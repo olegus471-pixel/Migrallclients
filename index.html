@@ -1,44 +1,5302 @@
+в коде ниже язык должен быть русский основной и английский второй (не португальский) все содержание должно переводится на английский (но без именения данных в таблицах гугл)
+
+
+
 <!DOCTYPE html>
-<html>
+
+<html lang="ru">
+
 <head>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body { color: var(--tg-theme-text-color); background: var(--tg-theme-bg-color); font-family: sans-serif; }
-        .card { border: 1px solid #ccc; padding: 10px; margin: 10px; border-radius: 8px; }
-        .status-badge { background: #0088cc; color: white; padding: 2px 8px; border-radius: 4px; }
-    </style>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<title>MigrAll CRM</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+
+/* ============================================================
+
+   DESIGN TOKENS — LIGHT THEME
+
+   ============================================================ */
+
+:root {
+
+  --bg:        #f0f2f7;
+
+  --surface:   #ffffff;
+
+  --s2:        #f7f8fb;
+
+  --s3:        #eef0f6;
+
+  --s4:        #e4e7f0;
+
+  --border:    #e0e4ed;
+
+  --border2:   #c8cedf;
+
+  --t1:        #1a1d2e;
+
+  --t2:        #4a5068;
+
+  --t3:        #8b92aa;
+
+  --t4:        #b8bdd0;
+
+  --acc:       #3b6ff5;
+
+  --acc-d:     #e8effe;
+
+  --acc-hover: #2d5ee0;
+
+  --gre:       #16a34a;
+
+  --gre-d:     #dcfce7;
+
+  --yel:       #d97706;
+
+  --yel-d:     #fef3c7;
+
+  --ora:       #ea580c;
+
+  --ora-d:     #ffedd5;
+
+  --red:       #dc2626;
+
+  --red-d:     #fee2e2;
+
+  --pur:       #7c3aed;
+
+  --pur-d:     #ede9fe;
+
+  --tea:       #0d9488;
+
+  --tea-d:     #ccfbf1;
+
+  --pnk:       #db2777;
+
+  --pnk-d:     #fce7f3;
+
+  --sh:        0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+
+  --sh2:       0 4px 16px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+
+  --sh3:       0 20px 60px rgba(0,0,0,.18);
+
+  --r:         10px;
+
+  --r2:        7px;
+
+}
+
+/* ============================================================
+
+   RESET & BASE
+
+   ============================================================ */
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+html,body{height:100%;overflow:hidden}
+
+body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--t1);font-size:14px;line-height:1.55}
+
+a{color:var(--acc);text-decoration:none}
+
+a:hover{text-decoration:underline}
+
+::-webkit-scrollbar{width:4px;height:4px}
+
+::-webkit-scrollbar-track{background:transparent}
+
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+::-webkit-scrollbar-thumb:hover{background:var(--t3)}
+
+input,select,textarea{font-family:'Manrope',sans-serif}
+
+/* ============================================================
+
+   LAYOUT
+
+   ============================================================ */
+
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* ---- SIDEBAR ---- */
+
+.sb{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:transform .25s,width .25s;z-index:100}
+
+.sb-logo{padding:16px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+
+.sb-logo-icon{width:32px;height:32px;background:var(--acc);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+
+.sb-logo-wrap{}
+
+.sb-logo-t{font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;color:var(--t1);line-height:1.1}
+
+.sb-logo-s{font-size:8px;color:var(--t3);font-family:'IBM Plex Mono',monospace;margin-top:1px}
+
+.sb-nav{flex:1;padding:6px 0;overflow-y:auto}
+
+.sb-sec{padding:10px 14px 3px;font-size:8px;font-weight:700;letter-spacing:.12em;color:var(--t4);text-transform:uppercase;font-family:'IBM Plex Mono',monospace}
+
+.ni{display:flex;align-items:center;gap:9px;padding:8px 14px;cursor:pointer;transition:all .12s;font-size:12.5px;font-weight:500;color:var(--t2);border-left:2px solid transparent;white-space:nowrap;border-radius:0 6px 6px 0;margin:0 6px 0 0;position:relative}
+
+.ni:hover{background:var(--s2);color:var(--t1)}
+
+.ni.active{background:var(--acc-d);color:var(--acc);border-left-color:var(--acc);font-weight:600}
+
+.ni-ic{font-size:14px;width:16px;text-align:center;flex-shrink:0}
+
+.ni-bdg{margin-left:auto;background:var(--red);color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;font-family:'IBM Plex Mono',monospace;min-width:18px;text-align:center}
+
+.ni-bdg.y{background:var(--yel)}
+
+.ni-bdg.g{background:var(--gre)}
+
+.sb-bot{padding:10px 12px 12px;border-top:1px solid var(--border)}
+
+.sync-btn{width:100%;padding:7px;background:var(--s2);border:1px solid var(--border);color:var(--t2);border-radius:var(--r2);cursor:pointer;font-size:10px;font-family:'Manrope',sans-serif;font-weight:600;transition:all .12s;display:flex;align-items:center;justify-content:center;gap:6px}
+
+.sync-btn:hover{background:var(--acc-d);color:var(--acc);border-color:var(--acc)}
+
+#sync-spin{display:inline-block;transition:transform .1s}
+
+.api-status{margin-top:6px;font-size:9px;color:var(--t3);font-family:'IBM Plex Mono',monospace;display:flex;align-items:center;gap:4px}
+
+.api-dot{width:5px;height:5px;border-radius:50%;background:var(--gre);flex-shrink:0}
+
+.api-dot.err{background:var(--red)}.api-dot.warn{background:var(--yel)}
+
+/* ---- TOPBAR ---- */
+
+.topbar{padding:10px 18px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:10px;min-height:52px;flex-shrink:0}
+
+.topbar-toggle{display:none;background:none;border:none;cursor:pointer;font-size:18px;color:var(--t2);padding:2px 4px;border-radius:4px}
+
+.topbar-toggle:hover{background:var(--s2)}
+
+.pg-title{font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;white-space:nowrap;color:var(--t1)}
+
+.tb-search{flex:1;max-width:280px;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r2);padding:6px 11px;color:var(--t1);font-size:11px;outline:none;transition:border-color .14s}
+
+.tb-search:focus{border-color:var(--acc);background:var(--surface)}
+
+.tb-search::placeholder{color:var(--t3)}
+
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--gre);animation:pulse 2s infinite}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.loading-bar{position:fixed;top:0;left:0;height:2px;background:var(--acc);width:0;z-index:9999;transition:width .3s}
+
+/* ---- MAIN ---- */
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+.content{flex:1;overflow-y:auto;padding:16px 18px}
+
+.view{display:none}.view.active{display:block}
+
+/* ============================================================
+
+   COMPONENTS
+
+   ============================================================ */
+
+/* --- PANELS --- */
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+
+.dt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%}
+
+.ph{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--surface)}
+
+.ph-title{font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;font-family:'IBM Plex Mono',monospace}
+
+.ph-cnt{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)}
+
+.ph-actions{margin-left:auto;display:flex;gap:5px;align-items:center}
+
+/* --- GRID HELPERS --- */
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+
+/* --- BUTTONS --- */
+
+.btn{padding:7px 14px;border-radius:var(--r2);font-size:12px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .12s;font-family:'Manrope',sans-serif;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+
+.btn-p{background:var(--acc);color:#fff;border-color:var(--acc)}.btn-p:hover{background:var(--acc-hover)}
+
+.btn-g{background:var(--s2);color:var(--t2);border-color:var(--border)}.btn-g:hover{background:var(--s3);color:var(--t1)}
+
+.btn-red{background:var(--red-d);color:var(--red);border-color:var(--red)}.btn-red:hover{opacity:.8}
+
+.btn-sm{padding:3px 9px;font-size:10px}
+
+.btn-xs{padding:2px 7px;font-size:9px}
+
+/* --- CHIPS --- */
+
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px}
+
+.chip{padding:5px 11px;border-radius:20px;font-size:10.5px;font-weight:600;cursor:pointer;transition:all .12s;border:1.5px solid var(--border);color:var(--t2);background:var(--surface);white-space:nowrap}
+
+.chip:hover{border-color:var(--border2);color:var(--t1)}
+
+.chip.active{border-color:var(--acc);color:var(--acc);background:var(--acc-d)}
+
+/* --- SEC HEADER --- */
+
+.sec-h{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+
+.sec-t{font-family:'Unbounded',sans-serif;font-size:15px;font-weight:700;color:var(--t1)}
+
+.sec-a{margin-left:auto;display:flex;gap:6px;align-items:center}
+
+/* --- BADGES --- */
+
+.bdg{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:9.5px;font-weight:700;white-space:nowrap;font-family:'IBM Plex Mono',monospace;letter-spacing:.03em}
+
+.bdg.gre{background:var(--gre-d);color:var(--gre)}.bdg.blu{background:var(--acc-d);color:var(--acc)}
+
+.bdg.yel{background:var(--yel-d);color:var(--yel)}.bdg.ora{background:var(--ora-d);color:var(--ora)}
+
+.bdg.red{background:var(--red-d);color:var(--red)}.bdg.pur{background:var(--pur-d);color:var(--pur)}
+
+.bdg.tea{background:var(--tea-d);color:var(--tea)}.bdg.pnk{background:var(--pnk-d);color:var(--pnk)}
+
+.bdg.gry{background:var(--s3);color:var(--t3)}
+
+/* --- TABLE --- */
+
+.dt{width:100%;border-collapse:collapse}
+
+.dt th{padding:9px 13px;text-align:left;font-size:9px;font-weight:700;color:var(--t3);border-bottom:1.5px solid var(--border);background:var(--s2);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;font-family:'IBM Plex Mono',monospace}
+
+.dt td{padding:10px 13px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:middle}
+
+.dt tr:last-child td{border-bottom:none}
+
+.dt tr:hover td{background:var(--s2);cursor:pointer}
+
+.dt tr{transition:background .08s}
+
+.dt td.mono{font-family:'IBM Plex Mono',monospace;font-size:10px}
+
+.edit-btn{background:none;border:none;color:var(--t3);cursor:pointer;font-size:11px;padding:3px 5px;border-radius:4px;transition:all .12s}
+
+.edit-btn:hover{background:var(--acc-d);color:var(--acc)}
+
+/* ============================================================
+
+   KPI CARDS
+
+   ============================================================ */
+
+.kpi-g{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--sh);position:relative;overflow:hidden}
+
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+
+.kpi.blu::before{background:var(--acc)}.kpi.gre::before{background:var(--gre)}
+
+.kpi.yel::before{background:var(--yel)}.kpi.red::before{background:var(--red)}
+
+.kpi-l{font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-family:'IBM Plex Mono',monospace}
+
+.kpi-v{font-family:'Unbounded',sans-serif;font-size:32px;font-weight:700;line-height:1}
+
+.kpi-s{font-size:9px;color:var(--t3);margin-top:4px}
+
+.kpi.blu .kpi-v{color:var(--acc)}.kpi.gre .kpi-v{color:var(--gre)}.kpi.yel .kpi-v{color:var(--yel)}.kpi.red .kpi-v{color:var(--red)}
+
+/* ============================================================
+
+   DASHBOARD TASK STATS
+
+   ============================================================ */
+
+.ts-g{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+
+.ts-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh)}
+
+.ts-l{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:4px;font-family:'IBM Plex Mono',monospace}
+
+.ts-v{font-family:'Unbounded',sans-serif;font-size:22px;font-weight:700;color:var(--t1)}
+
+.ts-filter{display:flex;gap:4px;margin-bottom:10px}
+
+.ts-fc{padding:3px 8px;border-radius:14px;font-size:9px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);color:var(--t2);background:var(--surface);transition:all .12s}
+
+.ts-fc:hover{border-color:var(--border2)}.ts-fc.active{border-color:var(--acc);color:var(--acc);background:var(--acc-d)}
+
+/* ============================================================
+
+   STAT ROWS (status modules)
+
+   ============================================================ */
+
+.stat-row{display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);gap:8px;transition:background .08s}
+
+.stat-row:last-child{border-bottom:none}
+
+.stat-row:hover{background:var(--s2)}
+
+.stat-num{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--acc);min-width:38px;flex-shrink:0}
+
+.stat-name{font-size:12.5px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.stat-date{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3);white-space:nowrap;flex-shrink:0}
+
+/* ============================================================
+
+   KANBAN
+
+   ============================================================ */
+
+.kb-wrap{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;align-items:flex-start}
+
+.kb-col{min-width:210px;max-width:210px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);display:flex;flex-direction:column;max-height:calc(100vh - 195px)}
+
+.kb-hdr{padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-shrink:0}
+
+.kb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+.kb-lbl{font-size:10px;font-weight:700;flex:1;letter-spacing:.02em}
+
+.kb-cnt{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)}
+
+.kb-cards{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:5px}
+
+.kcard{background:var(--s2);border:1px solid var(--border);border-radius:var(--r2);padding:9px 10px;cursor:pointer;transition:all .12s}
+
+.kcard:hover{border-color:var(--border2);box-shadow:var(--sh);background:var(--surface);transform:translateY(-1px)}
+
+.kcard-id{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--t3);margin-bottom:2px}
+
+.kcard-name{font-size:11px;font-weight:700;margin-bottom:4px;color:var(--t1)}
+
+.kcard-svc{font-size:9px;font-weight:600;margin-bottom:3px}
+
+.kcard-sub{font-size:8px;padding:2px 6px;border-radius:4px;background:var(--pur-d);color:var(--pur);font-family:'IBM Plex Mono',monospace;display:inline-block;margin-bottom:4px;font-weight:600}
+
+.kcard-ft{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+
+.kcard-tg{font-size:8.5px;color:var(--t3);font-family:'IBM Plex Mono',monospace;flex:1}
+
+.kb-add{margin:4px 6px 6px;padding:6px;border:1.5px dashed var(--border2);border-radius:var(--r2);text-align:center;font-size:10px;color:var(--t3);cursor:pointer;transition:all .12s;flex-shrink:0}
+
+.kb-add:hover{border-color:var(--acc);color:var(--acc);background:var(--acc-d)}
+
+/* ============================================================
+
+   PIPELINE STEPS
+
+   ============================================================ */
+
+.pipe-steps{display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:4px 0 10px}
+
+.ps-b{padding:4px 8px;border-radius:14px;font-size:8px;font-weight:600;font-family:'IBM Plex Mono',monospace;white-space:nowrap;border:1.5px solid var(--border);color:var(--t3);background:var(--s2);cursor:pointer;transition:all .12s;display:flex;align-items:center;gap:3px}
+
+.ps-b:hover{border-color:var(--border2);color:var(--t1)}
+
+.ps-b.active{background:var(--acc-d);color:var(--acc);border-color:var(--acc)}
+
+.ps-b.done{background:var(--gre-d);color:var(--gre);border-color:var(--gre)}
+
+.ps-b.done::before{content:'✓ '}
+
+.ps-arr{color:var(--t4);font-size:9px}
+
+/* ============================================================
+
+   TASKS
+
+   ============================================================ */
+
+.task-board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+
+.tcol{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);display:flex;flex-direction:column;max-height:calc(100vh - 205px)}
+
+.tcol-h{padding:10px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;flex-shrink:0}
+
+.tcol-t{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-family:'IBM Plex Mono',monospace}
+
+.tcol-cnt{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)}
+
+.tlist{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:5px;min-height:60px}
+
+.tcard{background:var(--s2);border:1px solid var(--border);border-radius:var(--r2);padding:9px 10px;cursor:grab;transition:all .12s;user-select:none;border-left:3px solid transparent}
+
+.tcard:hover{border-color:var(--border2);box-shadow:var(--sh);background:var(--surface)}
+
+.tcard.dragging{opacity:.35;cursor:grabbing}
+
+.tcard.drag-target{border-color:var(--acc)!important;background:var(--acc-d)!important}
+
+.tcard.pb-high{border-left-color:var(--red)}.tcard.pb-mid{border-left-color:var(--yel)}.tcard.pb-low{border-left-color:var(--t4)}
+
+.tcard-txt{font-size:11.5px;font-weight:500;margin-bottom:5px;line-height:1.4}
+
+.tcard-meta{display:flex;align-items:center;gap:5px;font-size:8.5px;font-family:'IBM Plex Mono',monospace;flex-wrap:wrap;color:var(--t3)}
+
+.tcard-meta .cn{color:var(--acc);font-weight:600}.tcard-meta .as{color:var(--tea);font-weight:600}
+
+.tcard-acts{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap}
+
+.t-add{margin:4px 6px 6px;padding:6px;border:1.5px dashed var(--border2);border-radius:var(--r2);text-align:center;font-size:10px;color:var(--t3);cursor:pointer;transition:all .12s;flex-shrink:0}
+
+.t-add:hover{border-color:var(--acc);color:var(--acc);background:var(--acc-d)}
+
+.pdot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
+
+.pdot.high{background:var(--red)}.pdot.mid{background:var(--yel)}.pdot.low{background:var(--t4)}
+
+.tcol.drop-active{outline:2px dashed var(--acc);outline-offset:-3px;background:var(--acc-d)}
+
+/* ============================================================
+
+   SCHEDULE
+
+   ============================================================ */
+
+.sched-layout{display:grid;grid-template-columns:196px 1fr;gap:12px}
+
+.sched-mini{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh)}
+
+.sched-mnav{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+
+.sched-mnav-t{font-family:'Unbounded',sans-serif;font-size:10px;font-weight:700;flex:1;color:var(--t1)}
+
+.sched-mb{background:none;border:none;color:var(--t2);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:4px;transition:background .1s}
+
+.sched-mb:hover{background:var(--s2);color:var(--t1)}
+
+.sched-mg{display:grid;grid-template-columns:repeat(7,1fr);padding:6px 8px 2px}
+
+.sched-dow{font-size:7px;font-weight:700;color:var(--t3);text-align:center;padding:2px 0;text-transform:uppercase;font-family:'IBM Plex Mono',monospace}
+
+.sched-day{font-size:9.5px;text-align:center;padding:3px 1px;border-radius:4px;cursor:pointer;transition:all .1s;font-weight:500;color:var(--t2);min-width:0}
+
+.sched-day:hover{background:var(--s2);color:var(--t1)}.sched-day.has{color:var(--acc);font-weight:700}.sched-day.sel{background:var(--acc);color:#fff}.sched-day.tod{border:1.5px solid var(--acc)}.sched-day.oth{color:var(--t4)}
+
+.sched-slots{padding:8px 12px;border-top:1px solid var(--border)}
+
+.sched-slots-t{font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:700;font-family:'IBM Plex Mono',monospace}
+
+.sched-sl{max-height:160px;overflow-y:auto}
+
+.slot-item{padding:4px 7px;border-radius:4px;font-size:9px;font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:background .1s;margin-bottom:2px;display:flex;align-items:center;gap:6px;border:1px solid transparent}
+
+.slot-item:hover{background:var(--s2)}.slot-item.occ{color:var(--t3)}.slot-item.free{color:var(--gre)}.slot-item.free:hover{background:var(--gre-d)}
+
+.slot-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}.slot-dot.free{background:var(--gre)}.slot-dot.occ{background:var(--t4)}
+
+.meet-row{display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);gap:8px}
+
+.meet-row:last-child{border-bottom:none}
+
+.meet-t{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--acc);min-width:100px;flex-shrink:0;font-weight:600}
+
+.meet-n{font-size:11.5px;font-weight:600;flex:1}
+
+.meet-lnk{font-size:9px;color:var(--acc);font-family:'IBM Plex Mono',monospace}
+
+/* ============================================================
+
+   CALENDAR
+
+   ============================================================ */
+
+.cal-layout{display:grid;grid-template-columns:1fr 230px;gap:12px}
+
+.cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+
+.cal-nav{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)}
+
+.cal-nav-btn{background:var(--s2);border:1px solid var(--border);color:var(--t2);padding:4px 10px;border-radius:var(--r2);cursor:pointer;font-size:12px;transition:all .12s}
+
+.cal-nav-btn:hover{background:var(--s3);color:var(--t1)}
+
+.cal-month{font-family:'Unbounded',sans-serif;font-size:11px;font-weight:700;flex:1;color:var(--t1)}
+
+.cal-dows{display:grid;grid-template-columns:repeat(7,1fr)}
+
+.cal-dow{padding:6px;font-size:8px;font-weight:700;color:var(--t3);border-bottom:1px solid var(--border);background:var(--s2);text-transform:uppercase;letter-spacing:.06em;text-align:center;font-family:'IBM Plex Mono',monospace}
+
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+
+.cal-cell{min-height:70px;padding:5px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;transition:background .08s}
+
+.cal-cell:nth-child(7n){border-right:none}.cal-cell:hover{background:var(--s2)}
+
+.cal-cell.today{background:var(--acc-d)}.cal-cell.selected{background:var(--s3)}
+
+.cal-dn{font-size:10.5px;font-weight:600;margin-bottom:2px;color:var(--t1)}.cal-cell.om .cal-dn{color:var(--t4)}
+
+.cal-ev{font-size:7px;padding:1px 3px;border-radius:2px;margin-bottom:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:'IBM Plex Mono',monospace;font-weight:600}
+
+.cal-ev.meet{background:var(--gre-d);color:var(--gre)}.cal-ev.court{background:var(--pur-d);color:var(--pur)}.cal-ev.deadline{background:var(--red-d);color:var(--red)}
+
+.cal-sb{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;display:flex;flex-direction:column;max-height:calc(100vh - 170px)}
+
+.cal-sb-d{padding:10px 13px;border-bottom:1px solid var(--border);font-size:11.5px;font-weight:700}
+
+.cal-sb-evts{flex:1;overflow-y:auto}
+
+.cal-evitem{padding:9px 12px;border-bottom:1px solid var(--border)}
+
+.cal-evitem:last-child{border-bottom:none}
+
+.cal-evtime{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--acc);margin-bottom:2px;font-weight:600}
+
+.cal-evname{font-size:11px;font-weight:600}
+
+.cal-evmeta{font-size:9px;color:var(--t3)}
+
+.cal-empty{padding:24px;text-align:center;color:var(--t3);font-size:10px}
+
+/* ============================================================
+
+   INTEGRATION CARDS
+
+   ============================================================ */
+
+.int-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+
+.int-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--sh);transition:box-shadow .12s}
+
+.int-card:hover{box-shadow:var(--sh2)}
+
+.int-ic{font-size:24px;margin-bottom:8px}
+
+.int-nm{font-size:11.5px;font-weight:700;margin-bottom:2px;color:var(--t1)}
+
+.int-id{font-family:'IBM Plex Mono',monospace;font-size:7.5px;color:var(--t3);margin-bottom:8px;word-break:break-all}
+
+.int-sr{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--t2)}
+
+.int-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+.int-dot.ok{background:var(--gre)}.int-dot.w{background:var(--yel)}.int-dot.e{background:var(--red)}
+
+.api-info{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-top:12px}
+
+.api-info pre{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--t2);line-height:1.7;white-space:pre-wrap;word-break:break-word}
+
+/* ============================================================
+
+   ONBOARD CHECKLIST
+
+   ============================================================ */
+
+.ob-list{background:var(--s2);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px}
+
+.ob-item{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:11px;border-bottom:1px solid var(--border)}
+
+.ob-item:last-child{border-bottom:none}
+
+.ob-item input[type=checkbox]{accent-color:var(--acc);width:14px;height:14px;cursor:pointer}
+
+.ob-item.done{color:var(--t3);text-decoration:line-through}
+
+.ob-item label{cursor:pointer;flex:1}
+
+/* ============================================================
+
+   COMMENTS
+
+   ============================================================ */
+
+.cmt-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;max-height:180px;overflow-y:auto}
+
+.cmt{background:var(--s2);border:1px solid var(--border);border-radius:var(--r2);padding:8px 10px}
+
+.cmt-m{font-size:8.5px;color:var(--t3);font-family:'IBM Plex Mono',monospace;margin-bottom:3px;display:flex;gap:8px}
+
+.cmt-m span{font-weight:700;color:var(--t2)}
+
+.cmt-t{font-size:11px;color:var(--t1);line-height:1.5}
+
+/* ============================================================
+
+   MODAL
+
+   ============================================================ */
+
+.ov{position:fixed;inset:0;background:rgba(15,18,35,.45);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:16px}
+
+.ov.open{display:flex}
+
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:13px;width:620px;max-width:100%;max-height:92vh;overflow-y:auto;padding:22px;box-shadow:var(--sh3);animation:mup .16s ease}
+
+.modal.wide{width:780px}.modal.narrow{width:420px}
+
+@keyframes mup{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.mhdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+
+.mcls{background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0 2px;line-height:1;transition:color .1s}
+
+.mcls:hover{color:var(--red)}
+
+.msec{margin-bottom:14px}
+
+.msl{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);margin-bottom:7px;font-family:'IBM Plex Mono',monospace}
+
+.mrow{display:flex;gap:10px;margin-bottom:10px;align-items:flex-end}
+
+.mf{flex:1;min-width:0}
+
+.mfl{font-size:10.5px;color:var(--t2);margin-bottom:4px;font-weight:600;display:block}
+
+.mi{width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r2);padding:8px 12px;color:var(--t1);font-size:12.5px;font-family:'Manrope',sans-serif;outline:none;transition:border-color .12s}
+
+.mi:focus{border-color:var(--acc);background:var(--surface)}
+
+.ms{width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r2);padding:8px 12px;color:var(--t1);font-size:12.5px;font-family:'Manrope',sans-serif;outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b92aa'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+
+.ms:focus{border-color:var(--acc)}
+
+.mta{width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r2);padding:8px 11px;color:var(--t1);font-size:11.5px;font-family:'Manrope',sans-serif;outline:none;resize:vertical;min-height:72px;transition:border-color .12s}
+
+.mta:focus{border-color:var(--acc)}
+
+.mdiv{border:none;border-top:1px solid var(--border);margin:14px 0}
+
+.mft{display:flex;gap:7px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+
+/* ============================================================
+
+   MOBILE OVERLAY FOR SIDEBAR
+
+   ============================================================ */
+
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99}
+
+/* ============================================================
+
+   RESPONSIVE
+
+   ============================================================ */
+
+@media (max-width: 900px){
+
+  .sb{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);z-index:100}
+
+  .sb.open{transform:translateX(0)}
+
+  .sb-overlay.open{display:block}
+
+  .topbar-toggle{display:flex}
+
+  .kpi-g,.ts-g{grid-template-columns:1fr 1fr}
+
+  .g2,.g3,.g4{grid-template-columns:1fr 1fr}
+
+  .task-board{grid-template-columns:1fr 1fr}
+
+  .cal-layout{grid-template-columns:1fr}
+
+  .cal-sb{max-height:300px}
+
+  .sched-layout{grid-template-columns:1fr}
+
+  .int-grid{grid-template-columns:1fr 1fr}
+
+  .kb-col{min-width:185px;max-width:185px}
+
+  .modal{width:100%!important;max-width:100%}
+
+  .mrow{flex-wrap:wrap}
+
+}
+
+@media (max-width: 600px){
+
+  .content{padding:10px 10px}
+
+  .kpi-g,.ts-g{grid-template-columns:1fr 1fr}
+
+  .g2,.g3,.g4{grid-template-columns:1fr}
+
+  .task-board{grid-template-columns:1fr}
+
+  .int-grid{grid-template-columns:1fr}
+
+  .kpi-v{font-size:22px}
+
+  .dt th, .dt td{padding:6px 8px;font-size:10.5px}
+
+  .chips{gap:4px}
+
+  .chip{font-size:9px;padding:3px 8px}
+
+  .sec-t{font-size:13px}
+
+  .modal{border-radius:14px 14px 0 0;position:fixed;bottom:0;left:0;right:0;max-height:88vh;margin:0;width:100%!important;max-width:100%!important;animation:slideup .2s ease}
+
+  .ov{align-items:flex-end;padding:0}
+
+  @keyframes slideup{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+
+}
+
+@supports(padding:max(0px)){
+
+  .content{padding-bottom:max(16px,env(safe-area-inset-bottom))}
+
+  .sb-bot{padding-bottom:max(12px,env(safe-area-inset-bottom))}
+
+}
+
+@media (min-width: 901px){
+
+  .sb-overlay{display:none!important}
+
+}
+
+/* ============================================================
+
+   AUTH SCREEN
+
+   ============================================================ */
+
+.auth-overlay{position:fixed;inset:0;background:var(--bg);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px}
+
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px 40px;width:100%;max-width:380px;box-shadow:var(--sh3);text-align:center}
+
+.auth-logo{font-size:36px;margin-bottom:10px}
+
+.auth-title{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:700;color:var(--t1);margin-bottom:4px}
+
+.auth-sub{font-size:12px;color:var(--t3);margin-bottom:28px}
+
+.auth-field{text-align:left;margin-bottom:14px}
+
+.auth-field label{display:block;font-size:11px;font-weight:600;color:var(--t2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em}
+
+.auth-field input{width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r2);padding:10px 14px;color:var(--t1);font-size:13px;font-family:'Manrope',sans-serif;outline:none;transition:border-color .12s}
+
+.auth-field input:focus{border-color:var(--acc);background:var(--surface)}
+
+.auth-btn{width:100%;padding:11px;background:var(--acc);color:#fff;border:none;border-radius:var(--r2);font-size:13px;font-weight:700;font-family:'Manrope',sans-serif;cursor:pointer;transition:background .12s;margin-top:6px}
+
+.auth-btn:hover{background:var(--acc-hover)}
+
+.auth-err{background:var(--red-d);color:var(--red);border-radius:6px;padding:8px 12px;font-size:11.5px;margin-top:10px;display:none}
+
+.auth-err.show{display:block}
+
+.auth-users{margin-top:20px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+
+.auth-ava{width:34px;height:34px;border-radius:50%;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:var(--s3);color:var(--t2);transition:all .12s;title:attr(data-name)}
+
+.auth-ava:hover{border-color:var(--acc);transform:scale(1.1)}
+
+.auth-ava.sel{border-color:var(--acc);background:var(--acc-d);color:var(--acc)}
+
+/* USER BADGE in topbar */
+
+.usr-badge{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 6px;background:var(--s2);border:1px solid var(--border);border-radius:20px;cursor:pointer;transition:all .12s;font-size:11.5px;font-weight:600;color:var(--t2)}
+
+.usr-badge:hover{background:var(--s3);border-color:var(--border2)}
+
+.usr-ava{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+
+.usr-menu{position:absolute;top:100%;right:0;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh2);min-width:200px;z-index:500;overflow:hidden}
+
+.usr-menu-item{padding:10px 14px;font-size:12px;cursor:pointer;transition:background .08s;display:flex;align-items:center;gap:8px}
+
+.usr-menu-item:hover{background:var(--s2)}
+
+.usr-menu-item.danger{color:var(--red)}
+
+.usr-wrap{position:relative}
+
+/* TASK SCOPE toggle */
+
+.scope-toggle{display:flex;background:var(--s2);border:1.5px solid var(--border);border-radius:20px;padding:2px;gap:0;margin-bottom:12px}
+
+.scope-btn{padding:5px 14px;border-radius:16px;font-size:11px;font-weight:600;cursor:pointer;transition:all .12s;color:var(--t2);background:none;border:none;font-family:'Manrope',sans-serif;white-space:nowrap}
+
+.scope-btn.active{background:var(--surface);color:var(--t1);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+
+/* ============================================================
+
+   INLINE STATUS / DATE EDITOR
+
+   ============================================================ */
+
+.inline-edit-cell{position:relative}
+
+.inline-status{display:inline-flex;align-items:center;gap:5px;cursor:pointer;border-radius:5px;padding:2px 4px;transition:background .12s;user-select:none}
+
+.inline-status:hover{background:var(--s2)}
+
+.inline-status:hover::after{content:'▾';font-size:9px;color:var(--t3)}
+
+.inline-date{display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--t2);border-radius:4px;padding:2px 5px;transition:background .12s;white-space:nowrap}
+
+.inline-date:hover{background:var(--s2);color:var(--acc)}
+
+.inline-date:hover::after{content:'✎';font-size:9px;margin-left:2px;color:var(--acc)}
+
+.inline-date.updated{color:var(--gre);font-weight:700}
+
+/* Dropdown выбора статуса */
+
+.status-dropdown{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh3);min-width:180px;z-index:8000;overflow:hidden;animation:fdropdown .1s ease}
+
+@keyframes fdropdown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+.status-dropdown-item{padding:9px 14px;font-size:12px;cursor:pointer;transition:background .08s;display:flex;align-items:center;gap:8px;font-family:'Manrope',sans-serif}
+
+.status-dropdown-item:hover{background:var(--s2)}
+
+.status-dropdown-item.current{background:var(--acc-d);color:var(--acc);font-weight:600}
+
+/* Попап редактирования даты */
+
+.date-popup{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh3);padding:14px;z-index:8000;min-width:220px;animation:fdropdown .1s ease}
+
+.date-popup-title{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+
+.date-popup input{width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r2);padding:7px 10px;color:var(--t1);font-size:13px;font-family:'IBM Plex Mono',monospace;outline:none}
+
+.date-popup input:focus{border-color:var(--acc)}
+
+.date-popup-btns{display:flex;gap:6px;margin-top:10px}
+
+.date-popup-btns button{flex:1;padding:6px;border:none;border-radius:var(--r2);font-size:11px;font-weight:600;cursor:pointer;font-family:'Manrope',sans-serif;transition:background .1s}
+
+.dp-save{background:var(--acc);color:#fff}
+
+.dp-save:hover{background:var(--acc-hover)}
+
+.dp-cancel{background:var(--s2);color:var(--t2)}
+
+.dp-cancel:hover{background:var(--s3)}
+
+.dp-today{background:var(--gre-d);color:var(--gre);font-size:10px;padding:6px 8px}
+
+/* ── LANG SWITCHER ── */
+
+.lang-sw{display:flex;background:var(--s2);border:1.5px solid var(--border);border-radius:20px;padding:2px;gap:0}
+
+.lang-btn{padding:4px 11px;border-radius:16px;font-size:10.5px;font-weight:700;cursor:pointer;
+
+  color:var(--t3);background:none;border:none;font-family:'Manrope',sans-serif;letter-spacing:.04em;transition:all .12s}
+
+.lang-btn.active{background:var(--surface);color:var(--t1);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+
+/* ── DELETE BUTTON ── */
+
+.del-btn{background:none;border:none;cursor:pointer;padding:4px 5px;border-radius:5px;
+
+  color:var(--t4);font-size:13px;transition:all .12s;line-height:1}
+
+.del-btn:hover{background:var(--red-d);color:var(--red)}
+
+/* ── DELETE CONFIRM POPUP ── */
+
+.del-pop{position:fixed;background:var(--surface);border:1px solid var(--border);
+
+  border-radius:var(--r);box-shadow:var(--sh3);padding:16px;z-index:9000;
+
+  min-width:230px;max-width:270px;animation:fdropdown .1s ease}
+
+.del-pop h4{font-size:12.5px;font-weight:700;color:var(--t1);margin-bottom:3px}
+
+.del-pop p{font-size:11px;color:var(--t3);margin-bottom:12px;line-height:1.4}
+
+.del-pop-btns{display:flex;gap:6px}
+
+.del-pop-btns button{flex:1;padding:7px;border:none;border-radius:var(--r2);
+
+  font-size:11.5px;font-weight:600;cursor:pointer;font-family:'Manrope',sans-serif;transition:.1s}
+
+.dpc{background:var(--s2);color:var(--t2)}.dpc:hover{background:var(--s3)}
+
+.dpd{background:var(--red);color:#fff}.dpd:hover{background:#b91c1c}
+
+</style>
+
 </head>
+
 <body>
-    <div id="app">
-        <h1>Личный кабинет</h1>
-        <div id="user-info" class="card">Загрузка данных...</div>
-        <h3>Мои задачи</h3>
-        <div id="tasks-list"></div>
+
+<div id="loading-bar" class="loading-bar"></div>
+
+<div class="sb-overlay" id="sb-overlay" onclick="closeSb()"></div>
+
+<div class="app">
+
+<!-- ===================== SIDEBAR ===================== -->
+
+<aside class="sb" id="sidebar">
+
+  <div class="sb-logo">
+
+    <div class="sb-logo-icon">🇵🇹</div>
+
+    <div class="sb-logo-wrap">
+
+      <div class="sb-logo-t">MIGRALL</div>
+
+      <div class="sb-logo-s">CRM v4 · Portugal</div>
+
     </div>
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand(); // Расширяем на все окно
+  </div>
 
-        const userId = tg.initDataUnsafe.user.id;
+  <nav class="sb-nav">
 
-        // Запрос к вашему новому API
-        fetch(`https://ВАШ-ДОМЕН.com/api/client?id=${userId}`)
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('user-info').innerHTML = `
-                    <p><b>Имя:</b> ${data.profile['Имя']}</p>
-                    <p><b>Статус:</b> <span class="status-badge">${data.profile['Статус']}</span></p>
-                `;
-                
-                let tasksHtml = data.tasks.map(t => `
-                    <div class="card">
-                        <b>${t['Задача']}</b><br>
-                        <small>Дедлайн: ${t['Дедлайн'] || 'нет'}</small>
-                    </div>
-                `).join('');
-                document.getElementById('tasks-list').innerHTML = tasksHtml;
-            });
-    </script>
+    <div class="sb-sec">Обзор</div>
+
+    <div class="ni active" onclick="showView('dashboard',this)"><span class="ni-ic">⊡</span>Дашборд</div>
+
+    <div class="sb-sec">Клиенты</div>
+
+    <div class="ni" onclick="showView('clients',this)"><span class="ni-ic">◉</span>Все клиенты</div>
+
+    <div class="ni" onclick="showView('kanban',this)"><span class="ni-ic">▦</span>Канбан / Pipeline</div>
+
+    <div class="sb-sec">Статусы</div>
+
+    <div class="ni" onclick="showView('aima',this)"><span class="ni-ic">📋</span>Проверки AIMA<span class="ni-bdg" id="bdg-aima">27</span></div>
+
+    <div class="ni" onclick="showView('visad',this)"><span class="ni-ic">✈</span>Виза D</div>
+
+    <div class="ni" onclick="showView('courts',this)"><span class="ni-ic">⚖</span>Суды</div>
+
+    <div class="ni" onclick="showView('citizenship',this)"><span class="ni-ic">🏛</span>Гражданство</div>
+
+    <div class="ni" onclick="showView('rights',this)"><span class="ni-ic">🚗</span>Права</div>
+
+    <div class="sb-sec">Расписание</div>
+
+    <div class="ni" onclick="showView('schedule',this)"><span class="ni-ic">📅</span>Расписание</div>
+
+    <div class="ni" onclick="showView('calendar',this)"><span class="ni-ic">▤</span>Календарь</div>
+
+    <div class="sb-sec">Работа</div>
+
+    <div class="ni" onclick="showView('tasks',this)"><span class="ni-ic">☑</span>Задачи<span class="ni-bdg y" id="bdg-tasks">0</span></div>
+
+    <div class="ni" onclick="showView('integration',this)"><span class="ni-ic">⚡</span>API / Интеграции</div>
+
+  </nav>
+
+  <div class="sb-bot">
+
+    <button class="sync-btn" onclick="doSync()"><span id="sync-spin">↻</span> Синхронизировать</button>
+
+    <div class="api-status"><div class="api-dot" id="api-dot"></div><span id="api-status-txt">Не подключено</span></div>
+
+  </div>
+
+</aside>
+
+<!-- ===================== MAIN ===================== -->
+
+<main class="main">
+
+  <div class="topbar">
+
+    <button class="topbar-toggle" onclick="openSb()">☰</button>
+
+    <div class="pg-title" id="pg-title">Дашборд</div>
+
+    <input class="tb-search" placeholder="🔍 Поиск клиента, ID, telegram..." id="tb-search" oninput="handleSearch(this.value)">
+
+    <div class="lang-sw">
+
+      <button class="lang-btn active" onclick="setLang('ru',this)">RU</button>
+
+      <button class="lang-btn" onclick="setLang('pt',this)">PT</button>
+
+    </div>
+
+    <div class="tb-right">
+
+      <div class="live-dot"></div>
+
+      <div class="usr-wrap" id="usr-wrap">
+
+        <div class="usr-badge" id="usr-badge" onclick="toggleUserMenu()">
+
+          <div class="usr-ava" id="usr-ava" style="background:var(--acc)">?</div>
+
+          <span id="usr-name-badge">—</span>
+
+          <span style="color:var(--t3);font-size:10px">▾</span>
+
+        </div>
+
+        <div class="usr-menu" id="usr-menu" style="display:none">
+
+          <div style="padding:12px 14px;border-bottom:1px solid var(--border)">
+
+            <div id="um-name" style="font-size:13px;font-weight:700;color:var(--t1)">—</div>
+
+            <div id="um-role" style="font-size:10.5px;color:var(--t3);margin-top:1px">—</div>
+
+          </div>
+
+          <div class="usr-menu-item" onclick="showView('tasks',null);closeUserMenu()">☑ Мои задачи</div>
+
+          <div class="usr-menu-item" onclick="showProfileModal()">⚙ Профиль</div>
+
+          <div class="usr-menu-item danger" onclick="doLogout()">⬡ Выйти</div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="content">
+
+  <!-- =================== DASHBOARD =================== -->
+
+  <div class="view active" id="view-dashboard">
+
+    <div class="kpi-g">
+
+      <div class="kpi blu"><div class="kpi-l" id="kpi-total-l">Всего клиентов</div><div class="kpi-v" id="kpi-total">—</div><div class="kpi-s">В базе CRM</div></div>
+
+      <div class="kpi yel"><div class="kpi-l" id="kpi-review-l">На рассмотрении</div><div class="kpi-v" id="kpi-review">—</div><div class="kpi-s" id="kpi-review-s">Анализ AIMA</div></div>
+
+      <div class="kpi gre"><div class="kpi-l" id="kpi-approved-l">Апрув</div><div class="kpi-v" id="kpi-approved">—</div><div class="kpi-s" id="kpi-approved-s">Одобрено</div></div>
+
+      <div class="kpi red"><div class="kpi-l" id="kpi-meets-l">Встреч сегодня</div><div class="kpi-v" id="kpi-meets">—</div><div class="kpi-s" id="kpi-meets-s">—</div></div>
+
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+
+      <div style="font-size:11px;font-weight:700;color:var(--t2)" id="ts-label-stat">Статистика задач за:</div>
+
+      <div class="ts-filter">
+
+        <div class="ts-fc active" id="ts-fc-day" onclick="setTaskPeriod('day',this)">День</div>
+
+        <div class="ts-fc" id="ts-fc-week" onclick="setTaskPeriod('week',this)">Неделя</div>
+
+        <div class="ts-fc" id="ts-fc-month" onclick="setTaskPeriod('month',this)">Месяц</div>
+
+      </div>
+
+    </div>
+
+    <div class="ts-g">
+
+      <div class="ts-card"><div class="ts-l">Поставлено</div><div class="ts-v" id="ts-tot">0</div></div>
+
+      <div class="ts-card"><div class="ts-l">В процессе</div><div class="ts-v" style="color:var(--yel)" id="ts-prog">0</div></div>
+
+      <div class="ts-card"><div class="ts-l">Выполнено</div><div class="ts-v" style="color:var(--gre)" id="ts-done">0</div></div>
+
+      <div class="ts-card"><div class="ts-l">Просрочено</div><div class="ts-v" style="color:var(--red)" id="ts-over">0</div></div>
+
+    </div>
+
+    <div class="g2" style="margin-bottom:12px">
+
+      <div class="panel">
+
+        <div class="ph">
+
+          <div class="ph-title" id="dash-my-tasks-title">Мои открытые задачи</div>
+
+          <div class="ph-cnt" id="dash-my-tasks-cnt">0</div>
+
+        </div>
+
+        <div id="dash-my-tasks"></div>
+
+      </div>
+
+      <div class="panel">
+
+        <div class="ph"><div class="ph-title">Ближайшие встречи</div><div class="ph-cnt">Эта неделя</div></div>
+
+        <div id="dash-meets"></div>
+
+      </div>
+
+    </div>
+
+    <div class="g2">
+
+      <div class="panel">
+
+        <div class="ph"><div class="ph-title">Давние проверки AIMA</div><div class="ph-cnt">По дате ↑</div></div>
+
+        <div id="dash-aima"></div>
+
+      </div>
+
+      <div class="panel">
+
+        <div class="ph"><div class="ph-title">Суды — по давности</div></div>
+
+        <div id="dash-courts"></div>
+
+      </div>
+
+    </div>
+
+    <div class="g2">
+
+      <div class="panel">
+
+        <div class="ph"><div class="ph-title">Гражданство</div></div>
+
+        <div id="dash-cit"></div>
+
+      </div>
+
+      <div class="panel">
+
+        <div class="ph"><div class="ph-title">Права</div></div>
+
+        <div id="dash-rights"></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- =================== CLIENTS =================== -->
+
+  <div class="view" id="view-clients">
+
+    <div class="sec-h">
+
+      <div class="sec-t">Клиенты</div>
+
+      <div class="sec-a">
+
+        <button class="btn btn-p btn-sm" onclick="openAddClientModal()">+ Новый клиент</button>
+
+      </div>
+
+    </div>
+
+    <div class="panel">
+
+      <div class="dt-wrap"><table class="dt">
+
+        <thead><tr><th>ID</th><th>Имя</th><th>Telegram</th><th>Тип услуги</th><th>Этап воронки</th><th>Подэтап</th><th>Посл. обновление</th></tr></thead>
+
+        <tbody id="clients-tbody"></tbody>
+
+      </table></div>
+
+      </div>
+
+  </div>
+
+  <!-- =================== KANBAN =================== -->
+
+  <div class="view" id="view-kanban">
+
+    <div class="sec-h">
+
+      <div class="sec-t">Kanban Pipeline</div>
+
+      <div class="chips sec-a" id="kb-chips" style="margin-bottom:0"></div>
+
+    </div>
+
+    <div class="kb-wrap" id="kb-board"></div>
+
+  </div>
+
+  <!-- =================== AIMA =================== -->
+
+  <div class="view" id="view-aima">
+
+    <div class="sec-h"><div class="sec-t">Проверки AIMA</div></div>
+
+    <div class="chips" id="aima-filter-chips">
+
+      <div class="chip active" onclick="filterAIMA('all',this)">Все</div>
+
+      <div class="chip" onclick="filterAIMA('Апрув',this)">Апрув</div>
+
+      <div class="chip" onclick="filterAIMA('Анализ',this)">Анализ</div>
+
+      <div class="chip" onclick="filterAIMA('Печать',this)">Печать</div>
+
+      <div class="chip" onclick="filterAIMA('Дозапрос',this)">Дозапрос</div>
+
+    </div>
+
+    <div class="panel">
+
+      <div class="dt-wrap"><table class="dt">
+
+        <thead><tr><th>№</th><th>ФИО</th><th>NIPC / Дело</th><th>ДР</th><th>Паспорт</th><th>Статус</th><th>Дата проверки</th><th>Секция</th><th></th></tr></thead>
+
+        <tbody id="aima-tbody"></tbody>
+
+      </table></div>
+
+      </div>
+
+  </div>
+
+  <!-- =================== VISA D =================== -->
+
+  <div class="view" id="view-visad">
+
+    <div class="sec-h"><div class="sec-t">Виза D — Статусы</div><div class="sec-a"><button class="btn btn-p btn-sm" onclick="editVisaD(-1)">+ Добавить</button></div></div>
+
+    <div class="panel">
+
+      <div class="dt-wrap"><table class="dt">
+
+        <thead><tr><th>№</th><th>ФИО</th><th>Тип</th><th>ДР</th><th>Паспорт</th><th>Статус</th><th>Дата обновления</th><th>Город</th><th>Комментарий</th><th></th></tr></thead>
+
+        <tbody id="visad-tbody"></tbody>
+
+      </table></div>
+
+      </div>
+
+  </div>
+
+  <!-- =================== COURTS =================== -->
+
+  <div class="view" id="view-courts">
+
+    <div class="sec-h"><div class="sec-t">Суды</div><div class="sec-a"><button class="btn btn-p btn-sm" onclick="editCourt(-1)">+ Добавить</button></div></div>
+
+    <div class="chips" id="courts-chips">
+
+      <div class="chip active" onclick="filterCourts('all',this)">Все</div>
+
+      <div class="chip" onclick="filterCourts('90.2',this)">90.2</div>
+
+      <div class="chip" onclick="filterCourts('98.2',this)">98.2</div>
+
+      <div class="chip" onclick="filterCourts('91',this)">91</div>
+
+      <div class="chip" onclick="filterCourts('88.2',this)">88.2</div>
+
+      <div class="chip" onclick="filterCourts('15',this)">15 ст.</div>
+
+    </div>
+
+    <div class="panel">
+
+      <div class="dt-wrap"><table class="dt">
+
+        <thead><tr><th>№</th><th>ФИО</th><th>Статья</th><th>Дата</th><th>Место</th><th>Этап</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
+
+        <tbody id="courts-tbody"></tbody>
+
+      </table></div>
+
+      </div>
+
+  </div>
+
+  <!-- =================== CITIZENSHIP =================== -->
+
+  <div class="view" id="view-citizenship">
+
+    <div class="sec-h"><div class="sec-t">Гражданство</div><div class="sec-a"><button class="btn btn-p btn-sm" onclick="editCitizenship(-1)">+ Добавить</button></div></div>
+
+    <div class="panel">
+
+      <div class="dt-wrap"><table class="dt">
+
+        <thead><tr><th>№</th><th>ФИО</th><th>Тип</th><th>Дата подачи</th><th>Трек-номер</th><th>Этап</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
+
+        <tbody id="cit-tbody"></tbody>
+
+      </table></div>
+
+      </div>
+
+  </div>
+
+  <!-- =================== RIGHTS =================== -->
+
+  <div class="view" id="view-rights">
+
+    <div class="sec-h"><div class="sec-t">Водительские права</div><div class="sec-a"><button class="btn btn-p btn-sm" onclick="editRights(-1)">+ Добавить</button></div></div>
+
+    <div class="panel">
+
+      <div class="dt-wrap"><table class="dt">
+
+        <thead><tr><th>№</th><th>ФИО</th><th>Страна прав</th><th>Дата подачи</th><th>Этап</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
+
+        <tbody id="rights-tbody"></tbody>
+
+      </table></div>
+
+      </div>
+
+  </div>
+
+  <!-- =================== SCHEDULE =================== -->
+
+  <div class="view" id="view-schedule">
+
+    <div class="sec-h"><div class="sec-t">Расписание встреч</div><div class="sec-a"><button class="btn btn-p btn-sm" onclick="openBookSlotModal()">+ Занять слот</button></div></div>
+
+    <div class="sched-layout">
+
+      <div class="sched-mini">
+
+        <div class="sched-mnav">
+
+          <button class="sched-mb" onclick="schedMon(-1)">‹</button>
+
+          <div class="sched-mnav-t" id="sched-m-title">Февраль 2026</div>
+
+          <button class="sched-mb" onclick="schedMon(1)">›</button>
+
+        </div>
+
+        <div style="padding:4px 6px 2px"><div class="sched-mg" id="sched-mg"></div></div>
+
+        <div class="sched-slots">
+
+          <div class="sched-slots-t">Слоты: <span id="sched-sel-d" style="color:var(--acc)">выберите день</span></div>
+
+          <div class="sched-sl" id="sched-sl"></div>
+
+        </div>
+
+      </div>
+
+      <div>
+
+        <div class="chips" id="sched-status-chips">
+
+          <div class="chip active" onclick="filterMeetings('all',this)">Все</div>
+
+          <div class="chip" onclick="filterMeetings('Подтверждено',this)">Подтверждено</div>
+
+          <div class="chip" onclick="filterMeetings('Ожидает подтверждения',this)">Ожидает</div>
+
+        </div>
+
+        <div class="panel">
+
+          <div class="dt-wrap"><table class="dt">
+
+            <thead><tr><th>Дата / Время</th><th>Клиент</th><th>Telegram</th><th>Статус</th><th>Google Meet</th></tr></thead>
+
+            <tbody id="sched-tbody"></tbody>
+
+          </table></div>
+
+      </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- =================== CALENDAR =================== -->
+
+  <div class="view" id="view-calendar">
+
+    <div class="sec-h"><div class="sec-t">Командный календарь</div></div>
+
+    <div class="cal-layout">
+
+      <div class="cal-wrap">
+
+        <div class="cal-nav">
+
+          <button class="cal-nav-btn" onclick="calMon(-1)">←</button>
+
+          <div class="cal-month" id="cal-month">Февраль 2026</div>
+
+          <button class="cal-nav-btn" onclick="calMon(1)">→</button>
+
+        </div>
+
+        <div class="cal-dows"><div class="cal-dow">Пн</div><div class="cal-dow">Вт</div><div class="cal-dow">Ср</div><div class="cal-dow">Чт</div><div class="cal-dow">Пт</div><div class="cal-dow">Сб</div><div class="cal-dow">Вс</div></div>
+
+        <div class="cal-grid" id="cal-grid"></div>
+
+      </div>
+
+      <div class="cal-sb">
+
+        <div class="cal-sb-d" id="cal-sel-d">Выберите день</div>
+
+        <div class="cal-sb-evts" id="cal-sb-evts"><div class="cal-empty">Нажмите на день</div></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- =================== TASKS =================== -->
+
+  <div class="view" id="view-tasks">
+
+    <div class="sec-h">
+
+      <div class="sec-t">Задачи</div>
+
+      <div class="sec-a">
+
+        <div class="scope-toggle">
+
+          <button class="scope-btn active" id="scope-mine" onclick="setTaskScope('mine',this)">👤 Мои</button>
+
+          <button class="scope-btn" id="scope-all" onclick="setTaskScope('all',this)">👥 Все</button>
+
+        </div>
+
+        <input class="mi" style="max-width:130px;padding:5px 9px;font-size:11px" placeholder="Фильтр по № клиента" id="task-client-filter" oninput="filterTasksByClient(this.value)">
+
+        <button class="btn btn-p btn-sm" onclick="openAddTaskModal()">+ Задача</button>
+
+      </div>
+
+    </div>
+
+    <div class="task-board" id="task-board"></div>
+
+  </div>
+
+  <!-- =================== INTEGRATION =================== -->
+
+  <div class="view" id="view-integration">
+
+    <div class="sec-h"><div class="sec-t">API / Интеграции</div></div>
+
+    <div class="int-grid">
+
+      <div class="int-card"><div class="int-ic">🤖</div><div class="int-nm">CRM Клиенты (Telegram)</div><div class="int-id">1NBSRoOn_tEIZrn0384BF_uFNBM8EaxDCr5AylipPiek</div><div class="int-sr"><div class="int-dot ok" id="ds-crm-dot"></div><span id="ds-crm-txt">Ожидание...</span></div></div>
+
+      <div class="int-card"><div class="int-ic">📋</div><div class="int-nm">Статусы AIMA (Проверки)</div><div class="int-id">1zyn8_ld50J99XoczAiKIjIuL0B5HHl6YVPKvhb3S0so</div><div class="int-sr"><div class="int-dot ok" id="ds-aima-dot"></div><span id="ds-aima-txt">Ожидание...</span></div></div>
+
+      <div class="int-card"><div class="int-ic">⚖️</div><div class="int-nm">Суды клиентов</div><div class="int-id">1u8OPwmGq4YQ3VRekeVGt7TMj2l8dgpxWOri9fb89Gik</div><div class="int-sr"><div class="int-dot w" id="ds-courts-dot"></div><span id="ds-courts-txt">Ожидание...</span></div></div>
+
+      <div class="int-card"><div class="int-ic">📅</div><div class="int-nm">График встреч</div><div class="int-id">1PFdrMsmuXcsFaZ66b2RlWNlequPMCJW5mcDB4lvRaXc</div><div class="int-sr"><div class="int-dot ok" id="ds-sched-dot"></div><span id="ds-sched-txt">Ожидание...</span></div></div>
+
+      <div class="int-card"><div class="int-ic">📊</div><div class="int-nm">Список подач клиентов</div><div class="int-id">1uZm3AuTMyMOmdZ9ZJW-59hkJ4QRTOgoo</div><div class="int-sr"><div class="int-dot ok" id="ds-subs-dot"></div><span id="ds-subs-txt">Ожидание...</span></div></div>
+
+      <div class="int-card"><div class="int-ic">🗓️</div><div class="int-nm">Командный календарь</div><div class="int-id">c_020552…@group.calendar.google.com</div><div class="int-sr"><div class="int-dot w"></div><span>Требуется OAuth 2.0</span></div></div>
+
+    </div>
+
+    <div class="api-info">
+
+      <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:8px">🔐 Архитектура API — данные через сервер Render</div>
+
+      <pre>
+
+Все API-ключи хранятся в переменных среды Render (Environment Variables):
+
+  GOOGLE_SHEETS_API_KEY   — ключ доступа к Google Sheets
+
+  GOOGLE_SERVICE_ACCOUNT  — JSON сервис-аккаунта Google
+
+  SHEETS_SPREADSHEET_ID_* — ID таблиц
+
+CRM ↔ Backend (Render) ↔ Google Sheets
+
+Потоки данных:
+
+  GET  /api/clients          → читает из листа CRM_Clients
+
+  POST /api/clients          → создаёт строку в листе CRM_Clients
+
+  PUT  /api/clients/:id      → обновляет строку по ID
+
+  GET  /api/statuses         → читает СПИСОК ПРОВЕРОК
+
+  PUT  /api/statuses/:num    → обновляет статус + дату проверки
+
+  GET  /api/courts           → читает лист судов
+
+  PUT  /api/courts/:num      → обновляет статус суда
+
+  GET  /api/schedule         → читает расписание
+
+  POST /api/schedule         → добавляет слот
+
+  GET  /api/visad            → читает статусы виз D
+
+  PUT  /api/visad/:num       → обновляет статус визы
+
+  PUT  /api/citizenship/:num → обновляет гражданство
+
+  PUT  /api/rights/:num      → обновляет права
+
+При изменении через CRM: данные → Render API → Google Sheets
+
+При изменении в Sheets: Sheets Apps Script → POST /api/webhook → CRM обновляется
+
+Календарь: отдельный поток через Google Calendar API (OAuth 2.0)
+
+</pre>
+
+    </div>
+
+  </div>
+
+  </div><!-- /content -->
+
+</main>
+
+</div><!-- /app -->
+
+<!-- MODAL OVERLAY -->
+
+<div class="ov" id="modal-ov" onclick="closeOv(event)">
+
+  <div class="modal" id="modal-box"><div id="modal-in"></div></div>
+
+</div>
+
+<script>
+
+'use strict';
+
+// ============================================================
+
+// API LAYER — calls go to /api/* on Render
+
+// Keys are stored as env vars on Render, never in this file
+
+// ============================================================
+
+const API_BASE = window.API_BASE || '/api'; // Override in production
+
+let API_ONLINE = false;
+
+async function apiFetch(path, options={}){
+
+  try {
+
+    const res = await fetch(API_BASE + path, {
+
+      headers:{'Content-Type':'application/json',...(options.headers||{})},
+
+      ...options,
+
+    });
+
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    return await res.json();
+
+  } catch(e) {
+
+    console.warn('API unavailable, using local data:', e.message);
+
+    return null;
+
+  }
+
+}
+
+async function apiPut(path, data){
+
+  const res = await apiFetch(path, {method:'PUT', body:JSON.stringify(data)});
+
+  return res;
+
+}
+
+async function apiPost(path, data){
+
+  const res = await apiFetch(path, {method:'POST', body:JSON.stringify(data)});
+
+  return res;
+
+}
+
+// ============================================================
+
+// USERS — local registry (passwords checked against API /login)
+
+// ============================================================
+
+const USERS_LOCAL = [
+
+  {login:'arina',    name:'Арина',    role:'manager',  color:'#3b6ff5', initials:'АР', canSeeAll:false},
+
+  {login:'alina',    name:'Алина',    role:'manager',  color:'#0d9488', initials:'АЛ', canSeeAll:false},
+
+  {login:'oleg',     name:'Олег',     role:'manager',  color:'#7c3aed', initials:'ОЛ', canSeeAll:false},
+
+  {login:'stefani',  name:'Стефани',  role:'manager',  color:'#db2777', initials:'СТ', canSeeAll:false},
+
+  {login:'paula',    name:'Паула',    role:'manager',  color:'#ea580c', initials:'ПА', canSeeAll:false},
+
+  {login:'admin',    name:'Администратор', role:'admin', color:'#16a34a', initials:'AD', canSeeAll:true},
+
+];
+
+// Пароли — для демо хранятся здесь. В проде: POST /api/login → токен
+
+const DEMO_PASSWORDS = {arina:'arina123',alina:'alina123',oleg:'oleg123',stefani:'stefani123',paula:'paula123',admin:'admin2024'};
+
+let currentUser = null;
+
+let taskScope = 'mine'; // 'mine' | 'all'
+
+function initAuth(){
+
+  // Build quick-login avatars
+
+  const wrap = g('auth-quick');
+
+  if(wrap) wrap.innerHTML = USERS_LOCAL.map(u=>`
+
+    <div class="auth-ava" data-login="${u.login}" title="${u.name}"
+
+      onclick="quickFill('${u.login}')"
+
+      style="background:${u.color};color:#fff;border-color:transparent">
+
+      ${u.initials}
+
+    </div>`).join('');
+
+  
+
+  // Check localStorage for saved session
+
+  try{
+
+    const saved = localStorage.getItem('crm_user');
+
+    if(saved){const u=JSON.parse(saved);loginAs(u);return;}
+
+  }catch(e){}
+
+  
+
+  g('auth-overlay').style.display='flex';
+
+}
+
+function quickFill(login){
+
+  g('auth-user').value = login;
+
+  const pwd = DEMO_PASSWORDS[login] || '';
+
+  g('auth-pass').value = pwd;
+
+  // Highlight avatar
+
+  document.querySelectorAll('.auth-ava').forEach(a=>{
+
+    a.style.borderColor = a.dataset.login===login?'var(--acc)':'transparent';
+
+  });
+
+  g('auth-pass').focus();
+
+}
+
+async function doLogin(){
+
+  const login = (g('auth-user').value||'').trim().toLowerCase();
+
+  const pass  = (g('auth-pass').value||'').trim();
+
+  const err   = g('auth-err');
+
+  err.classList.remove('show');
+
+  
+
+  // Try API first
+
+  const apiResult = await apiFetch('/login', {method:'POST', body:JSON.stringify({login,password:pass})}).catch(()=>null);
+
+  
+
+  if(apiResult && apiResult.user){
+
+    loginAs(apiResult.user);
+
+    return;
+
+  }
+
+  
+
+  // Fallback: local check
+
+  const user = USERS_LOCAL.find(u=>u.login===login);
+
+  if(!user){err.textContent='Пользователь не найден';err.classList.add('show');return;}
+
+  if(DEMO_PASSWORDS[login] && pass !== DEMO_PASSWORDS[login]){
+
+    err.textContent='Неверный пароль';err.classList.add('show');return;
+
+  }
+
+  loginAs(user);
+
+}
+
+function loginAs(user){
+
+  currentUser = user;
+
+  try{localStorage.setItem('crm_user', JSON.stringify(user));}catch(e){}
+
+  
+
+  // Hide auth screen
+
+  const overlay = g('auth-overlay');
+
+  if(overlay){overlay.style.opacity='0';overlay.style.transition='opacity .25s';setTimeout(()=>overlay.style.display='none',250);}
+
+  
+
+  // Update topbar badge
+
+  const ava = g('usr-ava');
+
+  if(ava){ava.textContent=user.initials||user.name[0];ava.style.background=user.color||'var(--acc)';}
+
+  const nb = g('usr-name-badge');
+
+  if(nb) nb.textContent = user.name;
+
+  
+
+  // Update user menu
+
+  const un=g('um-name'), ur=g('um-role');
+
+  if(un) un.textContent=user.name;
+
+  if(ur) ur.textContent=user.role==='admin'?'Администратор · доступ ко всему':'Менеджер';
+
+  
+
+  // Update sidebar (admin sees admin badge)
+
+  if(user.role==='admin' || user.canSeeAll){
+
+    const badge=document.createElement('span');
+
+    badge.className='ni-bdg g';badge.textContent='ADM';badge.style.fontSize='7px';
+
+    const logo=document.querySelector('.sb-logo-s');
+
+    if(logo)logo.textContent='CRM v4 · Admin';
+
+  }
+
+  
+
+  // Render tasks for this user
+
+  taskScope = (user.role==='admin'||user.canSeeAll)?'all':'mine';
+
+  // Update scope toggle buttons
+
+  setTimeout(()=>{
+
+    const mine=g('scope-mine'), all=g('scope-all');
+
+    if(mine&&all){
+
+      mine.classList.toggle('active', taskScope==='mine');
+
+      all.classList.toggle('active', taskScope==='all');
+
+    }
+
+  }, 100);
+
+  renderAll();
+
+  doSync();
+
+  
+
+  toast('Добро пожаловать, '+user.name+' 👋');
+
+}
+
+function doLogout(){
+
+  try{localStorage.removeItem('crm_user');}catch(e){}
+
+  currentUser=null;
+
+  closeUserMenu();
+
+  // Reset and show auth
+
+  g('auth-user').value='';g('auth-pass').value='';
+
+  g('auth-err').classList.remove('show');
+
+  const overlay=g('auth-overlay');
+
+  overlay.style.opacity='0';overlay.style.display='flex';
+
+  setTimeout(()=>{overlay.style.opacity='1';overlay.style.transition='opacity .2s';},10);
+
+}
+
+function toggleUserMenu(){
+
+  const m=g('usr-menu');
+
+  if(m.style.display==='none'){m.style.display='block';setTimeout(()=>document.addEventListener('click',closeUserMenuOutside),50);}
+
+  else closeUserMenu();
+
+}
+
+function closeUserMenu(){const m=g('usr-menu');if(m)m.style.display='none';document.removeEventListener('click',closeUserMenuOutside);}
+
+function closeUserMenuOutside(e){if(!g('usr-wrap')?.contains(e.target))closeUserMenu();}
+
+function showProfileModal(){
+
+  if(!currentUser)return;
+
+  closeUserMenu();
+
+  openModal(`
+
+    <div class="mhdr">
+
+      <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700">Профиль</div>
+
+      <button class="mcls" onclick="closeModal()">✕</button>
+
+    </div>
+
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;padding:14px;background:var(--s2);border-radius:var(--r2)">
+
+      <div style="width:48px;height:48px;border-radius:50%;background:${currentUser.color||'var(--acc)'};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0">${currentUser.initials||currentUser.name[0]}</div>
+
+      <div>
+
+        <div style="font-size:16px;font-weight:700">${currentUser.name}</div>
+
+        <div style="font-size:11px;color:var(--t3);margin-top:2px">${currentUser.role==='admin'?'Администратор':'Менеджер'} · @${currentUser.login}</div>
+
+      </div>
+
+    </div>
+
+    <div style="background:var(--acc-d);border-radius:6px;padding:10px 12px;font-size:11.5px;color:var(--acc)">
+
+      ℹ Смена пароля — через администратора системы. Пароли хранятся на сервере Render в зашифрованном виде.
+
+    </div>
+
+    <div class="mft"><button class="btn btn-g" onclick="closeModal()">Закрыть</button></div>
+
+  `,'narrow');
+
+}
+
+// ============================================================
+
+// TASK SCOPE TOGGLE — Мои / Все
+
+// ============================================================
+
+function setTaskScope(scope, el){
+
+  taskScope = scope;
+
+  document.querySelectorAll('.scope-btn').forEach(b=>b.classList.remove('active'));
+
+  if(el) el.classList.add('active');
+
+  renderTasks();
+
+  renderTaskStats();
+
+}
+
+function getVisibleTasks(){
+
+  if(!currentUser) return tasks;
+
+  if(taskScope==='all' || currentUser.role==='admin' || currentUser.canSeeAll) return tasks;
+
+  // Filter by current user's name
+
+  return tasks.filter(t => !t.assignee || t.assignee==='—' || t.assignee===currentUser.name);
+
+}
+
+// ============================================================
+
+// CONSTANTS
+
+// ============================================================
+
+const SVC_TYPES = [
+
+  'Сопровождение (полный цикл)',
+
+  'Сопровождение (внутри страны)',
+
+  'Продление ВНЖ','Суд','Гражданство','Права','Разовая услуга',
+
+];
+
+const SVC_COLORS = {
+
+  'Сопровождение (полный цикл)':'var(--acc)',
+
+  'Сопровождение (внутри страны)':'var(--tea)',
+
+  'Продление ВНЖ':'var(--yel)',
+
+  'Суд':'var(--pur)',
+
+  'Гражданство':'var(--ora)',
+
+  'Права':'var(--gre)',
+
+  'Разовая услуга':'var(--t3)',
+
+};
+
+const SUBSTAGES = {
+
+  'Сопровождение (полный цикл)':['Ожидание записи в консульство','Записан в консульство','Документы поданы в консульство','→ Отслеживание Виза D','Виза одобрена','Виза вклеена','Клиент в Португалии','Запись в AIMA получена','Документы в AIMA поданы','→ Отслеживание ВНЖ'],
+
+  'Сопровождение (внутри страны)':['Запись в AIMA получена','Документы поданы','→ Отслеживание ВНЖ'],
+
+  'Продление ВНЖ':['Документы собраны','Запись получена','Подача сделана','Статус проверяется','Апрув/Готово'],
+
+  'Суд':['Документы собраны','Подача в суд сделана','→ Отслеживание статуса','Результат'],
+
+  'Гражданство':['Документы собраны','Заявка подана','Трек-номер получен','→ Отслеживание гражданства'],
+
+  'Права':['Документы приняты','Права заверены','Заявка подана','Апрув получен','Запись сделана','Готово'],
+
+  'Разовая услуга':[],
+
+};
+
+const STAGE_TASKS = {
+
+  'Ожидание записи в консульство':['Проверить доступность слотов','Подготовить список документов'],
+
+  'Записан в консульство':['Подтвердить запись с клиентом','Подготовить пакет документов'],
+
+  'Документы поданы в консульство':['Проверить получение','Добавить в таблицу Виза D'],
+
+  'Виза одобрена':['Уведомить клиента','Организовать вклейку визы'],
+
+  'Клиент в Португалии':['Записать в AIMA','Подготовить документы AIMA'],
+
+  'Документы поданы':['Проверить получение','Добавить в таблицу ВНЖ'],
+
+  'Документы собраны':['Передать адвокату','Проверить комплектность'],
+
+  'Подача в суд сделана':['Получить квитанцию','Начать отслеживание'],
+
+  'Заявка подана':['Запросить трек-номер'],
+
+  'Трек-номер получен':['Занести в систему','Настроить отслеживание'],
+
+  'Документы приняты':['Проверить заверение'],
+
+  'Права заверены':['Подать заявку на обмен'],
+
+};
+
+const TEAM = ['Арина','Алина','Олег','Стефани','Паула','—'];
+
+const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+const SLOTS = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
+
+const AIMA_STATUSES = ['Анализ','Апрув','Печать','Дозапрос','Отказ','Завершено'];
+
+const VD_STATUSES = ['Записан','Подача сделана','Виза одобрена','Дозапрос','Отказ','Анализ','Рассматривается','Анализ Лиссабон','Лиссабон рассматривает','Есть в системе, записи нет'];
+
+const COURT_STAGES = ['Документы собраны','Подача в суд сделана','→ Отслеживание статуса','Результат получен'];
+
+const CIT_STAGES = ['Документы собраны','Заявка подана','Трек-номер получен','→ Отслеживание гражданства'];
+
+const RIGHTS_STAGES = ['Документы приняты','Права заверены','Заявка подана','Апрув получен','Запись сделана','Готово'];
+
+const COURT_STATUSES  = ['В процессе','Ожидание решения','Слушание назначено','Перенесено','Апелляция','Завершено','Условный','Штраф','Арест'];
+
+const CIT_STATUSES    = ['В обработке','Апрув','Отказ','Дозапрос','Завершено','Присяга назначена','Паспорт готов'];
+
+const RIGHTS_STATUSES = ['В обработке','Принято','Апрув','Отказ','Дозапрос','Завершено','Права выданы'];
+
+const KB_COLS = [
+
+  {id:'Новый клиент',label:'Новый клиент',color:'var(--acc)'},
+
+  {id:'Онбординг завершён',label:'Онбординг завершён',color:'var(--tea)'},
+
+  {id:'Активный',label:'Активный',color:'var(--gre)'},
+
+  {id:'Завершён',label:'Завершён',color:'var(--t3)'},
+
+];
+
+// ============================================================
+
+// LOCAL DATA (fallback when API unavailable)
+
+// ============================================================
+
+let clients = [
+
+  {id:'686695906',name:'Dmitrii Peshkov',tg:'@Peshkov_DV',phone:'89214101145',serviceType:'Сопровождение (полный цикл)',stage:'Активный',substage:'Ожидание записи в консульство',last:'2026-02-18',consulate:'09.03.2026',city:'Москва',onboard:[true,true,false]},
+
+  {id:'317375653',name:'Alex Filippov',tg:'@FeelWhy',phone:'351912983774',serviceType:'Сопровождение (внутри страны)',stage:'Активный',substage:'Запись в AIMA получена',last:'2026-02-06',consulate:'',city:'',onboard:[true,true,true]},
+
+  {id:'298813370',name:'Vladimir',tg:'@byFoxsmile',phone:'351929190179',serviceType:'Сопровождение (полный цикл)',stage:'Активный',substage:'Клиент в Португалии',last:'2026-02-18',consulate:'',city:'',onboard:[true,true,true]},
+
+  {id:'305687618',name:'Александр Дубков',tg:'@vokdub',phone:'323496580',serviceType:'Суд',stage:'Активный',substage:'Документы собраны',last:'2026-02-03',consulate:'25.11.2025',city:'Визеу',onboard:[true,true,true]},
+
+  {id:'497330118',name:'Надежда Д.',tg:'@minadeeen',phone:'',serviceType:'Сопровождение (полный цикл)',stage:'Активный',substage:'Документы поданы в консульство',last:'2026-01-28',consulate:'',city:'',onboard:[true,true,true]},
+
+  {id:'330739229',name:'Elena B',tg:'@elena_903b',phone:'',serviceType:'Сопровождение (полный цикл)',stage:'Активный',substage:'→ Отслеживание Виза D',last:'2026-02-09',consulate:'',city:'',onboard:[true,true,true]},
+
+  {id:'5652671788',name:'MigrAll Portugal',tg:'@MigrAllPT',phone:'926964093',serviceType:'',stage:'Новый клиент',substage:'',last:'2026-02-18',consulate:'',city:'',onboard:[false,false,false]},
+
+  {id:'310067905',name:'Alina',tg:'@alinateuvo',phone:'',serviceType:'Права',stage:'Активный',substage:'Документы приняты',last:'2025-12-03',consulate:'',city:'',onboard:[true,true,true]},
+
+  {id:'323305057',name:'Pavel Dyagilev',tg:'@Pdyagilev',phone:'',serviceType:'Сопровождение (полный цикл)',stage:'Онбординг завершён',substage:'',last:'2025-11-19',consulate:'',city:'',onboard:[true,true,false]},
+
+  {id:'959731329',name:'marspr1v3t',tg:'@marsprivet',phone:'',serviceType:'Сопровождение (полный цикл)',stage:'Активный',substage:'Документы поданы в консульство',last:'2026-02-06',consulate:'',city:'',onboard:[true,true,true]},
+
+];
+
+let statuses = [
+
+  {num:'385',name:'TIMUR VALEEV',nipc:'5370563',dob:'15/10/1991',pass:'75 8187317',status:'Печать',date:'09/02/2026',sec:'ОБЩИЕ'},
+
+  {num:'808',name:'GALINA RODZIONOVA',nipc:'5691535',dob:'',pass:'',status:'Апрув',date:'30/01/2026',sec:'ОБЩИЕ'},
+
+  {num:'328',name:'PETR EGOROV',nipc:'6244911',dob:'23/12/2003',pass:'',status:'Анализ',date:'27/01/2026',sec:'ОБЩИЕ'},
+
+  {num:'248',name:'ALEKSEI ARTAMONOV',nipc:'6714018',dob:'29/02/1984',pass:'',status:'Анализ',date:'27/01/2026',sec:'ОБЩИЕ'},
+
+  {num:'438',name:'VIACHESLAV PEROV',nipc:'7042547',dob:'18/01/1985',pass:'',status:'Анализ',date:'27/01/2026',sec:'ОБЩИЕ'},
+
+  {num:'366',name:'ALISA GREBENSHCHIKOVA',nipc:'6876032',dob:'12/06/1978',pass:'',status:'Анализ',date:'27/01/2026',sec:'ОБЩИЕ'},
+
+  {num:'412',name:'IULIIA BEBNEVA',nipc:'6704257',dob:'05/10/1988',pass:'76 7206171',status:'Анализ',date:'27/01/2026',sec:'ОБЩИЕ'},
+
+  {num:'634',name:'ALEKSANDR BANNIKOV',nipc:'6738644',dob:'24/11/1989',pass:'',status:'Апрув',date:'09/02/2026',sec:'ОБЩИЕ'},
+
+  {num:'352',name:'PETR BARANNIKOV',nipc:'5768617',dob:'12/05/1981',pass:'',status:'Анализ',date:'09/02/2026',sec:'ОБЩИЕ'},
+
+  {num:'326',name:'ZLATA LAUD',nipc:'6738794',dob:'05/05/1990',pass:'774436316',status:'Анализ',date:'02/02/2026',sec:'ОБЩИЕ'},
+
+  {num:'492',name:'ALEKSANDR DUBKOV',nipc:'6990534',dob:'25/07/1997',pass:'75 9304459',status:'Анализ',date:'09/02/2026',sec:'ОБЩИЕ'},
+
+  {num:'770',name:'SIARHEI DZEMIKHAU',nipc:'MI 4993389274',dob:'08/07/1995',pass:'MC3274835',status:'Анализ',date:'04/02/2026',sec:'МАНИФЕСТ'},
+
+  {num:'653',name:'ANASTASIIA MURASHOVA',nipc:'MI: 4935931915',dob:'19/01/1995',pass:'55 1904015',status:'Анализ',date:'29/01/2026',sec:'МАНИФЕСТ'},
+
+  {num:'313',name:'EVGENIIA KONDRUSEVA',nipc:'MI: 763111225',dob:'05/05/1983',pass:'',status:'Анализ',date:'27/01/2026',sec:'МАНИФЕСТ'},
+
+];
+
+let visaD = [
+
+  {num:'585',name:'MARINA TASHCHILINA',type:'DN',dob:'24/12/1988',pass:'76 2330746',status:'Виза одобрена',date:'',updated:'',city:'Москва',comment:'Ребенок должен родиться'},
+
+  {num:'210',name:'VASILISA NICHIPOR',type:'DN',dob:'',pass:'',status:'Виза одобрена',date:'',updated:'',city:'Москва',comment:''},
+
+  {num:'654',name:'ILIA ORLOV',type:'D7',dob:'02/10/1977',pass:'',status:'Виза одобрена',date:'',updated:'',city:'Москва',comment:''},
+
+  {num:'376',name:'ELENA BONIUKHOVA',type:'DN',dob:'02/04/1992',pass:'765661132',status:'Дозапрос',date:'',updated:'',city:'Москва',comment:''},
+
+  {num:'472',name:'KONSTANTIN SMIRNOV',type:'DN',dob:'12/06/1978',pass:'',status:'Анализ Лиссабон',date:'12/09/2025',updated:'',city:'Лиссабон',comment:''},
+
+  {num:'580',name:'TATIANA TIMOSHENKO',type:'DN',dob:'07/08/1980',pass:'',status:'Лиссабон рассматривает',date:'25/11/2025',updated:'',city:'Лиссабон',comment:''},
+
+  {num:'419',name:'ANDREY SHIRIAEV',type:'DN',dob:'03/02/1992',pass:'55 1408779',status:'Есть в системе, записи нет',date:'15/01/2026',updated:'',city:'',comment:''},
+
+  {num:'839',name:'DANIL ZHILIAEV',type:'D3',dob:'',pass:'',status:'Подача 02/02',date:'02/02/2026',updated:'',city:'Барселона',comment:''},
+
+  {num:'392',name:'DMITRII PESHKOV',type:'D7',dob:'',pass:'',status:'Запись 09/03',date:'09/03/2026',updated:'',city:'Москва',comment:''},
+
+  {num:'742',name:'EVGENII VLASOV',type:'DN',dob:'',pass:'',status:'Подача 02/03',date:'02/03/2026',updated:'',city:'Москва',comment:''},
+
+  {num:'413',name:'VLADA DANILINA',type:'DN',dob:'',pass:'',status:'Подача 23/01',date:'23/01/2026',updated:'',city:'Coimbra',comment:'Олег отправил на перевод + нужен NISS'},
+
+];
+
+let courts = [
+
+  {num:'100',name:'LILIA KOZLOVA',article:'98.2',date:'11/02/2026',place:'Braga',stage:'Документы собраны',status:'В процессе',updated:'',comment:'не в браке! Доки → адвокату. Сделать NISS'},
+
+  {num:'559',name:'AYK EMINYAN',article:'90.2',date:'19/02/2026',place:'Espinho',stage:'Документы собраны',status:'В процессе',updated:'',comment:'App file отправили клиенту'},
+
+  {num:'338',name:'VLADIMIR GENGURIAN',article:'90.2',date:'19/02/2026',place:'Aveiro',stage:'Документы собраны',status:'В процессе',updated:'',comment:'ждем декларацию с работы'},
+
+  {num:'118',name:'DARIA MANAEVA',article:'98.2',date:'19/02/2026',place:'Lisboa',stage:'Документы собраны',status:'В процессе',updated:'',comment:'По порталу. Документы → Пауле'},
+
+  {num:'456',name:'MARINA ANISIMOVA',article:'15',date:'19/02/2026',place:'Viseu',stage:'Документы собраны',status:'В процессе',updated:'',comment:'App file → клиенту'},
+
+  {num:'591',name:'OLHA LYSENKO',article:'90.2',date:'26/02/2026',place:'Lisboa I',stage:'Документы собраны',status:'В процессе',updated:'',comment:'Отдать Арине'},
+
+  {num:'438',name:'VIACHESLAV PEROV',article:'90.2',date:'19/01/2026',place:'AIMA Porto',stage:'Подача в суд сделана',status:'Ожидание решения',updated:'',comment:'опечатка в фамилии PERON'},
+
+  {num:'308',name:'KIRILL RASSKAZOV',article:'98.2',date:'26/01/2026',place:'AIMA VILA REAL',stage:'Подача в суд сделана',status:'Ожидание решения',updated:'',comment:''},
+
+  {num:'541',name:'ELENA SHILEIN',article:'91',date:'20/01/2026',place:'Lisboa II',stage:'→ Отслеживание статуса',status:'Рассматривается',updated:'',comment:'нужен NISS??'},
+
+  {num:'329',name:'PETR EGOROV',article:'90.2',date:'16/12/2025',place:'Guarda',stage:'→ Отслеживание статуса',status:'Рассматривается',updated:'',comment:''},
+
+  {num:'549',name:'VIKTORIIA BELIAEVA',article:'90.2',date:'17/12/2025',place:'Aveiro',stage:'Подача в суд сделана',status:'Ожидание решения',updated:'',comment:''},
+
+];
+
+let citizenship = [];
+
+let rights = [];
+
+let meetings = [
+
+  {date:'13.02.2026',time:'10:00',name:'Ольга Ковальская',tg:'@okovalskaya',status:'Подтверждено',meet:'https://meet.google.com/yjh-strx-wio'},
+
+  {date:'13.02.2026',time:'12:00',name:'Marina Tashchilina',tg:'@marina_universe',status:'Подтверждено',meet:'https://meet.google.com/gwd-drft-pnz'},
+
+  {date:'16.02.2026',time:'16:00',name:'Ольга Смирнова',tg:'@alekssachh',status:'Ожидает подтверждения',meet:''},
+
+  {date:'18.02.2026',time:'10:00',name:'Марина',tg:'@marina_interior_kz',status:'Подтверждено',meet:'https://meet.google.com/tny-ttuj-wcu'},
+
+  {date:'18.02.2026',time:'16:00',name:'Elvira Shaykhulova',tg:'@elvirash',status:'Подтверждено',meet:'https://meet.google.com/oqe-uypa-fuf'},
+
+  {date:'19.02.2026',time:'11:00',name:'Черешнев Александр',tg:'@oxotnick85',status:'Подтверждено',meet:''},
+
+  {date:'19.02.2026',time:'14:00',name:'Савелий Клименков',tg:'@OGSaveliy',status:'Ожидает подтверждения',meet:''},
+
+  {date:'20.02.2026',time:'10:00',name:'Степаненко Юрий',tg:'@A320_Captain',status:'Подтверждено',meet:''},
+
+  {date:'25.02.2026',time:'10:00',name:'Власов Евгений',tg:'@evgnv',status:'Подтверждено',meet:''},
+
+];
+
+const CAL_EVENTS = {
+
+  '2026-02-13':[{type:'meet',label:'10:00 Ковальская',detail:'Ольга Ковальская · @okovalskaya',time:'10:00'}],
+
+  '2026-02-18':[{type:'meet',label:'10:00 Марина',detail:'Марина · консультация',time:'10:00'},{type:'meet',label:'16:00 Shaykhulova',detail:'Elvira Shaykhulova',time:'16:00'}],
+
+  '2026-02-19':[{type:'meet',label:'11:00 Черешнев',detail:'Черешнев Александр',time:'11:00'},{type:'court',label:'Суды: Eminyan, Gengurian',detail:'90.2, 98.2 · Espinho/Aveiro',time:''}],
+
+  '2026-02-20':[{type:'meet',label:'10:00 Степаненко',detail:'Степаненко Юрий',time:'10:00'}],
+
+  '2026-02-26':[{type:'court',label:'Суд: Lysenko 90.2',detail:'OLHA LYSENKO · Lisboa I',time:'14:30'}],
+
+};
+
+let tasks = [
+
+  {id:'t001',text:'541 — письмо для записи по 91 статье',client:'541',assignee:'Алина',prio:'high',stage:'todo',due:'2026-02-20',created:'2026-02-18',cmts:[{a:'Арина',d:'18.02.2026',t:'Написать про магистратуру'}]},
+
+  {id:'t002',text:'793 — письмо в AIMA на отца',client:'793',assignee:'Олег',prio:'high',stage:'todo',due:'2026-02-19',created:'2026-02-18',cmts:[]},
+
+  {id:'t003',text:'770 — декларация на лендлорда',client:'770',assignee:'Алина',prio:'mid',stage:'todo',due:'2026-02-21',created:'2026-02-17',cmts:[]},
+
+  {id:'t004',text:'438 — NISS Finan оформление',client:'438',assignee:'Алина',prio:'mid',stage:'todo',due:'2026-02-25',created:'2026-02-17',cmts:[]},
+
+  {id:'t005',text:'545 — апелляция → отправить Пауле',client:'545',assignee:'Олег',prio:'high',stage:'inprogress',due:'2026-02-18',created:'2026-02-15',cmts:[{a:'Олег',d:'17.02.2026',t:'Подготовил черновик, нужна проверка'}]},
+
+  {id:'t006',text:'689 — декларация Пауле отправить',client:'689',assignee:'Арина',prio:'high',stage:'inprogress',due:'2026-02-18',created:'2026-02-16',cmts:[]},
+
+  {id:'t007',text:'793 — суд (90.2) подача',client:'793',assignee:'Олег',prio:'high',stage:'inprogress',due:'2026-02-19',created:'2026-02-16',cmts:[]},
+
+  {id:'t008',text:'549 — NISS оформление',client:'549',assignee:'Алина',prio:'mid',stage:'inprogress',due:'2026-02-22',created:'2026-02-14',cmts:[]},
+
+  {id:'t009',text:'770 — добавить в список подач',client:'770',assignee:'Алина',prio:'low',stage:'done',due:'2026-02-15',created:'2026-02-10',cmts:[]},
+
+  {id:'t010',text:'793 — рабочий контракт готов',client:'793',assignee:'Олег',prio:'low',stage:'done',due:'2026-02-14',created:'2026-02-10',cmts:[]},
+
+];
+
+// ============================================================
+
+// HELPERS
+
+// ============================================================
+
+function g(id){return document.getElementById(id)}
+
+function uid(){return 't'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
+
+function today(){return new Date().toISOString().split('T')[0]}
+
+function nowDMY(){const d=new Date();return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`}
+
+function parseDMY(s){if(!s)return new Date(0);const p=s.split('/');if(p.length===3)return new Date(+p[2],+p[1]-1,+p[0]);if(s.includes('.')){const p2=s.split('.');return new Date(+p2[2],+p2[1]-1,+p2[0]);}return new Date(s);}
+
+function badgeClass(s){
+
+  const map={
+
+    'Апрув':'gre','Виза одобрена':'gre','Готово':'gre','Результат получен':'gre','Апрув получен':'gre','Подтверждено':'gre','Завершено':'gre',
+
+    'Анализ':'yel','В процессе':'yel','Ожидание решения':'yel','Рассматривается':'yel','Лиссабон рассматривает':'yel','Статус проверяется':'yel','Подача дата':'yel',
+
+    'Печать':'pur','→':'pur','Трек-номер получен':'pur',
+
+    'Дозапрос':'ora','Ожидает подтверждения':'ora','Есть в системе':'ora',
+
+    'Отказ':'red',
+
+    'Новый клиент':'blu','Онбординг завершён':'tea','Активный':'gre','Завершён':'gry',
+
+  };
+
+  if(!s)return 'gry';
+
+  const k=Object.keys(map).find(k=>s.includes(k));
+
+  return k?map[k]:'gry';
+
+}
+
+function bdg(s,extra=''){return `<span class="bdg ${badgeClass(s)} ${extra}">${s||'—'}</span>`;}
+
+function svcBdg(svc){
+
+  const c=SVC_COLORS[svc]||'var(--t3)';
+
+  return svc?`<span class="bdg" style="background:color-mix(in srgb,${c} 12%,white);color:${c};border:1px solid color-mix(in srgb,${c} 25%,white)">${svc}</span>`:'<span class="bdg gry">—</span>';
+
+}
+
+function fmtDate(d){return d||'—'}
+
+function showLoading(on){
+
+  const el=g('loading-bar');
+
+  if(on){el.style.width='0';el.style.transition='none';setTimeout(()=>{el.style.transition='width .8s';el.style.width='70%';},10);}
+
+  else{el.style.width='100%';setTimeout(()=>{el.style.width='0';el.style.transition='none';},400);}
+
+}
+
+// ============================================================
+
+// MOBILE SIDEBAR
+
+// ============================================================
+
+function openSb(){g('sidebar').classList.add('open');g('sb-overlay').classList.add('open');}
+
+function closeSb(){g('sidebar').classList.remove('open');g('sb-overlay').classList.remove('open');}
+
+// ============================================================
+
+// NAVIGATION
+
+// ============================================================
+
+const VIEW_TITLES = {dashboard:'Дашборд',clients:'Клиенты',kanban:'Kanban Pipeline',aima:'Проверки AIMA',visad:'Виза D',courts:'Суды',citizenship:'Гражданство',rights:'Водительские права',schedule:'Расписание встреч',calendar:'Командный календарь',tasks:'Задачи',integration:'API / Интеграции'};
+
+function showView(id,el){
+
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+
+  g('view-'+id).classList.add('active');
+
+  if(el){el.classList.add('active');}else{document.querySelectorAll('.ni').forEach(n=>{if(n.onclick&&n.onclick.toString().includes("'"+id+"'"))n.classList.add('active');});}
+
+  g('pg-title').textContent=VIEW_TITLES[id]||id;
+
+  closeSb();
+
+  if(id==='calendar')renderCal();
+
+  if(id==='schedule'){renderSchedMini();renderMeetings(meetings);}
+
+}
+
+function handleSearch(q){
+
+  if(!q.trim()){renderClients(clients);return;}
+
+  const f=q.toLowerCase();
+
+  const res=clients.filter(c=>c.name.toLowerCase().includes(f)||c.tg.toLowerCase().includes(f)||c.id.includes(q));
+
+  renderClients(res);
+
+  showView('clients');
+
+}
+
+// ============================================================
+
+// SYNC
+
+// ============================================================
+
+async function doSync(){
+
+  const ic=g('sync-spin');
+
+  let ang=0;const iv=setInterval(()=>{ic.style.transform=`rotate(${ang+=20}deg)`;},40);
+
+  showLoading(true);
+
+  
+
+  const results = await Promise.all([
+
+    apiFetch('/clients'),
+
+    apiFetch('/statuses'),
+
+    apiFetch('/courts'),
+
+    apiFetch('/schedule'),
+
+    apiFetch('/visad'),
+
+    apiFetch('/citizenship'),
+
+    apiFetch('/rights'),
+
+  ]);
+
+  
+
+  API_ONLINE = results.some(r=>r!==null);
+
+  if(results[0])clients=results[0];
+
+  if(results[1])statuses=results[1];
+
+  if(results[2])courts=results[2];
+
+  if(results[3])meetings=results[3];
+
+  if(results[4])visaD=results[4];
+
+  if(results[5])citizenship=results[5];
+
+  if(results[6])rights=results[6];
+
+  
+
+  clearInterval(iv);ic.style.transform='';
+
+  showLoading(false);
+
+  
+
+  const dot=g('api-dot');const txt=g('api-status-txt');
+
+  if(API_ONLINE){dot.className='api-dot';txt.textContent='Подключено · '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});}
+
+  else{dot.className='api-dot warn';txt.textContent='API недоступен — локальные данные';}
+
+  
+
+  renderAll();
+
+  updateIntStatus(API_ONLINE);
+
+}
+
+function updateIntStatus(ok){
+
+  ['crm','aima','courts','sched','subs'].forEach(k=>{
+
+    const d=g('ds-'+k+'-dot');const t=g('ds-'+k+'-txt');
+
+    if(d)d.className='api-dot '+(ok?'ok':'w');
+
+    if(t)t.textContent=ok?'Подключено':'Использует локальные данные';
+
+  });
+
+}
+
+// ============================================================
+
+// DASHBOARD
+
+// ============================================================
+
+let taskPeriod='day';
+
+function setTaskPeriod(p,el){
+
+  taskPeriod=p;
+
+  document.querySelectorAll('.ts-fc').forEach(c=>c.classList.remove('active'));
+
+  el.classList.add('active');
+
+  renderTaskStats();
+
+}
+
+function renderTaskStats(){
+
+  const now=new Date();let start;
+
+  if(taskPeriod==='day'){start=new Date(now.getFullYear(),now.getMonth(),now.getDate());}
+
+  else if(taskPeriod==='week'){const d=new Date(now);d.setDate(d.getDate()-d.getDay()+1);d.setHours(0,0,0,0);start=d;}
+
+  else if(taskPeriod==='month'){start=new Date(now.getFullYear(),now.getMonth(),1);}
+
+  else{start=new Date(0);}
+
+  
+
+  const inRange=getVisibleTasks().filter(t=>{if(!t.created)return true;return new Date(t.created)>=start;});
+
+  const tot=inRange.length;
+
+  const prog=inRange.filter(t=>t.stage==='inprogress').length;
+
+  const done=inRange.filter(t=>t.stage==='done').length;
+
+  const over=inRange.filter(t=>t.stage!=='done'&&t.due&&new Date(t.due)<now).length;
+
+  
+
+  g('ts-tot').textContent=tot;g('ts-prog').textContent=prog;g('ts-done').textContent=done;g('ts-over').textContent=over;
+
+  g('bdg-tasks').textContent=tasks.filter(t=>t.stage!=='done').length;
+
+}
+
+function renderDash(){
+
+  // KPI
+
+  g('kpi-total').textContent=clients.length;
+
+  g('kpi-review').textContent=statuses.filter(s=>s.status==='Анализ').length;
+
+  g('kpi-approved').textContent=statuses.filter(s=>s.status==='Апрув').length;
+
+  const todayStr=new Date().toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'.');
+
+  const todayMeets=meetings.filter(m=>m.date===todayStr);
+
+  g('kpi-meets').textContent=todayMeets.length;
+
+  g('kpi-meets-s').textContent=todayStr;
+
+  g('bdg-aima').textContent=statuses.length;
+
+  
+
+  // Update scope based on current user
+
+  const myTasks=getVisibleTasks();
+
+  const openMyTasks=myTasks.filter(t=>t.stage!=='done');
+
+  g('bdg-tasks').textContent=openMyTasks.length;
+
+  
+
+  // Meets
+
+  const upcoming=meetings.filter(m=>parseDMY(m.date)>=new Date(new Date().setHours(0,0,0,0))).slice(0,5);
+
+  g('dash-meets').innerHTML=upcoming.map(m=>`<div class="meet-row"><div class="meet-t">${m.date} · ${m.time}</div><div class="meet-n">${m.name}</div>${bdg(m.status)}</div>`).join('')||'<div class="cal-empty">Нет предстоящих встреч</div>';
+
+  
+
+  // AIMA oldest
+
+  const aimaSorted=[...statuses].sort((a,b)=>parseDMY(a.date)-parseDMY(b.date));
+
+  g('dash-aima').innerHTML=aimaSorted.slice(0,5).map(s=>`<div class="stat-row"><div class="stat-num">${s.num}</div><div class="stat-name">${s.name}</div><div class="stat-date">${s.date}</div>${bdg(s.status)}</div>`).join('');
+
+  
+
+  // My tasks panel
+
+  const myOpenTasks=getVisibleTasks().filter(t=>t.stage!=='done');
+
+  const titleEl=g('dash-my-tasks-title');
+
+  const cntEl=g('dash-my-tasks-cnt');
+
+  if(titleEl) titleEl.textContent=currentUser?(currentUser.role==='admin'||currentUser.canSeeAll?'Все открытые задачи':'Мои открытые задачи'):'Открытые задачи';
+
+  if(cntEl) cntEl.textContent=myOpenTasks.length;
+
+  g('dash-my-tasks').innerHTML=myOpenTasks.slice(0,6).map(t=>`
+
+    <div class="stat-row" onclick="showView('tasks',null)" style="cursor:pointer">
+
+      <div class="pdot ${t.prio}" style="width:7px;height:7px;flex-shrink:0"></div>
+
+      <div class="stat-name">${t.text}</div>
+
+      <div class="stat-date">${t.due||'—'}</div>
+
+      ${bdg(t.stage==='todo'?'К выполнению':t.stage==='inprogress'?'В процессе':'Выполнено')}
+
+    </div>`).join('')||'<div class="cal-empty">Нет открытых задач 🎉</div>';
+
+  // Courts oldest
+
+  const courtsSorted=[...courts].sort((a,b)=>parseDMY(a.date)-parseDMY(b.date));
+
+  g('dash-courts').innerHTML=courtsSorted.slice(0,5).map(c=>`<div class="stat-row"><div class="stat-num" style="color:var(--pur)">${c.num}</div><div class="stat-name">${c.name}</div><div class="stat-date">${c.date}</div><span class="bdg pur">${c.article}</span></div>`).join('')||'<div class="cal-empty">Нет данных</div>';
+
+  
+
+  // Citizenship
+
+  g('dash-cit').innerHTML=citizenship.length?citizenship.slice(0,4).map(c=>`<div class="stat-row"><div class="stat-num" style="color:var(--ora)">${c.num}</div><div class="stat-name">${c.name}</div>${bdg(c.status)}</div>`).join(''):'<div class="cal-empty">Нет данных</div>';
+
+  
+
+  // Rights  
+
+  g('dash-rights').innerHTML=rights.length?rights.slice(0,4).map(r=>`<div class="stat-row"><div class="stat-num" style="color:var(--gre)">${r.num}</div><div class="stat-name">${r.name}</div>${bdg(r.status)}</div>`).join(''):'<div class="cal-empty">Нет данных</div>';
+
+  
+
+  renderTaskStats();
+
+}
+
+// ============================================================
+
+// CLIENTS
+
+// ============================================================
+
+function renderClients(data){
+
+  g('clients-tbody').innerHTML=(data||clients).map(c=>`
+
+    <tr onclick="openClientModal('${c.id}')">
+
+      <td class="mono" style="color:var(--acc)">${c.id}</td>
+
+      <td style="font-weight:600">${c.name}</td>
+
+      <td class="mono" style="color:var(--acc)">${c.tg}</td>
+
+      <td>${svcBdg(c.serviceType)}</td>
+
+      <td>${bdg(c.stage)}</td>
+
+      <td style="font-size:10.5px;color:var(--t2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.substage||'—'}</td>
+
+      <td class="mono" style="color:var(--t3)">${c.last||'—'}</td>
+
+    </tr>`).join('');
+
+}
+
+// ============================================================
+
+// KANBAN
+
+// ============================================================
+
+let kbFilter='all';
+
+function initKbChips(){
+
+  const labels={'all':'Все','Сопровождение (полный цикл)':'Полный цикл','Сопровождение (внутри страны)':'Внутри страны','Продление ВНЖ':'Продление','Суд':'Суд','Гражданство':'Гражданство','Права':'Права','Разовая услуга':'Разовая'};
+
+  g('kb-chips').innerHTML=['all',...SVC_TYPES].map(s=>`<div class="chip ${s==='all'?'active':''}" onclick="setKbFilter('${s}',this)">${labels[s]||s}</div>`).join('');
+
+}
+
+function setKbFilter(f,el){kbFilter=f;document.querySelectorAll('#kb-chips .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderKanban();}
+
+function renderKanban(){
+
+  const data=kbFilter==='all'?clients:clients.filter(c=>c.serviceType===kbFilter);
+
+  g('kb-board').innerHTML=KB_COLS.map(col=>{
+
+    const cards=data.filter(c=>c.stage===col.id);
+
+    return`<div class="kb-col">
+
+      <div class="kb-hdr"><div class="kb-dot" style="background:${col.color}"></div><div class="kb-lbl" style="color:${col.color}">${col.label}</div><div class="kb-cnt">${cards.length}</div></div>
+
+      <div class="kb-cards">${cards.map(c=>renderKCard(c)).join('')}</div>
+
+      <div class="kb-add" onclick="openAddClientModal('${col.id}')">+ добавить клиента</div>
+
+    </div>`;
+
+  }).join('');
+
+}
+
+function renderKCard(c){
+
+  const openTasks=tasks.filter(t=>t.client===c.id&&t.stage!=='done').length;
+
+  const sc=SVC_COLORS[c.serviceType]||'var(--t3)';
+
+  return`<div class="kcard" onclick="openClientModal('${c.id}')">
+
+    <div class="kcard-id">${c.id}</div>
+
+    <div class="kcard-name">${c.name}</div>
+
+    ${c.serviceType?`<div class="kcard-svc" style="color:${sc}">${c.serviceType}</div>`:''}
+
+    ${c.substage?`<div class="kcard-sub">${c.substage}</div>`:''}
+
+    ${c.stage==='Новый клиент'?`<div style="font-size:8.5px;color:var(--t3);margin-top:2px">Онбординг: ${(c.onboard||[]).filter(Boolean).length}/3</div>`:''}
+
+    <div class="kcard-ft">
+
+      <div class="kcard-tg">${c.tg}</div>
+
+      ${openTasks>0?`<span class="bdg ora">${openTasks} задач</span>`:''}
+
+    </div>
+
+  </div>`;
+
+}
+
+// ============================================================
+
+// CLIENT MODAL
+
+// ============================================================
+
+function openClientModal(cid){
+
+  const c=clients.find(x=>x.id===cid);if(!c)return;
+
+  const subs=SUBSTAGES[c.serviceType]||[];
+
+  const obl=['Отправить бриф','Присвоить номер клиента','Отправить чеклист документов'];
+
+  const ctasks=tasks.filter(t=>t.client===cid);
+
+  openModal(`
+
+    <div class="mhdr">
+
+      <div>
+
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)">ID: ${c.id}</div>
+
+        <div style="font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;margin-top:2px">${c.name}</div>
+
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${svcBdg(c.serviceType)} ${bdg(c.stage)}</div>
+
+      </div>
+
+      <button class="mcls" onclick="closeModal()">✕</button>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><span class="mfl">Telegram</span><div style="color:var(--acc);font-size:12px;font-weight:600">${c.tg}</div></div>
+
+      <div class="mf"><span class="mfl">Телефон</span><div class="mono" style="font-size:11px">${c.phone||'—'}</div></div>
+
+      <div class="mf"><span class="mfl">Подача конс.</span><div style="color:var(--yel);font-size:11px;font-weight:600">${c.consulate||'—'}</div></div>
+
+      <div class="mf"><span class="mfl">Город</span><div style="font-size:11px">${c.city||'—'}</div></div>
+
+    </div>
+
+    <hr class="mdiv">
+
+    
+
+    ${c.stage==='Новый клиент'?`
+
+    <div class="msec">
+
+      <div class="msl">Онбординг-чеклист</div>
+
+      <div class="ob-list">
+
+        ${obl.map((it,i)=>`<div class="ob-item ${(c.onboard||[])[i]?'done':''}" id="obi-${i}">
+
+          <input type="checkbox" ${(c.onboard||[])[i]?'checked':''} onchange="toggleOnboard('${cid}',${i},this.checked)" id="obcb-${i}">
+
+          <label for="obcb-${i}">${it}</label>
+
+        </div>`).join('')}
+
+      </div>
+
+      <button class="btn btn-p btn-sm" style="margin-top:8px" onclick="doActivateClient('${cid}')">Перевести в Активный →</button>
+
+    </div>`:''}
+
+    
+
+    ${c.stage==='Активный'&&subs.length>0?`
+
+    <div class="msec">
+
+      <div class="msl">Этапы — ${c.serviceType}</div>
+
+      <div class="pipe-steps">
+
+        ${subs.map((s,i)=>{
+
+          const idx=subs.indexOf(c.substage);
+
+          const cls=c.substage===s?'active':idx>i?'done':'';
+
+          return`<div class="ps-b ${cls}" onclick="setSubstage('${cid}','${s}')">${s}</div>${i<subs.length-1?'<span class="ps-arr">›</span>':''}`;
+
+        }).join('')}
+
+      </div>
+
+    </div>`:''}
+
+    
+
+    <div class="msec">
+
+      <div class="msl" style="display:flex;align-items:center;justify-content:space-between">
+
+        <span>Задачи (${ctasks.length})</span>
+
+        <button class="btn btn-g btn-xs" onclick="closeModal();openAddTaskModal('todo','${cid}')">+ задача</button>
+
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:4px;max-height:120px;overflow-y:auto">
+
+        ${ctasks.map(t=>`<div style="background:var(--s2);border-radius:5px;padding:6px 9px;border-left:3px solid ${t.prio==='high'?'var(--red)':t.prio==='mid'?'var(--yel)':'var(--t4)'}">
+
+          <div style="font-size:10px;font-weight:500">${t.text}</div>
+
+          <div style="font-size:8.5px;color:var(--t3);margin-top:2px">${bdg(t.stage)} · ${t.assignee||'—'} · ${t.due||'—'}</div>
+
+        </div>`).join('')}
+
+        ${ctasks.length===0?'<div style="color:var(--t3);font-size:10px;padding:4px">Нет задач</div>':''}
+
+      </div>
+
+    </div>
+
+    
+
+    <div class="msec">
+
+      <div class="msl">Изменить этап воронки</div>
+
+      <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+
+        <select class="ms" id="cs-stage" style="max-width:200px">
+
+          ${KB_COLS.map(k=>`<option value="${k.id}" ${c.stage===k.id?'selected':''}>${k.label}</option>`).join('')}
+
+        </select>
+
+        <button class="btn btn-p btn-sm" onclick="applyClientStage('${cid}')">Применить</button>
+
+      </div>
+
+    </div>
+
+  `,'wide');
+
+}
+
+function toggleOnboard(cid,i,v){
+
+  const c=clients.find(x=>x.id===cid);if(!c)return;
+
+  if(!c.onboard)c.onboard=[false,false,false];
+
+  c.onboard[i]=v;
+
+  const el=g('obi-'+i);if(el)el.className='ob-item'+(v?' done':'');
+
+}
+
+function doActivateClient(cid){
+
+  closeModal();
+
+  openModal(`
+
+    <div class="mhdr">
+
+      <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700">Тип услуги</div>
+
+      <button class="mcls" onclick="closeModal()">✕</button>
+
+    </div>
+
+    <div class="msec">
+
+      <label class="mfl">Выберите тип услуги *</label>
+
+      <select class="ms" id="act-svc" onchange="toggleCustomSvcInput(this.value)">
+
+        ${SVC_TYPES.map(s=>`<option>${s}</option>`).join('')}
+
+        <option value="__custom__">Ввести вручную...</option>
+
+      </select>
+
+    </div>
+
+    <div id="custom-svc-wrap" style="display:none;margin-top:8px">
+
+      <label class="mfl">Название услуги</label>
+
+      <input class="mi" id="custom-svc-name" placeholder="Введите название услуги">
+
+    </div>
+
+    <div class="mft">
+
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+
+      <button class="btn btn-p" onclick="confirmActivate('${cid}')">Активировать →</button>
+
+    </div>`,'narrow');
+
+}
+
+function toggleCustomSvcInput(v){g('custom-svc-wrap').style.display=v==='__custom__'?'block':'none';}
+
+async function confirmActivate(cid){
+
+  const c=clients.find(x=>x.id===cid);if(!c)return;
+
+  let type=g('act-svc').value;
+
+  if(type==='__custom__')type=g('custom-svc-name').value||'Разовая услуга';
+
+  c.serviceType=type;c.stage='Активный';c.last=today();
+
+  const subs=SUBSTAGES[type]||[];c.substage=subs[0]||'';
+
+  if(c.substage&&STAGE_TASKS[c.substage]){
+
+    STAGE_TASKS[c.substage].forEach(txt=>tasks.unshift({id:uid(),text:txt,client:cid,assignee:'',prio:'mid',stage:'todo',due:'',created:today(),cmts:[]}));
+
+  }
+
+  closeModal();renderAll();
+
+  await apiPut('/clients/'+cid, c);
+
+}
+
+async function applyClientStage(cid){
+
+  const c=clients.find(x=>x.id===cid);if(!c)return;
+
+  c.stage=g('cs-stage').value;c.last=today();
+
+  closeModal();renderKanban();renderClients();
+
+  await apiPut('/clients/'+cid, c);
+
+}
+
+async function setSubstage(cid,sub){
+
+  const c=clients.find(x=>x.id===cid);if(!c)return;
+
+  c.substage=sub;c.last=today();
+
+  if(STAGE_TASKS[sub]){
+
+    STAGE_TASKS[sub].forEach(txt=>{if(!tasks.find(t=>t.client===cid&&t.text===txt))tasks.unshift({id:uid(),text:txt,client:cid,assignee:'',prio:'mid',stage:'todo',due:'',created:today(),cmts:[]});});
+
+  }
+
+  closeModal();openClientModal(cid);renderKanban();renderTasks();renderTaskStats();
+
+  await apiPut('/clients/'+cid, c);
+
+}
+
+function openAddClientModal(stg='Новый клиент'){
+
+  openModal(`
+
+    <div class="mhdr">
+
+      <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700">Добавить клиента</div>
+
+      <button class="mcls" onclick="closeModal()">✕</button>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">ID / Telegram ID</label><input class="mi" id="nc-id" placeholder="123456789"></div>
+
+      <div class="mf"><label class="mfl">Имя *</label><input class="mi" id="nc-name"></div>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">Telegram</label><input class="mi" id="nc-tg" placeholder="@username"></div>
+
+      <div class="mf"><label class="mfl">Телефон</label><input class="mi" id="nc-phone"></div>
+
+    </div>
+
+    <div class="mft">
+
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+
+      <button class="btn btn-p" onclick="createClient('${stg}')">Добавить</button>
+
+    </div>`,'narrow');
+
+}
+
+async function createClient(stage){
+
+  const name=g('nc-name').value.trim();if(!name)return;
+
+  const c={id:g('nc-id').value||String(Date.now()),name,tg:g('nc-tg').value||'',phone:g('nc-phone').value||'',serviceType:'',stage,substage:'',last:today(),consulate:'',city:'',onboard:[false,false,false]};
+
+  clients.unshift(c);
+
+  closeModal();renderKanban();renderClients();renderDash();
+
+  await apiPost('/clients', c);
+
+}
+
+// ============================================================
+
+// STATUS EDIT HELPER (shared logic: date auto-update)
+
+// ============================================================
+
+function autoUpdatedDate(){return nowDMY();}
+
+// ════════════════════════════════════════════════════════════
+
+// i18n  (RU / PT)
+
+// ════════════════════════════════════════════════════════════
+
+let _lang = (() => { try{ return localStorage.getItem('crm_lang')||'ru'; }catch(e){return 'ru';} })();
+
+const _STRINGS = {
+
+  ru: {
+
+    // sidebar sections
+
+    sb_overview:'Обзор', sb_clients_sec:'Клиенты', sb_statuses_sec:'Статусы',
+
+    sb_schedule_sec:'Расписание', sb_work_sec:'Работа',
+
+    // sidebar items
+
+    ni_dashboard:'Дашборд', ni_clients:'Все клиенты', ni_kanban:'Канбан / Pipeline',
+
+    ni_aima:'Проверки AIMA', ni_visad:'Виза D', ni_courts:'Суды',
+
+    ni_citizenship:'Гражданство', ni_rights:'Права',
+
+    ni_schedule:'Расписание', ni_calendar:'Календарь',
+
+    ni_tasks:'Задачи', ni_integration:'API / Интеграции',
+
+    btn_sync:'Синхронизировать',
+
+    // page titles
+
+    pg_dashboard:'Дашборд', pg_clients:'Клиенты', pg_kanban:'Kanban Pipeline',
+
+    pg_aima:'Проверки AIMA', pg_visad:'Виза D — Статусы', pg_courts:'Суды',
+
+    pg_citizenship:'Гражданство', pg_rights:'Водительские права',
+
+    pg_schedule:'Расписание встреч', pg_calendar:'Командный календарь',
+
+    pg_tasks:'Задачи', pg_integration:'API / Интеграции',
+
+    // search
+
+    search_ph:'🔍 Поиск клиента, ID, telegram...',
+
+    // dashboard KPI
+
+    kpi_total:'Всего клиентов', kpi_total_s:'В базе CRM',
+
+    kpi_review:'На рассмотрении', kpi_review_s:'Анализ AIMA',
+
+    kpi_approved:'Апрув', kpi_approved_s:'Одобрено',
+
+    kpi_meets:'Встреч сегодня',
+
+    // stats
+
+    stats_lbl:'Статистика задач за:',
+
+    stats_day:'День', stats_week:'Неделя', stats_month:'Месяц',
+
+    ts_posted:'Поставлено', ts_progress:'В процессе', ts_done:'Выполнено', ts_overdue:'Просрочено',
+
+    // panels
+
+    ph_my_tasks:'Мои открытые задачи', ph_meets:'Ближайшие встречи',
+
+    ph_meets_sub:'Эта неделя', ph_aima:'Давние проверки AIMA', ph_aima_sub:'По дате ↑',
+
+    ph_courts_old:'Суды — по давности', ph_citizenship:'Гражданство', ph_rights_d:'Права',
+
+    // sec titles
+
+    sec_aima:'Проверки AIMA', sec_visad:'Виза D — Статусы', sec_courts:'Суды',
+
+    sec_citizenship:'Гражданство', sec_rights:'Водительские права',
+
+    sec_schedule:'Расписание встреч', sec_calendar:'Командный календарь',
+
+    sec_tasks:'Задачи', sec_integration:'API / Интеграции',
+
+    // table headers
+
+    th_name:'ФИО', th_service:'Тип услуги', th_stage:'Этап воронки',
+
+    th_substage:'Подэтап', th_updated:'Посл. обновление',
+
+    th_num:'№', th_nipc:'NIPC / Дело', th_dob:'ДР', th_pass:'Паспорт',
+
+    th_status:'Статус', th_date_check:'Дата проверки', th_section:'Секция',
+
+    th_type:'Тип', th_date_upd:'Дата обновления', th_city:'Город', th_comment:'Коммент.',
+
+    th_article:'Статья', th_date_court:'Дата', th_place:'Место', th_phase:'Этап',
+
+    th_date_updated:'Обновлён', th_date_submit:'Дата подачи',
+
+    th_track:'Трек-номер', th_country:'Страна прав',
+
+    // buttons
+
+    btn_add:'+ Добавить', btn_new_client:'+ Новый клиент', btn_book_slot:'+ Занять слот',
+
+    btn_add_task:'+ Задача',
+
+    // chips
+
+    chip_all:'Все',
+
+    // scope
+
+    scope_mine:'👤 Мои', scope_all:'👥 Все',
+
+    // user menu
+
+    um_my_tasks:'☑ Мои задачи', um_profile:'⚙ Профиль', um_logout:'⬡ Выйти',
+
+    // inline edit tooltips
+
+    inline_status_tip:'Нажмите для смены статуса',
+
+    inline_date_tip:'Нажмите для смены даты',
+
+    // delete
+
+    del_title:'Удалить запись?', del_sub:'Это действие нельзя отменить.',
+
+    del_cancel:'Отмена', del_confirm_btn:'Удалить',
+
+    del_done:'Запись удалена ✓',
+
+    // no data
+
+    no_data_cit:'Нет данных по гражданству — нажмите ↻ Синхронизировать или + Добавить',
+
+    no_data_rights:'Нет данных по правам — нажмите ↻ Синхронизировать или + Добавить',
+
+    no_open_tasks:'Нет открытых задач 🎉',
+
+    // sched
+
+    sched_choose:'выберите день', sched_free:'свободно', sched_occupied:'занят',
+
+  },
+
+  pt: {
+
+    sb_overview:'Visão Geral', sb_clients_sec:'Clientes', sb_statuses_sec:'Estatutos',
+
+    sb_schedule_sec:'Agenda', sb_work_sec:'Trabalho',
+
+    ni_dashboard:'Dashboard', ni_clients:'Todos os Clientes', ni_kanban:'Kanban / Pipeline',
+
+    ni_aima:'Verificações AIMA', ni_visad:'Visto D', ni_courts:'Tribunais',
+
+    ni_citizenship:'Cidadania', ni_rights:'Carta de Condução',
+
+    ni_schedule:'Agenda', ni_calendar:'Calendário',
+
+    ni_tasks:'Tarefas', ni_integration:'API / Integrações',
+
+    btn_sync:'Sincronizar',
+
+    pg_dashboard:'Dashboard', pg_clients:'Clientes', pg_kanban:'Kanban Pipeline',
+
+    pg_aima:'Verificações AIMA', pg_visad:'Visto D — Estatutos', pg_courts:'Tribunais',
+
+    pg_citizenship:'Cidadania', pg_rights:'Carta de Condução',
+
+    pg_schedule:'Agenda de Reuniões', pg_calendar:'Calendário da Equipa',
+
+    pg_tasks:'Tarefas', pg_integration:'API / Integrações',
+
+    search_ph:'🔍 Pesquisar cliente, ID, telegram...',
+
+    kpi_total:'Total de Clientes', kpi_total_s:'Na base CRM',
+
+    kpi_review:'Em Análise', kpi_review_s:'Análise AIMA',
+
+    kpi_approved:'Aprovado', kpi_approved_s:'Aprovados',
+
+    kpi_meets:'Reuniões Hoje',
+
+    stats_lbl:'Estatísticas de tarefas:',
+
+    stats_day:'Dia', stats_week:'Semana', stats_month:'Mês',
+
+    ts_posted:'Criadas', ts_progress:'Em Curso', ts_done:'Concluídas', ts_overdue:'Atrasadas',
+
+    ph_my_tasks:'Minhas Tarefas Abertas', ph_meets:'Próximas Reuniões',
+
+    ph_meets_sub:'Esta Semana', ph_aima:'Verificações AIMA Antigas', ph_aima_sub:'Por data ↑',
+
+    ph_courts_old:'Tribunais — por antiguidade', ph_citizenship:'Cidadania', ph_rights_d:'Cartas de Condução',
+
+    sec_aima:'Verificações AIMA', sec_visad:'Visto D — Estatutos', sec_courts:'Tribunais',
+
+    sec_citizenship:'Cidadania', sec_rights:'Carta de Condução',
+
+    sec_schedule:'Agenda de Reuniões', sec_calendar:'Calendário da Equipa',
+
+    sec_tasks:'Tarefas', sec_integration:'API / Integrações',
+
+    th_name:'Nome Completo', th_service:'Tipo de Serviço', th_stage:'Fase',
+
+    th_substage:'Sub-fase', th_updated:'Última Atualização',
+
+    th_num:'Nº', th_nipc:'NIPC / Processo', th_dob:'Nasc.', th_pass:'Passaporte',
+
+    th_status:'Estatuto', th_date_check:'Data de Verificação', th_section:'Secção',
+
+    th_type:'Tipo', th_date_upd:'Data de Atualização', th_city:'Cidade', th_comment:'Coment.',
+
+    th_article:'Artigo', th_date_court:'Data', th_place:'Local', th_phase:'Fase',
+
+    th_date_updated:'Atualizado', th_date_submit:'Data de Submissão',
+
+    th_track:'Nº Rastreio', th_country:'País da Carta',
+
+    btn_add:'+ Adicionar', btn_new_client:'+ Novo Cliente', btn_book_slot:'+ Reservar Slot',
+
+    btn_add_task:'+ Tarefa',
+
+    chip_all:'Todos',
+
+    scope_mine:'👤 Minhas', scope_all:'👥 Todas',
+
+    um_my_tasks:'☑ Minhas Tarefas', um_profile:'⚙ Perfil', um_logout:'⬡ Sair',
+
+    inline_status_tip:'Clique para alterar estatuto',
+
+    inline_date_tip:'Clique para alterar data',
+
+    del_title:'Eliminar registo?', del_sub:'Esta ação não pode ser desfeita.',
+
+    del_cancel:'Cancelar', del_confirm_btn:'Eliminar',
+
+    del_done:'Registo eliminado ✓',
+
+    no_data_cit:'Sem dados de cidadania — clique ↻ Sincronizar ou + Adicionar',
+
+    no_data_rights:'Sem dados de carta — clique ↻ Sincronizar ou + Adicionar',
+
+    no_open_tasks:'Sem tarefas abertas 🎉',
+
+    sched_choose:'escolha um dia', sched_free:'livre', sched_occupied:'ocupado',
+
+  }
+
+};
+
+/** Translate key */
+
+function _t(k){ return (_STRINGS[_lang]||_STRINGS.ru)[k] || _STRINGS.ru[k] || k; }
+
+function setLang(lang, btn){
+
+  _lang = lang;
+
+  try{ localStorage.setItem('crm_lang', lang); }catch(e){}
+
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+
+  if(btn) btn.classList.add('active');
+
+  _applyI18n();
+
+  renderAll(); renderCal(); renderSchedMini();
+
+}
+
+const _NI_MAP = {
+
+  dashboard:'ni_dashboard', clients:'ni_clients', kanban:'ni_kanban',
+
+  aima:'ni_aima', visad:'ni_visad', courts:'ni_courts',
+
+  citizenship:'ni_citizenship', rights:'ni_rights',
+
+  schedule:'ni_schedule', calendar:'ni_calendar',
+
+  tasks:'ni_tasks', integration:'ni_integration'
+
+};
+
+const _SEC_MAP = {
+
+  'Обзор':'sb_overview','Visão Geral':'sb_overview',
+
+  'Клиенты':'sb_clients_sec','Clientes':'sb_clients_sec',
+
+  'Статусы':'sb_statuses_sec','Estatutos':'sb_statuses_sec',
+
+  'Расписание':'sb_schedule_sec','Agenda':'sb_schedule_sec',
+
+  'Работа':'sb_work_sec','Trabalho':'sb_work_sec',
+
+};
+
+const _SECTITLE_MAP = {
+
+  'Проверки AIMA':'sec_aima','Verificações AIMA':'sec_aima',
+
+  'Виза D — Статусы':'sec_visad','Visto D — Estatutos':'sec_visad',
+
+  'Суды':'sec_courts','Tribunais':'sec_courts',
+
+  'Гражданство':'sec_citizenship','Cidadania':'sec_citizenship',
+
+  'Водительские права':'sec_rights','Carta de Condução':'sec_rights',
+
+  'Расписание встреч':'sec_schedule','Agenda de Reuniões':'sec_schedule',
+
+  'Командный календарь':'sec_calendar','Calendário da Equipa':'sec_calendar',
+
+  'Задачи':'sec_tasks','Tarefas':'sec_tasks',
+
+  'API / Интеграции':'sec_integration','API / Integrações':'sec_integration',
+
+  'Kanban Pipeline':'pg_kanban',
+
+};
+
+const _TH_MAP = {
+
+  'ФИО':'th_name','Nome Completo':'th_name',
+
+  'Тип услуги':'th_service','Tipo de Serviço':'th_service',
+
+  'Этап воронки':'th_stage','Fase':'th_stage',
+
+  'Подэтап':'th_substage','Sub-fase':'th_substage',
+
+  'Посл. обновление':'th_updated','Última Atualização':'th_updated',
+
+  '№':'th_num','Nº':'th_num',
+
+  'NIPC / Дело':'th_nipc','NIPC / Processo':'th_nipc',
+
+  'ДР':'th_dob','Nasc.':'th_dob',
+
+  'Паспорт':'th_pass','Passaporte':'th_pass',
+
+  'Статус':'th_status','Estatuto':'th_status',
+
+  'Дата проверки':'th_date_check','Data de Verificação':'th_date_check',
+
+  'Секция':'th_section','Secção':'th_section',
+
+  'Тип':'th_type',
+
+  'Дата обновления':'th_date_upd','Data de Atualização':'th_date_upd',
+
+  'Город':'th_city','Cidade':'th_city',
+
+  'Комментарий':'th_comment','Коммент.':'th_comment','Coment.':'th_comment',
+
+  'Статья':'th_article','Artigo':'th_article',
+
+  'Дата':'th_date_court',
+
+  'Место':'th_place','Local':'th_place',
+
+  'Этап':'th_phase',
+
+  'Обновлён':'th_date_updated','Atualizado':'th_date_updated',
+
+  'Дата подачи':'th_date_submit','Data de Submissão':'th_date_submit',
+
+  'Трек-номер':'th_track','Nº Rastreio':'th_track',
+
+  'Страна прав':'th_country','País da Carta':'th_country',
+
+};
+
+function _applyI18n(){
+
+  document.documentElement.lang = _lang==='pt'?'pt':'ru';
+
+  // Sidebar sections
+
+  document.querySelectorAll('.sb-sec').forEach(s=>{
+
+    const k=_SEC_MAP[s.textContent.trim()]; if(k) s.textContent=_t(k);
+
+  });
+
+  // Nav items
+
+  document.querySelectorAll('.ni[onclick]').forEach(ni=>{
+
+    const m=ni.getAttribute('onclick').match(/showView\('(\w+)'/);
+
+    if(!m) return;
+
+    const k=_NI_MAP[m[1]]; if(!k) return;
+
+    const ic=ni.querySelector('.ni-ic');
+
+    const bdg=ni.querySelector('.ni-bdg');
+
+    ni.textContent=_t(k);
+
+    if(ic) ni.prepend(ic);
+
+    if(bdg) ni.appendChild(bdg);
+
+  });
+
+  // Sync button
+
+  const sb=document.querySelector('.sync-btn');
+
+  if(sb){ const sp=g('sync-spin'); sb.textContent=_t('btn_sync'); if(sp)sb.prepend(sp); }
+
+  // Search
+
+  const sr=g('tb-search'); if(sr) sr.placeholder=_t('search_ph');
+
+  // Page title (current view)
+
+  const pgt=g('pg-title');
+
+  if(pgt){ const v=document.querySelector('.view.active'); if(v){ const id=v.id.replace('view-',''); pgt.textContent=_t('pg_'+id)||pgt.textContent; } }
+
+  // KPI labels
+
+  [['kpi-total-l','kpi_total'],['kpi-total-s','kpi_total_s'],
+
+   ['kpi-review-l','kpi_review'],['kpi-review-s','kpi_review_s'],
+
+   ['kpi-approved-l','kpi_approved'],['kpi-approved-s','kpi_approved_s'],
+
+   ['kpi-meets-l','kpi_meets'],
+
+   ['ts-label-stat','stats_lbl'],
+
+   ['ts-fc-day','stats_day'],['ts-fc-week','stats_week'],['ts-fc-month','stats_month'],
+
+  ].forEach(([id,k])=>{ const el=g(id); if(el) el.textContent=_t(k); });
+
+  // ts-l cards
+
+  const tsKeys=['ts_posted','ts_progress','ts_done','ts_overdue'];
+
+  document.querySelectorAll('.ts-l').forEach((c,i)=>{ if(tsKeys[i]) c.textContent=_t(tsKeys[i]); });
+
+  // Panel headers
+
+  const phId=g('dash-my-tasks-title'); if(phId) phId.textContent=_t('ph_my_tasks');
+
+  const _phTxt={
+
+    'Ближайшие встречи':'ph_meets','Próximas Reuniões':'ph_meets',
+
+    'Давние проверки AIMA':'ph_aima','Verificações AIMA Antigas':'ph_aima',
+
+    'Суды — по давности':'ph_courts_old','Tribunais — por antiguidade':'ph_courts_old',
+
+    'Гражданство':'ph_citizenship','Cidadania':'ph_citizenship',
+
+    'Права':'ph_rights_d','Cartas de Condução':'ph_rights_d',
+
+  };
+
+  document.querySelectorAll('.ph-title').forEach(ph=>{
+
+    const k=_phTxt[ph.textContent.trim()]; if(k) ph.textContent=_t(k);
+
+  });
+
+  const _phCnt={'Эта неделя':'ph_meets_sub','Esta Semana':'ph_meets_sub','По дате ↑':'ph_aima_sub','Por data ↑':'ph_aima_sub'};
+
+  document.querySelectorAll('.ph-cnt').forEach(c=>{
+
+    const k=_phCnt[c.textContent.trim()]; if(k) c.textContent=_t(k);
+
+  });
+
+  // Section titles
+
+  document.querySelectorAll('.sec-t').forEach(st=>{
+
+    const k=_SECTITLE_MAP[st.textContent.trim()]; if(k) st.textContent=_t(k);
+
+  });
+
+  // Table headers
+
+  document.querySelectorAll('.dt thead th').forEach(th=>{
+
+    const k=_TH_MAP[th.textContent.trim()]; if(k) th.textContent=_t(k);
+
+  });
+
+  // Chip "Все"
+
+  document.querySelectorAll('.chip').forEach(c=>{
+
+    if(c.textContent.trim()==='Все'||c.textContent.trim()==='Todos') c.textContent=_t('chip_all');
+
+  });
+
+  // Scope btns
+
+  const sm=g('scope-mine'),sa=g('scope-all');
+
+  if(sm) sm.textContent=_t('scope_mine');
+
+  if(sa) sa.textContent=_t('scope_all');
+
+  // User menu
+
+  const um=document.querySelectorAll('.usr-menu-item');
+
+  if(um[0]) um[0].textContent=_t('um_my_tasks');
+
+  if(um[1]) um[1].textContent=_t('um_profile');
+
+  if(um[2]) um[2].textContent=_t('um_logout');
+
+  // Sec-a buttons
+
+  const _btnTxt={
+
+    '+ Добавить':'btn_add','+ Adicionar':'btn_add',
+
+    '+ Новый клиент':'btn_new_client','+ Novo Cliente':'btn_new_client',
+
+    '+ Занять слот':'btn_book_slot','+ Reservar Slot':'btn_book_slot',
+
+    '+ Задача':'btn_add_task','+ Tarefa':'btn_add_task',
+
+    'Синхронизировать':'btn_sync','Sincronizar':'btn_sync',
+
+  };
+
+  document.querySelectorAll('.btn').forEach(b=>{
+
+    const k=_btnTxt[b.textContent.trim()]; if(k) b.textContent=_t(k);
+
+  });
+
+  // Sched choose label
+
+  const scd=g('sched-sel-d');
+
+  if(scd&&(scd.textContent==='выберите день'||scd.textContent==='escolha um dia'))
+
+    scd.textContent=_t('sched_choose');
+
+}
+
+// ════════════════════════════════════════════════════════════
+
+// DELETE — кнопка 🗑 в таблицах статусов
+
+// ════════════════════════════════════════════════════════════
+
+let _delPop = null;
+
+function _closeDelPop(){
+
+  if(_delPop){ _delPop.remove(); _delPop=null; }
+
+}
+
+/** Вызывается из onclick кнопки 🗑 */
+
+function handleDelBtn(btn, e){
+
+  e.stopPropagation();
+
+  closeAllDropdowns();
+
+  _closeDelPop();
+
+  const mod = btn.dataset.mod;
+
+  const idx = parseInt(btn.dataset.idx);
+
+  const lbl = decodeURIComponent(btn.dataset.lbl||'');
+
+  const rect = btn.getBoundingClientRect();
+
+  const pop = document.createElement('div');
+
+  pop.className = 'del-pop';
+
+  pop.innerHTML =
+
+    '<h4>'+_t('del_title')+'</h4>'
+
+   +'<p>'+lbl+'<br><span style="color:var(--red);font-size:10px">'+_t('del_sub')+'</span></p>'
+
+   +'<div class="del-pop-btns">'
+
+     +'<button class="dpc" onclick="_closeDelPop()">'+_t('del_cancel')+'</button>'
+
+     +'<button class="dpd" onclick="_execDelete(\''+mod+'\','+idx+')">'+_t('del_confirm_btn')+'</button>'
+
+   +'</div>';
+
+  // Позиционировать
+
+  pop.style.cssText = 'top:'+(rect.bottom+4)+'px;left:'+Math.max(rect.right-270,8)+'px';
+
+  document.body.appendChild(pop);
+
+  _delPop = pop;
+
+  // Закрыть при клике снаружи
+
+  setTimeout(()=>{
+
+    const out=(ev)=>{ if(!pop.contains(ev.target)){_closeDelPop();document.removeEventListener('click',out);} };
+
+    document.addEventListener('click',out);
+
+  },50);
+
+  // Скорректировать если вышел за экран
+
+  requestAnimationFrame(()=>{
+
+    if(!pop) return;
+
+    const r=pop.getBoundingClientRect();
+
+    if(r.bottom>window.innerHeight-8) pop.style.top=(rect.top-r.height-4)+'px';
+
+    if(r.right>window.innerWidth-8)   pop.style.left=(window.innerWidth-r.width-8)+'px';
+
+  });
+
+}
+
+async function _execDelete(mod, idx){
+
+  _closeDelPop();
+
+  let key, apiPath;
+
+  if(mod==='aima'){
+
+    key=statuses[idx]?.num; apiPath='/statuses';
+
+    statuses.splice(idx,1); renderAIMA(); renderDash();
+
+  } else if(mod==='visad'){
+
+    key=visaD[idx]?.num; apiPath='/visad';
+
+    visaD.splice(idx,1); renderVisaD();
+
+  } else if(mod==='courts'){
+
+    key=courts[idx]?.num; apiPath='/courts';
+
+    courts.splice(idx,1); renderCourts(); renderDash();
+
+  } else if(mod==='citizenship'){
+
+    key=citizenship[idx]?.num; apiPath='/citizenship';
+
+    citizenship.splice(idx,1); renderCitizenship(); renderDash();
+
+  } else if(mod==='rights'){
+
+    key=rights[idx]?.num; apiPath='/rights';
+
+    rights.splice(idx,1); renderRights();
+
+  }
+
+  toast(_t('del_done'));
+
+  if(key) await apiFetch(apiPath+'/'+key,{method:'DELETE'}).catch(()=>{});
+
+}
+
+// ============================================================
+
+// INLINE STATUS & DATE EDITOR
+
+// ============================================================
+
+let _openDropdown = null; // текущий открытый dropdown
+
+function closeAllDropdowns(){
+
+  if(_openDropdown){_openDropdown.remove();_openDropdown=null;}
+
+  const dp=document.querySelector('.date-popup');
+
+  if(dp)dp.remove();
+
+}
+
+document.addEventListener('click', e=>{
+
+  if(!e.target.closest('.status-dropdown')&&!e.target.closest('.inline-status'))closeAllDropdowns();
+
+  if(!e.target.closest('.date-popup')&&!e.target.closest('.inline-date'))closeAllDropdowns();
+
+});
+
+// ---- INLINE STATUS DROPDOWN ----
+
+// module: 'aima'|'visad'|'courts'|'citizenship'|'rights'
+
+// idx: индекс в массиве
+
+// currentStatus: текущий статус
+
+// statuses_arr: массив вариантов
+
+// apiPath: путь PUT /api/.../:key
+
+// keyField: поле-ключ для PUT (num, id, etc.)
+
+function openStatusDropdown(e, module, idx, currentStatus, statusArr, apiPath, keyField){
+
+  e.stopPropagation();
+
+  closeAllDropdowns();
+
+  
+
+  const rect = e.currentTarget.getBoundingClientRect();
+
+  const dd = document.createElement('div');
+
+  dd.className = 'status-dropdown';
+
+  dd.style.top = (rect.bottom + 4) + 'px';
+
+  dd.style.left = rect.left + 'px';
+
+  // Проверим что не вышли за правый край
+
+  dd.innerHTML = statusArr.map(s=>`
+
+    <div class="status-dropdown-item ${s===currentStatus?'current':''}" onclick="applyInlineStatus('${module}',${idx},'${s.replace(/'/g,"\\'")}','${apiPath}','${keyField}',this)">
+
+      ${s===currentStatus?'✓ ':''}<span>${s}</span>
+
+    </div>`).join('');
+
+  document.body.appendChild(dd);
+
+  _openDropdown = dd;
+
+  
+
+  // Подвинуть если выходит за правый край
+
+  requestAnimationFrame(()=>{
+
+    const ddRect = dd.getBoundingClientRect();
+
+    if(ddRect.right > window.innerWidth - 8){
+
+      dd.style.left = (window.innerWidth - ddRect.width - 8) + 'px';
+
+    }
+
+    if(ddRect.bottom > window.innerHeight - 8){
+
+      dd.style.top = (rect.top - ddRect.height - 4) + 'px';
+
+    }
+
+  });
+
+}
+
+async function applyInlineStatus(module, idx, newStatus, apiPath, keyField, el){
+
+  closeAllDropdowns();
+
+  const today = nowDMY();
+
+  
+
+  // Обновить данные в памяти и перерисовать
+
+  let obj, key;
+
+  if(module==='aima'){
+
+    statuses[idx].status = newStatus;
+
+    statuses[idx].date = today;
+
+    key = statuses[idx][keyField];
+
+    renderAIMA(); renderDash();
+
+  } else if(module==='visad'){
+
+    visaD[idx].status = newStatus;
+
+    visaD[idx].updated = today;
+
+    key = visaD[idx][keyField];
+
+    renderVisaD();
+
+  } else if(module==='courts'){
+
+    courts[idx].status = newStatus;
+
+    courts[idx].updated = today;
+
+    key = courts[idx][keyField];
+
+    renderCourts(); renderDash();
+
+  } else if(module==='citizenship'){
+
+    citizenship[idx].status = newStatus;
+
+    citizenship[idx].updated = today;
+
+    key = citizenship[idx][keyField];
+
+    renderCitizenship(); renderDash();
+
+  } else if(module==='rights'){
+
+    rights[idx].status = newStatus;
+
+    rights[idx].updated = today;
+
+    key = rights[idx][keyField];
+
+    renderRights();
+
+  }
+
+  
+
+  toast('Статус обновлён: ' + newStatus + ' ✓');
+
+  
+
+  // Синхронизировать с Google Sheets через API
+
+  const data = module==='aima'
+
+    ? {status:newStatus, date:today}
+
+    : {status:newStatus, updated:today};
+
+  await apiPut(apiPath+'/'+key, data);
+
+}
+
+// ---- INLINE DATE EDITOR ----
+
+function openDatePopup(e, module, idx, currentDate, apiPath, keyField){
+
+  e.stopPropagation();
+
+  closeAllDropdowns();
+
+  
+
+  const rect = e.currentTarget.getBoundingClientRect();
+
+  const dp = document.createElement('div');
+
+  dp.className = 'date-popup';
+
+  dp.style.top = (rect.bottom + 4) + 'px';
+
+  dp.style.left = rect.left + 'px';
+
+  dp.innerHTML = `
+
+    <div class="date-popup-title">Дата проверки</div>
+
+    <input id="dp-input" value="${currentDate||''}" placeholder="DD.MM.YYYY" maxlength="10">
+
+    <div class="date-popup-btns">
+
+      <button class="dp-today" onclick="setDateToday('${module}',${idx},'${apiPath}','${keyField}')">Сегодня</button>
+
+      <button class="dp-cancel" onclick="closeAllDropdowns()">✕</button>
+
+      <button class="dp-save" onclick="applyInlineDate('${module}',${idx},'${apiPath}','${keyField}')">Сохранить</button>
+
+    </div>`;
+
+  document.body.appendChild(dp);
+
+  
+
+  // Маска DD.MM.YYYY
+
+  const inp = dp.querySelector('#dp-input');
+
+  inp.focus(); inp.select();
+
+  inp.addEventListener('input', ()=>{
+
+    let v=inp.value.replace(/[^\d]/g,'');
+
+    if(v.length>2)v=v.slice(0,2)+'.'+v.slice(2);
+
+    if(v.length>5)v=v.slice(0,5)+'.'+v.slice(5);
+
+    inp.value=v.slice(0,10);
+
+  });
+
+  inp.addEventListener('keydown', e=>{if(e.key==='Enter')applyInlineDate(module,idx,apiPath,keyField);if(e.key==='Escape')closeAllDropdowns();});
+
+  
+
+  requestAnimationFrame(()=>{
+
+    const r=dp.getBoundingClientRect();
+
+    if(r.right>window.innerWidth-8)dp.style.left=(window.innerWidth-r.width-8)+'px';
+
+    if(r.bottom>window.innerHeight-8)dp.style.top=(rect.top-r.height-4)+'px';
+
+  });
+
+}
+
+function setDateToday(module,idx,apiPath,keyField){
+
+  const inp=document.querySelector('#dp-input');
+
+  if(inp)inp.value=nowDMY();
+
+  applyInlineDate(module,idx,apiPath,keyField);
+
+}
+
+async function applyInlineDate(module,idx,apiPath,keyField){
+
+  const inp=document.querySelector('#dp-input');
+
+  const newDate=inp?inp.value.trim():nowDMY();
+
+  closeAllDropdowns();
+
+  
+
+  let key;
+
+  if(module==='aima'){
+
+    statuses[idx].date=newDate; key=statuses[idx][keyField]; renderAIMA();
+
+  } else if(module==='visad'){
+
+    visaD[idx].updated=newDate; key=visaD[idx][keyField]; renderVisaD();
+
+  } else if(module==='courts'){
+
+    courts[idx].updated=newDate; key=courts[idx][keyField]; renderCourts();
+
+  } else if(module==='citizenship'){
+
+    citizenship[idx].updated=newDate; key=citizenship[idx][keyField]; renderCitizenship();
+
+  } else if(module==='rights'){
+
+    rights[idx].updated=newDate; key=rights[idx][keyField]; renderRights();
+
+  }
+
+  
+
+  toast('Дата обновлена: '+newDate+' ✓');
+
+  
+
+  const field = module==='aima' ? 'date' : 'updated';
+
+  await apiPut(apiPath+'/'+key, {[field]:newDate});
+
+}
+
+// ============================================================
+
+// AIMA STATUSES
+
+// ============================================================
+
+function renderAIMA(data){
+
+  const arr=data||statuses;
+
+  g('aima-tbody').innerHTML=arr.map((s)=>{
+
+    const ri=statuses.findIndex(x=>x.num===s.num&&x.name===s.name);
+
+    return '<tr>'
+
+      +'<td class="mono" style="color:var(--acc)">'+s.num+'</td>'
+
+      +'<td style="font-weight:600">'+s.name+'</td>'
+
+      +'<td class="mono" style="font-size:11px">'+s.nipc+'</td>'
+
+      +'<td class="mono" style="font-size:11px">'+(s.dob||'—')+'</td>'
+
+      +'<td class="mono" style="font-size:11px">'+(s.pass||'—')+'</td>'
+
+      +'<td class="inline-edit-cell"><span class="inline-status" onclick="openStatusDropdown(event,\'aima\','+ri+',\''+s.status+'\',AIMA_STATUSES,\'/statuses\',\'num\')" title="'+_t('inline_status_tip')+'">'+bdg(s.status)+'</span></td>'
+
+      +'<td class="inline-edit-cell"><span class="inline-date" onclick="openDatePopup(event,\'aima\','+ri+',\''+(s.date||'')+'\',\'/statuses\',\'num\')" title="'+_t('inline_date_tip')+'">'+(s.date||'—')+'</span></td>'
+
+      +'<td><span class="bdg '+(s.sec==='МАНИФЕСТ'?'pur':'gry')+'">'+s.sec+'</span></td>'
+
+      +'<td style="white-space:nowrap">'
+
+        +'<button class="edit-btn" onclick="editAIMA('+ri+',event)">✏</button>'
+
+        +'<button class="del-btn" data-mod="aima" data-idx="'+ri+'" data-lbl="'+encodeURIComponent(s.num+' '+s.name)+'" onclick="handleDelBtn(this,event)">🗑</button>'
+
+      +'</td>'
+
+      +'</tr>';
+
+  }).join('');
+
+}
+
+function filterAIMA(f,el){
+
+  document.querySelectorAll('#aima-filter-chips .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');
+
+  renderAIMA(f==='all'?statuses:statuses.filter(s=>s.status===f));
+
+}
+
+function editAIMA(idx,e){
+
+  e&&e.stopPropagation();
+
+  const s=statuses[idx];
+
+  openModal(`
+
+    <div class="mhdr">
+
+      <div>
+
+        <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700">Изменить статус AIMA</div>
+
+        <div style="font-size:11px;color:var(--t3);margin-top:2px">${s.name} · ${s.nipc}</div>
+
+      </div>
+
+      <button class="mcls" onclick="closeModal()">✕</button>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf">
+
+        <label class="mfl">Новый статус</label>
+
+        <select class="ms" id="ea-status">
+
+          ${AIMA_STATUSES.map(v=>`<option ${s.status===v?'selected':''}>${v}</option>`).join('')}
+
+        </select>
+
+      </div>
+
+      <div class="mf">
+
+        <label class="mfl">Дата проверки <span style="color:var(--gre);font-size:8px">← обновится автоматически</span></label>
+
+        <input class="mi" id="ea-date" value="${s.date}" placeholder="DD/MM/YYYY">
+
+      </div>
+
+    </div>
+
+    <div style="background:var(--acc-d);border-radius:6px;padding:8px 10px;font-size:10px;color:var(--acc);margin-bottom:10px">
+
+      ℹ При сохранении дата проверки обновится на сегодня (${nowDMY()}), если не изменить вручную.
+
+    </div>
+
+    <div class="mft">
+
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+
+      <button class="btn btn-p" onclick="saveAIMA(${idx})">Сохранить и синхронизировать</button>
+
+    </div>`,'narrow');
+
+}
+
+async function saveAIMA(idx){
+
+  const newStatus=g('ea-status').value;
+
+  const newDate=g('ea-date').value||nowDMY();
+
+  statuses[idx].status=newStatus;
+
+  statuses[idx].date=newDate;
+
+  closeModal();renderAIMA();renderDash();toast('Статус AIMA обновлён ✓');
+
+  await apiPut('/statuses/'+statuses[idx].num, {status:newStatus, date:newDate});
+
+}
+
+// ============================================================
+
+// VISA D
+
+// ============================================================
+
+function renderVisaD(){
+
+  g('visad-tbody').innerHTML=visaD.map((v,i)=>{
+
+    return '<tr>'
+
+      +'<td class="mono" style="color:var(--acc)">'+v.num+'</td>'
+
+      +'<td style="font-weight:600">'+v.name+'</td>'
+
+      +'<td><span class="bdg blu">'+v.type+'</span></td>'
+
+      +'<td class="mono" style="font-size:11px">'+(v.dob||'—')+'</td>'
+
+      +'<td class="mono" style="font-size:11px">'+(v.pass||'—')+'</td>'
+
+      +'<td class="inline-edit-cell"><span class="inline-status" onclick="openStatusDropdown(event,\'visad\','+i+',\''+v.status+'\',VD_STATUSES,\'/visad\',\'num\')" title="'+_t('inline_status_tip')+'">'+bdg(v.status)+'</span></td>'
+
+      +'<td class="inline-edit-cell"><span class="inline-date" onclick="openDatePopup(event,\'visad\','+i+',\''+(v.updated||v.date||'')+'\',\'/visad\',\'num\')" title="'+_t('inline_date_tip')+'">'+(v.updated||v.date||'—')+'</span></td>'
+
+      +'<td style="font-size:11px">'+(v.city||'—')+'</td>'
+
+      +'<td style="font-size:11px;color:var(--t2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(v.comment||'—')+'</td>'
+
+      +'<td style="white-space:nowrap">'
+
+        +'<button class="edit-btn" onclick="editVisaD('+i+',event)">✏</button>'
+
+        +'<button class="del-btn" data-mod="visad" data-idx="'+i+'" data-lbl="'+encodeURIComponent(v.num+' '+v.name)+'" onclick="handleDelBtn(this,event)">🗑</button>'
+
+      +'</td>'
+
+      +'</tr>';
+
+  }).join('');
+
+}
+
+function editVisaD(idx,e){
+
+  e&&e.stopPropagation();
+
+  const v=idx<0?{num:'',name:'',type:'DN',dob:'',pass:'',status:'Анализ',date:'',updated:'',city:'',comment:''}:visaD[idx];
+
+  openModal(`
+
+    <div class="mhdr">
+
+      <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700">${idx<0?'Новая запись':'Изменить'} — Виза D</div>
+
+      <button class="mcls" onclick="closeModal()">✕</button>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">№ клиента</label><input class="mi" id="vd-num" value="${v.num}"></div>
+
+      <div class="mf"><label class="mfl">ФИО</label><input class="mi" id="vd-name" value="${v.name}"></div>
+
+      <div class="mf"><label class="mfl">Тип визы</label><input class="mi" id="vd-type" value="${v.type}" placeholder="DN, D7, D3..."></div>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">ДР</label><input class="mi" id="vd-dob" value="${v.dob}"></div>
+
+      <div class="mf"><label class="mfl">Паспорт</label><input class="mi" id="vd-pass" value="${v.pass}"></div>
+
+      <div class="mf"><label class="mfl">Город</label><input class="mi" id="vd-city" value="${v.city}"></div>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf">
+
+        <label class="mfl">Статус <span style="color:var(--gre);font-size:8px">← дата обновится автоматически</span></label>
+
+        <select class="ms" id="vd-status" onchange="toggleVdCustom(this.value)">
+
+          ${VD_STATUSES.map(s=>`<option ${v.status===s?'selected':''}>${s}</option>`).join('')}
+
+          <option value="__custom__">Ввести вручную...</option>
+
+        </select>
+
+      </div>
+
+      <div class="mf"><label class="mfl">Дата записи / подачи</label><input class="mi" id="vd-date" value="${v.date}"></div>
+
+    </div>
+
+    <div id="vd-custom" style="display:none;margin-bottom:10px">
+
+      <label class="mfl">Статус вручную</label>
+
+      <input class="mi" id="vd-custom-val" placeholder="Введите статус">
+
+    </div>
+
+    <div class="msec"><label class="mfl">Комментарий</label><textarea class="mta" id="vd-comment">${v.comment}</textarea></div>
+
+    <div class="mft">
+
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+
+      <button class="btn btn-p" onclick="saveVisaD(${idx})">${idx<0?'Добавить':'Сохранить'}</button>
+
+    </div>`);
+
+}
+
+function toggleVdCustom(v){g('vd-custom').style.display=v==='__custom__'?'block':'none';}
+
+async function saveVisaD(idx){
+
+  let st=g('vd-status').value;
+
+  if(st==='__custom__')st=g('vd-custom-val').value||'—';
+
+  const obj={num:g('vd-num').value,name:g('vd-name').value,type:g('vd-type').value,dob:g('vd-dob').value,pass:g('vd-pass').value,status:st,date:g('vd-date').value,updated:nowDMY(),city:g('vd-city').value,comment:g('vd-comment').value};
+
+  if(idx<0)visaD.push(obj);else visaD[idx]=obj;
+
+  closeModal();renderVisaD();toast(idx<0?'Запись добавлена ✓':'Виза D обновлена ✓');
+
+  await (idx<0?apiPost('/visad',obj):apiPut('/visad/'+obj.num,obj));
+
+}
+
+// ============================================================
+
+// COURTS
+
+// ============================================================
+
+function renderCourts(data){
+
+  g('courts-tbody').innerHTML=(data||courts).map((c,i)=>{
+
+    const ri=courts.findIndex(x=>x.num===c.num&&x.name===c.name);
+
+    return '<tr>'
+
+      +'<td class="mono" style="color:var(--pur)">'+c.num+'</td>'
+
+      +'<td style="font-weight:600">'+c.name+'</td>'
+
+      +'<td><span class="bdg pur">'+c.article+'</span></td>'
+
+      +'<td class="mono" style="font-size:11px">'+c.date+'</td>'
+
+      +'<td style="font-size:11px">'+c.place+'</td>'
+
+      +'<td style="font-size:11px;color:var(--pur)">'+c.stage+'</td>'
+
+      +'<td class="inline-edit-cell"><span class="inline-status" onclick="openStatusDropdown(event,\'courts\','+ri+',\''+c.status+'\',COURT_STATUSES,\'/courts\',\'num\')" title="'+_t('inline_status_tip')+'">'+bdg(c.status)+'</span></td>'
+
+      +'<td class="inline-edit-cell"><span class="inline-date" onclick="openDatePopup(event,\'courts\','+ri+',\''+(c.updated||'')+'\',\'/courts\',\'num\')" title="'+_t('inline_date_tip')+'">'+(c.updated||'—')+'</span></td>'
+
+      +'<td style="font-size:11px;color:var(--t2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(c.comment||'—')+'</td>'
+
+      +'<td style="white-space:nowrap">'
+
+        +'<button class="edit-btn" onclick="editCourt('+ri+',event)">✏</button>'
+
+        +'<button class="del-btn" data-mod="courts" data-idx="'+ri+'" data-lbl="'+encodeURIComponent(c.num+' '+c.name)+'" onclick="handleDelBtn(this,event)">🗑</button>'
+
+      +'</td>'
+
+      +'</tr>';
+
+  }).join('');
+
+}
+
+function filterCourts(f,el){
+
+  document.querySelectorAll('#courts-chips .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');
+
+  renderCourts(f==='all'?courts:courts.filter(c=>c.article===f));
+
+}
+
+function editCourt(idx,e){
+
+  e&&e.stopPropagation();
+
+  const c=idx<0?{num:'',name:'',article:'90.2',date:'',place:'',stage:'Документы собраны',status:'В процессе',updated:'',comment:''}:courts[idx];
+
+  openModal(`
+
+    <div class="mhdr">
+
+      <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700">${idx<0?'Новое дело':'Изменить дело'} — Суд</div>
+
+      <button class="mcls" onclick="closeModal()">✕</button>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">№ клиента</label><input class="mi" id="ct-num" value="${c.num}"></div>
+
+      <div class="mf"><label class="mfl">ФИО</label><input class="mi" id="ct-name" value="${c.name}"></div>
+
+      <div class="mf"><label class="mfl">Статья</label><input class="mi" id="ct-art" value="${c.article}" placeholder="90.2, 98.2..."></div>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">Дата суда</label><input class="mi" id="ct-date" value="${c.date}" placeholder="DD/MM/YYYY"></div>
+
+      <div class="mf"><label class="mfl">Место</label><input class="mi" id="ct-place" value="${c.place}"></div>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf">
+
+        <label class="mfl">Этап</label>
+
+        <select class="ms" id="ct-stage">${COURT_STAGES.map(s=>`<option ${c.stage===s?'selected':''}>${s}</option>`).join('')}</select>
+
+      </div>
+
+      <div class="mf">
+
+        <label class="mfl">Статус <span style="color:var(--gre);font-size:8px">← дата обновится</span></label>
+
+        <input class="mi" id="ct-status" value="${c.status}" placeholder="В процессе, Ожидание решения...">
+
+      </div>
+
+    </div>
+
+    <div class="msec"><label class="mfl">Комментарий</label><textarea class="mta" id="ct-comment">${c.comment}</textarea></div>
+
+    <div class="mft">
+
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+
+      <button class="btn btn-p" onclick="saveCourt(${idx})">${idx<0?'Добавить':'Сохранить'}</button>
+
+    </div>`);
+
+}
+
+async function saveCourt(idx){
+
+  const obj={num:g('ct-num').value,name:g('ct-name').value,article:g('ct-art').value,date:g('ct-date').value,place:g('ct-place').value,stage:g('ct-stage').value,status:g('ct-status').value,updated:nowDMY(),comment:g('ct-comment').value};
+
+  if(idx<0)courts.push(obj);else courts[idx]=obj;
+
+  closeModal();renderCourts();renderDash();toast(idx<0?'Дело добавлено ✓':'Суд обновлён ✓');
+
+  await (idx<0?apiPost('/courts',obj):apiPut('/courts/'+obj.num,obj));
+
+}
+
+// ============================================================
+
+// CITIZENSHIP
+
+// ============================================================
+
+function renderCitizenship(){
+
+  g('cit-tbody').innerHTML=citizenship.length?citizenship.map((c,i)=>{
+
+    return '<tr>'
+
+      +'<td class="mono" style="color:var(--ora)">'+c.num+'</td>'
+
+      +'<td style="font-weight:600">'+c.name+'</td>'
+
+      +'<td><span class="bdg ora">'+(c.type||'—')+'</span></td>'
+
+      +'<td class="mono" style="font-size:11px">'+(c.date||'—')+'</td>'
+
+      +'<td class="mono" style="font-size:11px">'+(c.track||'—')+'</td>'
+
+      +'<td style="font-size:11px;color:var(--ora)">'+c.stage+'</td>'
+
+      +'<td class="inline-edit-cell"><span class="inline-status" onclick="openStatusDropdown(event,\'citizenship\','+i+',\''+c.status+'\',CIT_STATUSES,\'/citizenship\',\'num\')" title="'+_t('inline_status_tip')+'">'+bdg(c.status)+'</span></td>'
+
+      +'<td class="inline-edit-cell"><span class="inline-date" onclick="openDatePopup(event,\'citizenship\','+i+',\''+(c.updated||'')+'\',\'/citizenship\',\'num\')" title="'+_t('inline_date_tip')+'">'+(c.updated||'—')+'</span></td>'
+
+      +'<td style="font-size:11px;color:var(--t2)">'+(c.comment||'—')+'</td>'
+
+      +'<td style="white-space:nowrap">'
+
+        +'<button class="edit-btn" onclick="editCitizenship('+i+',event)">✏</button>'
+
+        +'<button class="del-btn" data-mod="citizenship" data-idx="'+i+'" data-lbl="'+encodeURIComponent(c.num+' '+c.name)+'" onclick="handleDelBtn(this,event)">🗑</button>'
+
+      +'</td>'
+
+      +'</tr>';
+
+  }).join(''):'<tr><td colspan="10" style="padding:24px;text-align:center;color:var(--t3);font-size:11px">'+_t('no_data_cit')+'</td></tr>';
+
+}
+
+function editCitizenship(idx,e){
+
+  e&&e.stopPropagation();
+
+  const c=idx<0?{num:'',name:'',type:'',date:'',track:'',stage:'Документы собраны',status:'В процессе',updated:'',comment:''}:citizenship[idx];
+
+  openModal(`
+
+    <div class="mhdr">
+
+      <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700">${idx<0?'Добавить':'Изменить'} — Гражданство</div>
+
+      <button class="mcls" onclick="closeModal()">✕</button>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">№ клиента</label><input class="mi" id="ci-num" value="${c.num}"></div>
+
+      <div class="mf"><label class="mfl">ФИО</label><input class="mi" id="ci-name" value="${c.name}"></div>
+
+      <div class="mf"><label class="mfl">Тип</label><input class="mi" id="ci-type" value="${c.type}" placeholder="Португалия, ЕС..."></div>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">Дата подачи</label><input class="mi" id="ci-date" value="${c.date}" placeholder="DD/MM/YYYY"></div>
+
+      <div class="mf"><label class="mfl">Трек-номер</label><input class="mi" id="ci-track" value="${c.track||''}"></div>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf">
+
+        <label class="mfl">Этап</label>
+
+        <select class="ms" id="ci-stage">${CIT_STAGES.map(s=>`<option ${c.stage===s?'selected':''}>${s}</option>`).join('')}</select>
+
+      </div>
+
+      <div class="mf">
+
+        <label class="mfl">Статус <span style="color:var(--gre);font-size:8px">← дата обновится</span></label>
+
+        <input class="mi" id="ci-status" value="${c.status}">
+
+      </div>
+
+    </div>
+
+    <div class="msec"><label class="mfl">Комментарий</label><textarea class="mta" id="ci-comment">${c.comment}</textarea></div>
+
+    <div class="mft">
+
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+
+      <button class="btn btn-p" onclick="saveCitizenship(${idx})">${idx<0?'Добавить':'Сохранить'}</button>
+
+    </div>`);
+
+}
+
+async function saveCitizenship(idx){
+
+  const obj={num:g('ci-num').value,name:g('ci-name').value,type:g('ci-type').value,date:g('ci-date').value,track:g('ci-track').value,stage:g('ci-stage').value,status:g('ci-status').value,updated:nowDMY(),comment:g('ci-comment').value};
+
+  if(idx<0)citizenship.push(obj);else citizenship[idx]=obj;
+
+  closeModal();renderCitizenship();renderDash();toast(idx<0?'Добавлено ✓':'Гражданство обновлено ✓');
+
+  await (idx<0?apiPost('/citizenship',obj):apiPut('/citizenship/'+obj.num,obj));
+
+}
+
+// ============================================================
+
+// RIGHTS
+
+// ============================================================
+
+function renderRights(){
+
+  g('rights-tbody').innerHTML=rights.length?rights.map((r,i)=>{
+
+    return '<tr>'
+
+      +'<td class="mono" style="color:var(--gre)">'+r.num+'</td>'
+
+      +'<td style="font-weight:600">'+r.name+'</td>'
+
+      +'<td><span class="bdg gre">'+(r.country||'—')+'</span></td>'
+
+      +'<td class="mono" style="font-size:11px">'+(r.date||'—')+'</td>'
+
+      +'<td style="font-size:11px;color:var(--gre)">'+r.stage+'</td>'
+
+      +'<td class="inline-edit-cell"><span class="inline-status" onclick="openStatusDropdown(event,\'rights\','+i+',\''+r.status+'\',RIGHTS_STATUSES,\'/rights\',\'num\')" title="'+_t('inline_status_tip')+'">'+bdg(r.status)+'</span></td>'
+
+      +'<td class="inline-edit-cell"><span class="inline-date" onclick="openDatePopup(event,\'rights\','+i+',\''+(r.updated||'')+'\',\'/rights\',\'num\')" title="'+_t('inline_date_tip')+'">'+(r.updated||'—')+'</span></td>'
+
+      +'<td style="font-size:11px;color:var(--t2)">'+(r.comment||'—')+'</td>'
+
+      +'<td style="white-space:nowrap">'
+
+        +'<button class="edit-btn" onclick="editRights('+i+',event)">✏</button>'
+
+        +'<button class="del-btn" data-mod="rights" data-idx="'+i+'" data-lbl="'+encodeURIComponent(r.num+' '+r.name)+'" onclick="handleDelBtn(this,event)">🗑</button>'
+
+      +'</td>'
+
+      +'</tr>';
+
+  }).join(''):'<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--t3);font-size:11px">'+_t('no_data_rights')+'</td></tr>';
+
+}
+
+function editRights(idx,e){
+
+  e&&e.stopPropagation();
+
+  const r=idx<0?{num:'',name:'',country:'',date:'',stage:'Документы приняты',status:'В процессе',updated:'',comment:''}:rights[idx];
+
+  openModal(`
+
+    <div class="mhdr">
+
+      <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700">${idx<0?'Добавить':'Изменить'} — Права</div>
+
+      <button class="mcls" onclick="closeModal()">✕</button>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">№ клиента</label><input class="mi" id="ri-num" value="${r.num}"></div>
+
+      <div class="mf"><label class="mfl">ФИО</label><input class="mi" id="ri-name" value="${r.name}"></div>
+
+      <div class="mf"><label class="mfl">Страна прав</label><input class="mi" id="ri-country" value="${r.country||''}"></div>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">Дата подачи</label><input class="mi" id="ri-date" value="${r.date}" placeholder="DD/MM/YYYY"></div>
+
+      <div class="mf">
+
+        <label class="mfl">Этап</label>
+
+        <select class="ms" id="ri-stage">${RIGHTS_STAGES.map(s=>`<option ${r.stage===s?'selected':''}>${s}</option>`).join('')}</select>
+
+      </div>
+
+      <div class="mf">
+
+        <label class="mfl">Статус <span style="color:var(--gre);font-size:8px">← дата обновится</span></label>
+
+        <input class="mi" id="ri-status" value="${r.status}">
+
+      </div>
+
+    </div>
+
+    <div class="msec"><label class="mfl">Комментарий</label><textarea class="mta" id="ri-comment">${r.comment}</textarea></div>
+
+    <div class="mft">
+
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+
+      <button class="btn btn-p" onclick="saveRights(${idx})">${idx<0?'Добавить':'Сохранить'}</button>
+
+    </div>`,'narrow');
+
+}
+
+async function saveRights(idx){
+
+  const obj={num:g('ri-num').value,name:g('ri-name').value,country:g('ri-country').value,date:g('ri-date').value,stage:g('ri-stage').value,status:g('ri-status').value,updated:nowDMY(),comment:g('ri-comment').value};
+
+  if(idx<0)rights.push(obj);else rights[idx]=obj;
+
+  closeModal();renderRights();renderDash();toast(idx<0?'Добавлено ✓':'Права обновлены ✓');
+
+  await (idx<0?apiPost('/rights',obj):apiPut('/rights/'+obj.num,obj));
+
+}
+
+// ============================================================
+
+// TASKS — DRAG & DROP
+
+// ============================================================
+
+let taskClientFilter='';
+
+let _dragId=null;
+
+function filterTasksByClient(v){taskClientFilter=v;renderTasks();}
+
+function renderTasks(){
+
+  const COLS=[{key:'todo',label:'К выполнению',color:'var(--acc)'},{key:'inprogress',label:'В процессе',color:'var(--yel)'},{key:'done',label:'Выполнено',color:'var(--gre)'}];
+
+  const visibleTasks=getVisibleTasks();
+
+  const data=taskClientFilter?visibleTasks.filter(t=>t.client.includes(taskClientFilter)):visibleTasks;
+
+  g('task-board').innerHTML=COLS.map(col=>{
+
+    const ct=data.filter(t=>t.stage===col.key);
+
+    return`<div class="tcol" id="tcol-${col.key}" ondragover="tDragOver(event,'${col.key}')" ondrop="tDrop(event,'${col.key}')" ondragleave="tDragLeave(event)">
+
+      <div class="tcol-h">
+
+        <div style="width:7px;height:7px;border-radius:50%;background:${col.color};flex-shrink:0"></div>
+
+        <div class="tcol-t" style="color:${col.color}">${col.label}</div>
+
+        <div class="tcol-cnt">${ct.length}</div>
+
+      </div>
+
+      <div class="tlist" id="tlist-${col.key}">
+
+        ${ct.map(t=>renderTCard(t)).join('')}
+
+      </div>
+
+      <div class="t-add" onclick="openAddTaskModal('${col.key}')">+ задача</div>
+
+    </div>`;
+
+  }).join('');
+
+}
+
+function renderTCard(t){
+
+  const now=new Date();const ov=t.stage!=='done'&&t.due&&new Date(t.due)<now;
+
+  return`<div class="tcard pb-${t.prio}" id="tc-${t.id}" draggable="true" ondragstart="tDragStart(event,'${t.id}')" onclick="openTaskModal('${t.id}')">
+
+    <div class="tcard-txt">${t.text}</div>
+
+    <div class="tcard-meta">
+
+      ${t.client?`<span class="cn">кл.${t.client}</span>`:''}
+
+      ${t.assignee&&t.assignee!=='—'?`<span class="as">${t.assignee}</span>`:''}
+
+      <span class="pdot ${t.prio}"></span>
+
+      ${t.due?`<span style="color:${ov?'var(--red)':'var(--t3)'}">${t.due}</span>`:''}
+
+      ${t.cmts&&t.cmts.length>0?`<span>💬${t.cmts.length}</span>`:''}
+
+    </div>
+
+    <div class="tcard-acts" onclick="event.stopPropagation()">
+
+      ${t.stage!=='todo'?`<button class="btn btn-g btn-xs" onclick="moveTask('${t.id}','todo',event)">← Todo</button>`:''}
+
+      ${t.stage!=='inprogress'?`<button class="btn btn-g btn-xs" onclick="moveTask('${t.id}','inprogress',event)">→ Процесс</button>`:''}
+
+      ${t.stage!=='done'?`<button class="btn btn-p btn-xs" onclick="moveTask('${t.id}','done',event)">✓</button>`:''}
+
+    </div>
+
+  </div>`;
+
+}
+
+function tDragStart(e,id){_dragId=id;setTimeout(()=>{const el=g('tc-'+id);if(el)el.classList.add('dragging');},0);}
+
+function tDragOver(e,col){e.preventDefault();e.currentTarget.classList.add('drop-active');}
+
+function tDragLeave(e){e.currentTarget.classList.remove('drop-active');}
+
+function tDrop(e,col){
+
+  e.preventDefault();e.currentTarget.classList.remove('drop-active');
+
+  if(_dragId){const t=tasks.find(x=>x.id===_dragId);if(t)t.stage=col;_dragId=null;renderTasks();renderTaskStats();}
+
+}
+
+function moveTask(id,stage,e){if(e)e.stopPropagation();const t=tasks.find(x=>x.id===id);if(t)t.stage=stage;renderTasks();renderTaskStats();}
+
+document.addEventListener('dragend',()=>{document.querySelectorAll('.tcard').forEach(c=>c.classList.remove('dragging'));document.querySelectorAll('.tcol').forEach(c=>c.classList.remove('drop-active'));});
+
+function openTaskModal(id){
+
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+
+  openModal(`
+
+    <div class="mhdr">
+
+      <div>
+
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)">Задача${t.client?' · клиент '+t.client:''}</div>
+
+        <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:700;margin-top:3px">${t.text}</div>
+
+      </div>
+
+      <button class="mcls" onclick="closeModal()">✕</button>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">Этап</label>
+
+        <select class="ms" id="tm-stage"><option value="todo" ${t.stage==='todo'?'selected':''}>К выполнению</option><option value="inprogress" ${t.stage==='inprogress'?'selected':''}>В процессе</option><option value="done" ${t.stage==='done'?'selected':''}>Выполнено</option></select>
+
+      </div>
+
+      <div class="mf"><label class="mfl">Приоритет</label>
+
+        <select class="ms" id="tm-prio"><option value="high" ${t.prio==='high'?'selected':''}>🔴 Высокий</option><option value="mid" ${t.prio==='mid'?'selected':''}>🟡 Средний</option><option value="low" ${t.prio==='low'?'selected':''}>⚪ Низкий</option></select>
+
+      </div>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">Ответственный</label>
+
+        <select class="ms" id="tm-assignee">${TEAM.map(a=>`<option ${t.assignee===a?'selected':''}>${a}</option>`).join('')}</select>
+
+      </div>
+
+      <div class="mf"><label class="mfl">Срок</label><input class="mi" type="date" id="tm-due" value="${t.due}"></div>
+
+      <div class="mf"><label class="mfl">Клиент №</label><input class="mi" id="tm-client" value="${t.client}"></div>
+
+    </div>
+
+    <hr class="mdiv">
+
+    <div class="msec">
+
+      <div class="msl">Комментарии (${(t.cmts||[]).length})</div>
+
+      <div class="cmt-list" id="tm-cmtlist">
+
+        ${(t.cmts||[]).map(c=>`<div class="cmt"><div class="cmt-m"><span>${c.a}</span> · ${c.d}</div><div class="cmt-t">${c.t}</div></div>`).join('')}
+
+        ${!(t.cmts||[]).length?'<div style="font-size:10px;color:var(--t3);padding:4px">Нет комментариев</div>':''}
+
+      </div>
+
+      <textarea class="mta" id="tm-new-cmt" placeholder="Добавить комментарий..." style="min-height:52px;margin-bottom:5px"></textarea>
+
+      <button class="btn btn-g btn-sm" onclick="addComment('${t.id}')">+ Добавить комментарий</button>
+
+    </div>
+
+    <div class="mft">
+
+      <button class="btn btn-red btn-sm" style="margin-right:auto" onclick="deleteTask('${t.id}')">🗑 Удалить</button>
+
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+
+      <button class="btn btn-p" onclick="saveTask('${t.id}')">Сохранить</button>
+
+    </div>`,'wide');
+
+}
+
+function addComment(tid){
+
+  const t=tasks.find(x=>x.id===tid);const txt=(g('tm-new-cmt').value||'').trim();
+
+  if(!t||!txt)return;
+
+  if(!t.cmts)t.cmts=[];
+
+  t.cmts.push({a:'Менеджер',d:nowDMY(),t:txt});
+
+  const el=g('tm-cmtlist');
+
+  if(el)el.innerHTML=t.cmts.map(c=>`<div class="cmt"><div class="cmt-m"><span>${c.a}</span> · ${c.d}</div><div class="cmt-t">${c.t}</div></div>`).join('');
+
+  g('tm-new-cmt').value='';
+
+}
+
+function saveTask(tid){
+
+  const t=tasks.find(x=>x.id===tid);if(!t)return;
+
+  t.stage=g('tm-stage').value;t.prio=g('tm-prio').value;t.assignee=g('tm-assignee').value;t.due=g('tm-due').value;t.client=g('tm-client').value;
+
+  closeModal();renderTasks();renderTaskStats();
+
+}
+
+function deleteTask(tid){if(confirm('Удалить задачу?')){tasks=tasks.filter(x=>x.id!==tid);closeModal();renderTasks();renderTaskStats();}}
+
+function openAddTaskModal(defaultStage='todo',defaultClient=''){
+
+  openModal(`
+
+    <div class="mhdr">
+
+      <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700">Новая задача</div>
+
+      <button class="mcls" onclick="closeModal()">✕</button>
+
+    </div>
+
+    <div class="msec"><label class="mfl">Описание *</label><textarea class="mta" id="nt-text" placeholder="Описание задачи..."></textarea></div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">Клиент №</label><input class="mi" id="nt-client" value="${defaultClient}" placeholder="541"></div>
+
+      <div class="mf"><label class="mfl">Ответственный</label><select class="ms" id="nt-assignee">${TEAM.map(a=>`<option>${a}</option>`).join('')}</select></div>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">Приоритет</label><select class="ms" id="nt-prio"><option value="high">🔴 Высокий</option><option value="mid" selected>🟡 Средний</option><option value="low">⚪ Низкий</option></select></div>
+
+      <div class="mf"><label class="mfl">Срок</label><input class="mi" type="date" id="nt-due"></div>
+
+      <div class="mf"><label class="mfl">Этап</label><select class="ms" id="nt-stage"><option value="todo" ${defaultStage==='todo'?'selected':''}>К выполнению</option><option value="inprogress" ${defaultStage==='inprogress'?'selected':''}>В процессе</option><option value="done">Выполнено</option></select></div>
+
+    </div>
+
+    <div class="mft">
+
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+
+      <button class="btn btn-p" onclick="createTask()">Создать</button>
+
+    </div>`,'narrow');
+
+}
+
+function createTask(){
+
+  const txt=(g('nt-text').value||'').trim();if(!txt)return;
+
+  tasks.unshift({id:uid(),text:txt,client:g('nt-client').value,assignee:g('nt-assignee').value,prio:g('nt-prio').value,stage:g('nt-stage').value,due:g('nt-due').value,created:today(),cmts:[]});
+
+  closeModal();renderTasks();renderTaskStats();
+
+}
+
+// ============================================================
+
+// SCHEDULE
+
+// ============================================================
+
+let schedY=2026,schedM=1,schedSel=null;
+
+function schedMon(d){schedM+=d;if(schedM>11){schedM=0;schedY++;}if(schedM<0){schedM=11;schedY--;}renderSchedMini();}
+
+function renderSchedMini(){
+
+  g('sched-m-title').textContent=`${MONTHS[schedM]} ${schedY}`;
+
+  const fd=new Date(schedY,schedM,1).getDay(),dim=new Date(schedY,schedM+1,0).getDate(),prev=new Date(schedY,schedM,0).getDate(),so=(fd+6)%7;
+
+  const today_=new Date(),mDates=new Set(meetings.map(m=>m.date));
+
+  const dows=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+  let h=dows.map(d=>`<div class="sched-dow">${d}</div>`).join('');
+
+  for(let i=so-1;i>=0;i--)h+=`<div class="sched-day oth">${prev-i}</div>`;
+
+  for(let d=1;d<=dim;d++){
+
+    const ds=`${String(d).padStart(2,'0')}.${String(schedM+1).padStart(2,'0')}.${schedY}`;
+
+    const isT=today_.getFullYear()===schedY&&today_.getMonth()===schedM&&today_.getDate()===d;
+
+    h+=`<div class="sched-day ${mDates.has(ds)?'has':''} ${isT?'tod':''} ${schedSel===ds?'sel':''}" onclick="selectSchedDay('${ds}')">${d}</div>`;
+
+  }
+
+  const rem=(so+dim)%7;if(rem>0)for(let d=1;d<=7-rem;d++)h+=`<div class="sched-day oth">${d}</div>`;
+
+  g('sched-mg').innerHTML=h;
+
+}
+
+function selectSchedDay(ds){
+
+  schedSel=ds;renderSchedMini();
+
+  g('sched-sel-d').textContent=ds;
+
+  const dm=meetings.filter(m=>m.date===ds);const occ=new Set(dm.map(m=>m.time));
+
+  g('sched-sl').innerHTML=SLOTS.map(slot=>{
+
+    const isFree=!occ.has(slot);
+
+    const occName=!isFree?(dm.find(m=>m.time===slot)?.name||'занят'):'';
+
+    const onclickAttr=isFree?`onclick="openBookSlotModal('${ds}','${slot}')"`:''
+
+    return `<div class="slot-item ${isFree?'free':'occ'}" ${onclickAttr} title="${isFree?'Нажмите для бронирования':occName}">
+
+      <div class="slot-dot ${isFree?'free':'occ'}"></div>
+
+      <span>${slot}</span>
+
+      <span style="margin-left:auto;font-size:8.5px">${isFree?'свободно':occName}</span>
+
+    </div>`;
+
+  }).join('');
+
+  renderMeetings(meetings.filter(m=>m.date===ds));
+
+}
+
+function filterMeetings(f,el){
+
+  document.querySelectorAll('#sched-status-chips .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');
+
+  renderMeetings(f==='all'?meetings:meetings.filter(m=>m.status===f));
+
+}
+
+function renderMeetings(data){
+
+  g('sched-tbody').innerHTML=(data||meetings).sort((a,b)=>parseDMY(a.date)-parseDMY(b.date)).map(m=>`
+
+    <tr>
+
+      <td class="mono" style="color:var(--acc)">${m.date} · ${m.time}</td>
+
+      <td style="font-weight:600">${m.name}</td>
+
+      <td class="mono" style="color:var(--acc);font-size:10.5px">${m.tg||'—'}</td>
+
+      <td>${m.status==='Подтверждено'?`<span class="bdg gre">✓ Подтверждено</span>`:`<span class="bdg yel">⏳ ${m.status||'—'}</span>`}</td>
+
+      <td>${m.meet&&m.meet!=='pending'&&m.meet.startsWith('http')?`<a class="meet-lnk" href="${m.meet}" target="_blank">↗ Meet</a>`:m.meet?`<span style="font-size:9px;color:var(--t3)">${m.meet}</span>`:'—'}</td>
+
+    </tr>`).join('');
+
+}
+
+function openBookSlotModal(date='',time=''){
+
+  openModal(`
+
+    <div class="mhdr">
+
+      <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700">Занять слот</div>
+
+      <button class="mcls" onclick="closeModal()">✕</button>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">Дата (ДД.ММ.ГГГГ)</label><input class="mi" id="bs-date" value="${date}" placeholder="18.02.2026"></div>
+
+      <div class="mf"><label class="mfl">Время</label><select class="ms" id="bs-time">${SLOTS.map(s=>`<option ${s===time?'selected':''}>${s}</option>`).join('')}</select></div>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">Имя клиента *</label><input class="mi" id="bs-name"></div>
+
+      <div class="mf"><label class="mfl">Telegram</label><input class="mi" id="bs-tg" placeholder="@username"></div>
+
+    </div>
+
+    <div class="mrow">
+
+      <div class="mf"><label class="mfl">Статус</label><select class="ms" id="bs-status"><option>Подтверждено</option><option>Ожидает подтверждения</option></select></div>
+
+      <div class="mf"><label class="mfl">Google Meet (опционально)</label><input class="mi" id="bs-meet" placeholder="https://meet.google.com/..."></div>
+
+    </div>
+
+    <div class="mft">
+
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+
+      <button class="btn btn-p" onclick="bookSlot()">Сохранить</button>
+
+    </div>`);
+
+}
+
+async function bookSlot(){
+
+  const name=(g('bs-name').value||'').trim();if(!name)return;
+
+  const obj={date:g('bs-date').value,time:g('bs-time').value,name,tg:g('bs-tg').value,status:g('bs-status').value,meet:g('bs-meet').value};
+
+  meetings.push(obj);
+
+  closeModal();renderMeetings(meetings);renderSchedMini();if(schedSel)selectSchedDay(schedSel);renderDash();
+
+  await apiPost('/schedule',obj);
+
+}
+
+// ============================================================
+
+// CALENDAR
+
+// ============================================================
+
+let calY=2026,calM=1,calSel=null;
+
+function calMon(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}renderCal();}
+
+function renderCal(){
+
+  g('cal-month').textContent=`${MONTHS[calM]} ${calY}`;
+
+  const fd=new Date(calY,calM,1).getDay(),dim=new Date(calY,calM+1,0).getDate(),prev=new Date(calY,calM,0).getDate(),so=(fd+6)%7;
+
+  const today_=new Date();let cells='';
+
+  for(let i=so-1;i>=0;i--)cells+=`<div class="cal-cell om"><div class="cal-dn">${prev-i}</div></div>`;
+
+  for(let d=1;d<=dim;d++){
+
+    const ds=`${calY}-${String(calM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+    const isT=today_.getFullYear()===calY&&today_.getMonth()===calM&&today_.getDate()===d;
+
+    const isSel=calSel===ds;const evts=CAL_EVENTS[ds]||[];
+
+    cells+=`<div class="cal-cell ${isT?'today':''} ${isSel?'selected':''}" onclick="selectCalDay('${ds}')"><div class="cal-dn">${d}</div>${evts.slice(0,2).map(e=>`<div class="cal-ev ${e.type}">${e.label}</div>`).join('')}${evts.length>2?`<div style="font-size:7px;color:var(--t3);padding:0 3px">+${evts.length-2}</div>`:''}</div>`;
+
+  }
+
+  const rem=7-((so+dim)%7);if(rem<7)for(let d=1;d<=rem;d++)cells+=`<div class="cal-cell om"><div class="cal-dn">${d}</div></div>`;
+
+  g('cal-grid').innerHTML=cells;
+
+}
+
+function selectCalDay(ds){
+
+  calSel=ds;renderCal();
+
+  const[y,m,d]=ds.split('-');g('cal-sel-d').textContent=`${d}.${m}.${y}`;
+
+  const evts=CAL_EVENTS[ds]||[];
+
+  g('cal-sb-evts').innerHTML=evts.length?evts.map(e=>`<div class="cal-evitem"><div class="cal-evtime">${e.time||'Весь день'}</div><div class="cal-evname">${e.detail.split('·')[0].trim()}</div><div class="cal-evmeta">${(e.detail.split('·')[1]||'').trim()}</div></div>`).join(''):'<div class="cal-empty">Нет событий в этот день</div>';
+
+}
+
+// ============================================================
+
+// MODAL
+
+// ============================================================
+
+function openModal(html,size=''){
+
+  const box=g('modal-box');
+
+  box.className='modal'+(size?' '+size:'');
+
+  g('modal-in').innerHTML=html;
+
+  g('modal-ov').classList.add('open');
+
+}
+
+function closeModal(){g('modal-ov').classList.remove('open');}
+
+function toast(msg,type='ok'){
+
+  const t=document.createElement('div');
+
+  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:'+(type==='ok'?'#16a34a':'#dc2626')+';color:#fff;padding:9px 20px;border-radius:20px;font-size:12px;font-weight:600;z-index:9999;box-shadow:0 4px 14px rgba(0,0,0,.2);font-family:Manrope,sans-serif;white-space:nowrap;pointer-events:none';
+
+  t.textContent=msg;document.body.appendChild(t);
+
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300)},2500);
+
+}
+
+function closeOv(e){if(e.target===g('modal-ov'))closeModal();}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+// ============================================================
+
+// RENDER ALL
+
+// ============================================================
+
+function renderAll(){
+
+  renderDash();
+
+  renderClients();
+
+  renderKanban();
+
+  renderAIMA();
+
+  renderVisaD();
+
+  renderCourts();
+
+  renderCitizenship();
+
+  renderRights();
+
+  renderMeetings(meetings);
+
+  renderSchedMini();
+
+  renderTasks();
+
+  renderTaskStats();
+
+}
+
+// ============================================================
+
+// INIT
+
+// ============================================================
+
+(function init(){
+
+  initKbChips();
+
+  renderAll();
+
+  renderCal();
+
+  renderSchedMini();
+
+  g('api-status-txt').textContent='Локальные данные · нажмите ↻ для синхронизации';
+
+  g('api-dot').className='api-dot warn';
+
+  updateIntStatus(false);
+
+  // Restore saved language
+
+  if(_lang !== 'ru'){
+
+    document.querySelectorAll('.lang-btn').forEach(b=>{
+
+      b.classList.toggle('active', b.textContent.trim().toLowerCase()===_lang);
+
+    });
+
+    _applyI18n();
+
+  }
+
+  initAuth();
+
+})();
+
+</script>
+
+<!-- AUTH SCREEN -->
+
+<div class="auth-overlay" id="auth-overlay">
+
+  <div class="auth-box">
+
+    <div class="auth-logo">🇵🇹</div>
+
+    <div class="auth-title">MigrAll CRM</div>
+
+    <div class="auth-sub">Войдите чтобы продолжить</div>
+
+    <div class="auth-field">
+
+      <label>Имя пользователя</label>
+
+      <input id="auth-user" placeholder="Введите имя" autocomplete="username" onkeydown="if(event.key==='Enter')g('auth-pass').focus()">
+
+    </div>
+
+    <div class="auth-field">
+
+      <label>Пароль</label>
+
+      <input id="auth-pass" type="password" placeholder="Пароль" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+
+    </div>
+
+    <button class="auth-btn" onclick="doLogin()">Войти →</button>
+
+    <div class="auth-err" id="auth-err">Неверный логин или пароль</div>
+
+    <div style="margin-top:20px;font-size:11px;color:var(--t3)">Быстрый вход:</div>
+
+    <div class="auth-users" id="auth-quick"></div>
+
+  </div>
+
+</div>
+
 </body>
+
 </html>
+
+
+
