@@ -2264,8 +2264,18 @@ async function _loadUsersFromSheets(callback) {
   var sheetId = '';
   // 1. Приоритет: ENV переменная с сервера (Render.com → SHEET_USERS)
   if(window.__ENV && window.__ENV.SHEET_USERS) sheetId = window.__ENV.SHEET_USERS;
-  // 2. localStorage (настройки вручную)
-  if(!sheetId) { try { sheetId = localStorage.getItem('crm_users_sheet_id') || ''; } catch(e){} }
+  // 2. localStorage (настройки вручную) — только если это реально ID таблицы (не URL)
+  if(!sheetId) {
+    try {
+      var lsVal = localStorage.getItem('crm_users_sheet_id') || '';
+      // Валидация: Sheet ID не должен быть URL (script.google.com и т.п.)
+      if(lsVal && !lsVal.startsWith('http') && lsVal.length > 10) sheetId = lsVal;
+      else if(lsVal && lsVal.startsWith('http')) {
+        console.warn('[_loadUsersFromSheets] localStorage содержит URL вместо Sheet ID — игнорируем');
+        localStorage.removeItem('crm_users_sheet_id'); // очищаем неверное значение
+      }
+    } catch(e){}
+  }
 
   if(!sheetId) {
     console.warn('[_loadUsersFromSheets] SHEET_USERS не задан. Добавьте в Render Environment Variables.');
