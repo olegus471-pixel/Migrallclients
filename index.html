@@ -1225,6 +1225,17 @@ input,select,textarea{font-family:'Manrope',sans-serif}
   <div class="view" id="view-integration">
     <div class="sec-h"><div class="sec-t">API / Интеграции</div></div>
 
+    <!-- Render.com Environment Variables -->
+    <div class="panel" style="margin-bottom:16px;padding:16px 18px;border-left:3px solid var(--pri)">
+      <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">🚀 Render.com — Переменные окружения</div>
+      <div style="font-size:11px;color:var(--t2);margin-bottom:10px">
+        ID таблиц хранятся на сервере в <b>Environment Variables</b> и не нужно вводить вручную.<br>
+        Перейдите: <b>Render Dashboard → ваш сервис → Environment</b> и добавьте:
+      </div>
+      <div id="render-env-status" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-family:monospace;font-size:10.5px;margin-bottom:10px"></div>
+      <div style="font-size:10px;color:var(--t3)">✅ — значение задано на сервере &nbsp;|&nbsp; ❌ — не задано (нужно добавить в Render)</div>
+    </div>
+
     <!-- Apps Script URL -->
     <div class="panel" style="margin-bottom:16px;padding:16px 18px">
       <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">⚡ Google Apps Script URL</div>
@@ -2141,8 +2152,16 @@ CRM ↔ Backend (Render) ↔ Google Sheets
 // ============================================================
 // ─── API CONFIG ─────────────────────────────────────────────
 // Установить реальный URL после деплоя Apps Script:
+// window.__ENV инжектируется сервером (server.js) из переменных окружения Render.com
 // window.API_BASE = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
-let API_BASE = window.API_BASE || (()=>{ try{ return localStorage.getItem('crm_gas_url')||''; }catch(e){ return ''; } })() || 'https://script.google.com/macros/s/AKfycbwDvmzX8V2fy2Qojrf8k4vq-t0GctFPhXywdp-7SnRuwDAu3h2NdvAwOVXzr3mXgObB/exec';
+const __ENV = window.__ENV || {};
+// GAS_URL из ENV → приоритет над localStorage и хардкодом
+let API_BASE = window.API_BASE
+  || (__ENV.GAS_URL || '')
+  || (()=>{ try{ return localStorage.getItem('crm_gas_url')||''; }catch(e){ return ''; } })()
+  || 'https://script.google.com/macros/s/AKfycbwDvmzX8V2fy2Qojrf8k4vq-t0GctFPhXywdp-7SnRuwDAu3h2NdvAwOVXzr3mXgObB/exec';
+// Если GAS_URL задан через ENV — сохраняем чтобы не перебивался из localStorage
+if (__ENV.GAS_URL) { try{ localStorage.setItem('crm_gas_url', __ENV.GAS_URL); }catch(e){} }
 let API_ONLINE = false;
 let _pollInterval = null;
 
@@ -2243,10 +2262,13 @@ function _normalizeUsers(data) {
 /** Загрузить пользователей напрямую из Google Sheets (если сервер не отдаёт) */
 async function _loadUsersFromSheets(callback) {
   var sheetId = '';
-  try { sheetId = localStorage.getItem('crm_users_sheet_id') || ''; } catch(e){}
-  
+  // 1. Приоритет: ENV переменная с сервера (Render.com → SHEET_USERS)
+  if(window.__ENV && window.__ENV.SHEET_USERS) sheetId = window.__ENV.SHEET_USERS;
+  // 2. localStorage (настройки вручную)
+  if(!sheetId) { try { sheetId = localStorage.getItem('crm_users_sheet_id') || ''; } catch(e){} }
+
   if(!sheetId) {
-    console.warn('[_loadUsersFromSheets] ID таблицы Users не задан. Укажите его в API / Интеграции.');
+    console.warn('[_loadUsersFromSheets] SHEET_USERS не задан. Добавьте в Render Environment Variables.');
     if(callback) callback();
     return;
   }
@@ -2940,6 +2962,8 @@ function showView(id,el){
       if(inp && sid) inp.value = sid;
       if(kinp && akey) kinp.value = akey;
     } catch(e){}
+    // Показать статус Render ENV переменных
+    _renderEnvStatus();
   }
   if(id==='filings') { 
     initFilingMonth();  // установить текущий месяц
@@ -3008,6 +3032,35 @@ function copyGasCode() {
   navigator.clipboard.writeText(ta.value)
     .then(function(){ showToast('GAS код скопирован в буфер ✓'); })
     .catch(function(){ document.execCommand('copy'); showToast('GAS код скопирован ✓'); });
+}
+
+function _renderEnvStatus() {
+  var el = document.getElementById('render-env-status');
+  if (!el) return;
+  var env = window.__ENV || {};
+  var vars = [
+    ['GAS_URL',           'GAS_URL — Google Apps Script URL'],
+    ['SHEET_USERS',       'SHEET_USERS — Таблица пользователей'],
+    ['SHEET_CLIENTS',     'SHEET_CLIENTS — Клиенты'],
+    ['SHEET_STATUSES',    'SHEET_STATUSES — Статусы AIMA'],
+    ['SHEET_COURTS',      'SHEET_COURTS — Суды'],
+    ['SHEET_SCHEDULE',    'SHEET_SCHEDULE — Расписание'],
+    ['SHEET_CITIZENSHIP', 'SHEET_CITIZENSHIP — Гражданство'],
+    ['SHEET_RIGHTS',      'SHEET_RIGHTS — Права'],
+    ['SHEET_ORDERS',      'SHEET_ORDERS — Заказы'],
+    ['SHEET_TASKS',       'SHEET_TASKS — Задачи'],
+    ['SHEET_FILINGS',     'SHEET_FILINGS — Подачи'],
+    ['SHEET_SPEC_TASKS',  'SHEET_SPEC_TASKS — Дела адвоката/переводчика'],
+    ['DRIVE_ROOT',        'DRIVE_ROOT — Google Drive папка'],
+    ['CALENDAR_ID',       'CALENDAR_ID — Google Calendar'],
+  ];
+  el.innerHTML = vars.map(function(v) {
+    var set = env[v[0]] && env[v[0]].length > 0;
+    return '<div style="padding:2px 4px;border-radius:4px;background:' + (set ? 'rgba(34,197,94,.1)' : 'rgba(239,68,68,.08)') + '">'
+      + (set ? '✅' : '❌') + ' <b>' + v[0] + '</b>'
+      + (set ? ' <span style="color:var(--t3);font-weight:400">(' + env[v[0]].slice(0,20) + '…)</span>' : '')
+      + '</div>';
+  }).join('');
 }
 
 function saveUsersSheetId() {
