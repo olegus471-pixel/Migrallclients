@@ -2546,7 +2546,7 @@ function loginAs(userOrLogin){
   } else {
     user = USERS_LOCAL.find(function(u){ return u.login===userOrLogin; })||USERS_LOCAL[0];
   }
-  currentUser = user.login||user.email;
+  currentUser = user;
   try{ localStorage.setItem('crm_user', JSON.stringify(user)); }catch(e){}
 
   // Скрыть экран входа
@@ -2598,9 +2598,9 @@ function closeUserMenuOutside(e){if(!g('usr-wrap')?.contains(e.target))closeUser
 function showProfileModal(){
   closeUserMenu();
   var saved = (function(){ try{ return JSON.parse(localStorage.getItem('crm_user')||'{}'); }catch(e){ return {}; } })();
-  var name = saved.name || currentUser || '—';
-  var role = saved.role || 'manager';
-  var email = saved.email || saved.login || currentUser || '—';
+  var name = saved.name || (currentUser&&currentUser.name) || '—';
+  var role = saved.role || (currentUser&&currentUser.role) || 'manager';
+  var email = saved.email || saved.login || (currentUser&&(currentUser.email||currentUser.login)) || '—';
   var initials = name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase()||'?';
   var roleLabel = role==='admin'?'Администратор':role==='manager'?'Менеджер':'Просмотр';
   var existing = document.getElementById('profile-modal');
@@ -6417,7 +6417,7 @@ async function saveFiling() {
     status: document.getElementById('fm-status').value,
     comment: document.getElementById('fm-comment').value,
   };
-  if (!editingId) filing.createdBy = currentUser || '';
+  if (!editingId) filing.createdBy = (currentUser&&(currentUser.name||currentUser.email||currentUser.login)) || '';
   var result = editingId
     ? await apiPut('/filings', filing).catch(function(){ return null; })
     : await apiPost('/filings', filing).catch(function(){ return null; });
@@ -6796,7 +6796,7 @@ async function saveSpecTask() {
     description: document.getElementById('st-desc').value,
     driveUrl: document.getElementById('st-drive').value,
     stage: document.getElementById('st-stage').value,
-    createdBy: currentUser || '',
+    createdBy: (currentUser&&(currentUser.name||currentUser.email||currentUser.login)) || '',
     createdAt: new Date().toISOString()
   };
   var result = await apiPost('/spec-tasks', task).catch(function(){ return null; });
