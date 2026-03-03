@@ -867,7 +867,19 @@ input,select,textarea{font-family:'Manrope',sans-serif}
   <div class="view" id="view-clients">
     <div class="sec-h">
       <div class="sec-t">Клиенты</div>
-      <div class="sec-a">
+      <div class="sec-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="clients-search" class="mi" style="width:180px;font-size:11px" placeholder="🔍 Поиск по имени, tg, ID..." oninput="applyClientsFilter()">
+        <select id="clients-stage-filter" class="ms" style="font-size:11px;width:150px" onchange="applyClientsFilter()">
+          <option value="all">Все этапы</option>
+          <option value="Новый клиент">Новый клиент</option>
+          <option value="Онбординг завершён">Онбординг завершён</option>
+          <option value="Активный">Активный</option>
+          <option value="Завершён">Завершён</option>
+        </select>
+        <label style="font-size:11px;color:var(--t2);display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="checkbox" id="clients-hide-done" checked onchange="applyClientsFilter()">
+          Скрыть завершённых
+        </label>
         <button class="btn btn-p btn-sm" onclick="openAddClientModal()">+ Новый клиент</button>
       </div>
     </div>
@@ -891,12 +903,20 @@ input,select,textarea{font-family:'Manrope',sans-serif}
   <!-- =================== AIMA =================== -->
   <div class="view" id="view-aima">
     <div class="sec-h"><div class="sec-t">Проверки AIMA</div></div>
-    <div class="chips" id="aima-filter-chips">
-      <div class="chip active" onclick="filterAIMA('all',this)">Все</div>
-      <div class="chip" onclick="filterAIMA('Апрув',this)">Апрув</div>
-      <div class="chip" onclick="filterAIMA('Анализ',this)">Анализ</div>
-      <div class="chip" onclick="filterAIMA('Печать',this)">Печать</div>
-      <div class="chip" onclick="filterAIMA('Дозапрос',this)">Дозапрос</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <div class="chips" id="aima-filter-chips" style="margin-bottom:0">
+        <div class="chip active" onclick="filterAIMA('all',this)">Все</div>
+        <div class="chip" onclick="filterAIMA('Апрув',this)">Апрув</div>
+        <div class="chip" onclick="filterAIMA('Анализ',this)">Анализ</div>
+        <div class="chip" onclick="filterAIMA('Печать',this)">Печать</div>
+        <div class="chip" onclick="filterAIMA('Дозапрос',this)">Дозапрос</div>
+        <div class="chip" onclick="filterAIMA('Отказ',this)">Отказ</div>
+      </div>
+      <label style="font-size:11px;color:var(--t2);display:flex;align-items:center;gap:4px;cursor:pointer;margin-left:4px">
+        <input type="checkbox" id="aima-hide-done" checked onchange="filterAIMA(_aimaCurrentFilter||'all',document.querySelector('#aima-filter-chips .chip.active'))">
+        Скрыть завершённых
+      </label>
+      <input id="aima-search" class="mi" style="width:160px;font-size:11px;margin-left:auto" placeholder="🔍 Поиск..." oninput="filterAIMA(_aimaCurrentFilter||'all',document.querySelector('#aima-filter-chips .chip.active'))">
     </div>
     <div class="panel">
       <div class="dt-wrap"><div class="dt-wrap"><table class="dt">
@@ -962,13 +982,20 @@ input,select,textarea{font-family:'Manrope',sans-serif}
   <!-- =================== COURTS =================== -->
   <div class="view" id="view-courts">
     <div class="sec-h"><div class="sec-t">Суды</div><div class="sec-a"><button class="btn btn-p btn-sm" onclick="editCourt(-1)">+ Добавить</button></div></div>
-    <div class="chips" id="courts-chips">
-      <div class="chip active" onclick="filterCourts('all',this)">Все</div>
-      <div class="chip" onclick="filterCourts('90.2',this)">90.2</div>
-      <div class="chip" onclick="filterCourts('98.2',this)">98.2</div>
-      <div class="chip" onclick="filterCourts('91',this)">91</div>
-      <div class="chip" onclick="filterCourts('88.2',this)">88.2</div>
-      <div class="chip" onclick="filterCourts('15',this)">15 ст.</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <div class="chips" id="courts-chips" style="margin-bottom:0">
+        <div class="chip active" onclick="filterCourts('all',this)">Все</div>
+        <div class="chip" onclick="filterCourts('90.2',this)">90.2</div>
+        <div class="chip" onclick="filterCourts('98.2',this)">98.2</div>
+        <div class="chip" onclick="filterCourts('91',this)">91</div>
+        <div class="chip" onclick="filterCourts('88.2',this)">88.2</div>
+        <div class="chip" onclick="filterCourts('15',this)">15 ст.</div>
+      </div>
+      <label style="font-size:11px;color:var(--t2);display:flex;align-items:center;gap:4px;cursor:pointer">
+        <input type="checkbox" id="courts-hide-done" checked onchange="filterCourts(_courtsCurrentFilter||'all',document.querySelector('#courts-chips .chip.active'))">
+        Скрыть завершённых
+      </label>
+      <input id="courts-search" class="mi" style="width:160px;font-size:11px;margin-left:auto" placeholder="🔍 Поиск..." oninput="filterCourts(_courtsCurrentFilter||'all',document.querySelector('#courts-chips .chip.active'))">
     </div>
     <div class="panel">
       <div class="dt-wrap"><div class="dt-wrap"><table class="dt">
@@ -980,7 +1007,14 @@ input,select,textarea{font-family:'Manrope',sans-serif}
 
   <!-- =================== CITIZENSHIP =================== -->
   <div class="view" id="view-citizenship">
-    <div class="sec-h"><div class="sec-t">Гражданство</div><div class="sec-a"><button class="btn btn-p btn-sm" onclick="editCitizenship(-1)">+ Добавить</button></div></div>
+    <div class="sec-h"><div class="sec-t">Гражданство</div><div class="sec-a" style="display:flex;gap:8px;align-items:center">
+      <input id="cit-search" class="mi" style="width:160px;font-size:11px" placeholder="🔍 Поиск..." oninput="renderCitizenship()">
+      <label style="font-size:11px;color:var(--t2);display:flex;align-items:center;gap:4px;cursor:pointer">
+        <input type="checkbox" id="cit-hide-done" checked onchange="renderCitizenship()">
+        Скрыть завершённых
+      </label>
+      <button class="btn btn-p btn-sm" onclick="editCitizenship(-1)">+ Добавить</button>
+    </div></div>
     <div class="panel">
       <div class="dt-wrap"><div class="dt-wrap"><table class="dt">
         <thead><tr><th>№</th><th>Telegram</th><th>ФИО</th><th>Адвокат</th><th>Тип</th><th>Дата подачи</th><th>Трек-номер</th><th>Этап</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
@@ -991,7 +1025,15 @@ input,select,textarea{font-family:'Manrope',sans-serif}
 
   <!-- =================== RIGHTS =================== -->
   <div class="view" id="view-rights">
-    <div class="sec-h"><div class="sec-t">Водительские права</div><div class="sec-a"><button class="btn btn-p btn-sm" onclick="editRights(-1)">+ Добавить (legacy)</button><button class="btn btn-p btn-sm" style="margin-left:6px" onclick="showView('orders',null);openNewOrderModal()"><span data-i18n="ord_new">+ Новый заказ</span> ↗</button></div></div>
+    <div class="sec-h"><div class="sec-t">Водительские права</div><div class="sec-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="rights-search" class="mi" style="width:160px;font-size:11px" placeholder="🔍 Поиск..." oninput="renderRights()">
+      <label style="font-size:11px;color:var(--t2);display:flex;align-items:center;gap:4px;cursor:pointer">
+        <input type="checkbox" id="rights-hide-done" checked onchange="renderRights()">
+        Скрыть завершённых
+      </label>
+      <button class="btn btn-p btn-sm" onclick="editRights(-1)">+ Добавить (legacy)</button>
+      <button class="btn btn-p btn-sm" onclick="showView('orders',null);openNewOrderModal()"><span data-i18n="ord_new">+ Новый заказ</span> ↗</button>
+    </div></div>
     <div class="panel">
       <div class="dt-wrap"><div class="dt-wrap"><table class="dt">
         <thead><tr><th>№</th><th>Telegram</th><th>ФИО</th><th>Страна прав</th><th>Дата подачи</th><th>Этап</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
@@ -2155,6 +2197,23 @@ CRM ↔ Backend (Render) ↔ Google Sheets
 // window.__ENV инжектируется сервером (server.js) из переменных окружения Render.com
 // window.API_BASE = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
 const __ENV = window.__ENV || {};
+
+// ── FIX: Кнопка "Назад" и "Обновить" не сбрасывают логин ──
+// При загрузке страницы пушим состояние в history
+// чтобы кнопка "назад" возвращала на эту же страницу
+(function() {
+  // Pushstate при первой загрузке
+  if (!window.location.hash) {
+    history.replaceState({ crm: true }, '', window.location.href);
+  }
+  // Перехватываем popstate (кнопка Назад)
+  window.addEventListener('popstate', function(e) {
+    // Не уходим со страницы — пушим состояние обратно
+    history.pushState({ crm: true }, '', window.location.href);
+  });
+  // Перехватываем beforeunload (кнопка Обновить) — 
+  // сессия сохраняется в localStorage, просто восстанавливается при reload
+})();
 // GAS_URL из ENV → приоритет над localStorage и хардкодом
 let API_BASE = window.API_BASE
   || (__ENV.GAS_URL || '')
@@ -2955,6 +3014,9 @@ function showView(id,el){
   g('view-'+id).classList.add('active');
   if(id==='lawyer') renderLawyerCabinet();
   if(id==='orders') renderOrders();
+  if(id==='clients') applyClientsFilter();
+  if(id==='aima') filterAIMA(_aimaCurrentFilter||'all', document.querySelector('#aima-filter-chips .chip.active'));
+  if(id==='courts') filterCourts(_courtsCurrentFilter||'all', document.querySelector('#courts-chips .chip.active'));
   if(id==='translator') renderTranslatorCabinet();
   if(id==='translator') renderTranslatorCabinet();
   if(id==='orders') renderOrders();
@@ -2999,7 +3061,9 @@ function showView(id,el){
   }
 }
 function handleSearch(q){
-  if(!q.trim()){renderClients(clients);return;}
+  if(document.getElementById('clients-search')) document.getElementById('clients-search').value = q;
+  applyClientsFilter();
+  if(!q.trim()) return;
   const f=q.toLowerCase();
   const res=clients.filter(c=>c.name.toLowerCase().includes(f)||c.tg.toLowerCase().includes(f)||c.id.includes(q));
   renderClients(res);
@@ -3452,6 +3516,23 @@ function renderDash(){
 // ============================================================
 // CLIENTS
 // ============================================================
+// Фильтр клиентов: поиск + этап + скрыть завершённых
+function applyClientsFilter() {
+  var q     = (document.getElementById('clients-search') && document.getElementById('clients-search').value || '').toLowerCase().trim();
+  var stage = document.getElementById('clients-stage-filter') ? document.getElementById('clients-stage-filter').value : 'all';
+  var hideDone = document.getElementById('clients-hide-done') ? document.getElementById('clients-hide-done').checked : false;
+  var data = clients.filter(function(c) {
+    if (hideDone && (c.stage === 'Завершён' || c.stage === 'Завершено')) return false;
+    if (stage !== 'all' && c.stage !== stage) return false;
+    if (q) {
+      var hay = ((c.name||'') + ' ' + (c.tg||'') + ' ' + (c.id||'')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  renderClients(data);
+}
+
 function renderClients(data){
   const canAssign=currentUser&&(currentUser.role==='manager'||currentUser.role==='admin');
   g('clients-tbody').innerHTML=(data||clients).map(c=>{
@@ -3465,9 +3546,37 @@ function renderClients(data){
       +'<td>'+bdg(c.stage)+'</td>'
       +'<td style="font-size:10.5px;color:var(--t2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(c.substage||'—')+'</td>'
       +'<td class="mono" style="color:var(--t3)">'+fmtDate(c.last)+'</td>'
-      +(canAssign?'<td><button class="edit-btn" title="Assign to Lawyer" onclick="openAssignModal(\''+c.id+'\',event)">⚖</button></td>':'<td></td>')
+      +(canAssign?'<td style="white-space:nowrap"><button class="edit-btn" title="Назначить адвоката" onclick="openAssignModal(\''+c.id+'\',event)">⚖</button>'
+        +(currentUser&&currentUser.role==='admin'?'<button class="del-btn" style="margin-left:4px" title="Удалить клиента" onclick="deleteClient(\''+c.id+'\',event)">🗑</button>':'')
+        +'</td>':'<td></td>')
       +'</tr>';
   }).join('');
+}
+
+async function deleteClient(cid, e) {
+  if (e) e.stopPropagation();
+  const c = clients.find(x => x.id === cid);
+  if (!c) return;
+  openModal('<div class="mhdr"><div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:700">🗑 Удалить клиента?</div><button class="mcls" onclick="closeModal()">✕</button></div>'
+    + '<div class="msec" style="padding:16px 20px">'
+    + '<div style="font-size:13px;color:var(--t1);margin-bottom:8px"><b>' + c.name + '</b> <span style="color:var(--t3)">' + c.id + '</span></div>'
+    + '<div style="font-size:12px;color:var(--red)">⚠ Это действие нельзя отменить. Клиент будет удалён из CRM.</div>'
+    + '</div>'
+    + '<div class="mft">'
+    + '<button class="btn btn-g" onclick="closeModal()">Отмена</button>'
+    + '<button class="btn" style="background:var(--red);color:#fff" onclick="confirmDeleteClient('' + cid + '')">Удалить →</button>'
+    + '</div>', 'narrow');
+}
+
+async function confirmDeleteClient(cid) {
+  clients = clients.filter(x => x.id !== cid);
+  closeModal();
+  applyClientsFilter();
+  renderKanban();
+  renderDash();
+  showToast('Клиент удалён ✓');
+  // Помечаем как удалённого на сервере
+  await apiPut('/clients/' + cid, { stage: 'Удалён', substage: 'deleted', last: today() }).catch(() => {});
 }
 
 // ============================================================
@@ -3661,7 +3770,12 @@ async function confirmActivate(cid){
   const c=clients.find(x=>x.id===cid);if(!c)return;
   let type=g('act-svc').value;
   if(type==='__custom__')type=g('custom-svc-name').value||'Разовая услуга';
-  c.serviceType=type;c.stage='Активный';c.last=today();
+  c.serviceType=type;
+  // FIX: не сбрасываем stage если клиент уже Активный
+  if(!c.stage || c.stage === 'Новый клиент' || c.stage === 'Онбординг завершён') {
+    c.stage = 'Активный';
+  }
+  c.last=today();
   const subs=SUBSTAGES[type]||[];c.substage=subs[0]||'';
   if(c.substage&&STAGE_TASKS[c.substage]){
     STAGE_TASKS[c.substage].forEach(txt=>tasks.unshift({id:uid(),text:txt,client:cid,assignee:'',prio:'mid',stage:'todo',due:'',created:today(),cmts:[]}));
@@ -4502,9 +4616,19 @@ function renderAIMA(data){
       +'</tr>';
   }).join('');
 }
-function filterAIMA(f,el){
-  document.querySelectorAll('#aima-filter-chips .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');
-  renderAIMA(f==='all'?statuses:statuses.filter(s=>s.status===f));
+var _aimaCurrentFilter = 'all';
+function filterAIMA(f, el) {
+  if (el) { document.querySelectorAll('#aima-filter-chips .chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); }
+  _aimaCurrentFilter = f || 'all';
+  var hideDone = document.getElementById('aima-hide-done') ? document.getElementById('aima-hide-done').checked : false;
+  var q = (document.getElementById('aima-search') ? document.getElementById('aima-search').value : '').toLowerCase().trim();
+  var data = statuses.filter(function(s) {
+    if (hideDone && s.status === 'Завершено') return false;
+    if (_aimaCurrentFilter !== 'all' && s.status !== _aimaCurrentFilter) return false;
+    if (q) { var hay = ((s.name||'') + ' ' + (s.nipc||'') + ' ' + (s.num||'')).toLowerCase(); if (!hay.includes(q)) return false; }
+    return true;
+  });
+  renderAIMA(data);
 }
 function editAIMA(idx,e){
   e&&e.stopPropagation();
@@ -4672,9 +4796,19 @@ function renderCourts(data){
       +'</tr>';
   }).join('');
 }
-function filterCourts(f,el){
-  document.querySelectorAll('#courts-chips .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');
-  renderCourts(f==='all'?courts:courts.filter(c=>c.article===f));
+var _courtsCurrentFilter = 'all';
+function filterCourts(f, el) {
+  if (el) { document.querySelectorAll('#courts-chips .chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); }
+  _courtsCurrentFilter = f || 'all';
+  var hideDone = document.getElementById('courts-hide-done') ? document.getElementById('courts-hide-done').checked : false;
+  var q = (document.getElementById('courts-search') ? document.getElementById('courts-search').value : '').toLowerCase().trim();
+  var data = courts.filter(function(c) {
+    if (hideDone && c.status === 'Завершено') return false;
+    if (_courtsCurrentFilter !== 'all' && c.article !== _courtsCurrentFilter) return false;
+    if (q) { var hay = ((c.name||'') + ' ' + (c.num||'')).toLowerCase(); if (!hay.includes(q)) return false; }
+    return true;
+  });
+  renderCourts(data);
 }
 function editCourt(idx,e){
   e&&e.stopPropagation();
@@ -4799,6 +4933,14 @@ function renderCitizenship(){
   var _u = _myUser();
   var _src = citizenship;
   if(_u.role === 'lawyer') _src = citizenship.filter(function(c){ return (c.lawyer||'') === _u.name; });
+  // Фильтр: скрыть завершённых + поиск
+  var hideDone = document.getElementById('cit-hide-done') ? document.getElementById('cit-hide-done').checked : false;
+  var q = (document.getElementById('cit-search') ? document.getElementById('cit-search').value : '').toLowerCase().trim();
+  _src = _src.filter(function(c) {
+    if (hideDone && c.status === 'Завершено') return false;
+    if (q) { var hay = ((c.name||'') + ' ' + (c.nipc||'') + ' ' + (c.num||'')).toLowerCase(); if (!hay.includes(q)) return false; }
+    return true;
+  });
   g('cit-tbody').innerHTML=_src.length?_src.map((c,i)=>{
     return '<tr>'
       +'<td class="mono" style="color:var(--ora)">'+c.num+'</td>'
@@ -4881,6 +5023,14 @@ function renderRights(){
   var _u = _myUser();
   var _rightsArr = rights;
   if(_u.role === 'translator') _rightsArr = rights.filter(function(r){ return (r.translator||r.name||'') === _u.name || (r.assignee||'') === _u.name; });
+  // Фильтр: скрыть завершённых + поиск
+  var hideDone = document.getElementById('rights-hide-done') ? document.getElementById('rights-hide-done').checked : false;
+  var q = (document.getElementById('rights-search') ? document.getElementById('rights-search').value : '').toLowerCase().trim();
+  _rightsArr = _rightsArr.filter(function(r) {
+    if (hideDone && r.status === 'Завершено') return false;
+    if (q) { var hay = ((r.name||'') + ' ' + (r.num||'') + ' ' + (r.country||'')).toLowerCase(); if (!hay.includes(q)) return false; }
+    return true;
+  });
   g('rights-tbody').innerHTML=_rightsArr.length?_rightsArr.map((r,i)=>{
     return '<tr>'
       +'<td class="mono" style="color:var(--gre)">'+r.num+'</td>'
@@ -5336,7 +5486,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 // ============================================================
 function renderAll(){
   renderDash();
-  renderClients();
+  applyClientsFilter();
   renderKanban();
   renderAIMA();
   renderCourts();
