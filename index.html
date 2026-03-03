@@ -3557,15 +3557,19 @@ async function deleteClient(cid, e) {
   if (e) e.stopPropagation();
   const c = clients.find(x => x.id === cid);
   if (!c) return;
-  openModal('<div class="mhdr"><div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:700">🗑 Удалить клиента?</div><button class="mcls" onclick="closeModal()">✕</button></div>'
+  openModal(
+    '<div class="mhdr"><div style="font-size:15px;font-weight:700">🗑 Удалить клиента?</div>'
+    + '<button class="mcls" onclick="closeModal()">✕</button></div>'
     + '<div class="msec" style="padding:16px 20px">'
-    + '<div style="font-size:13px;color:var(--t1);margin-bottom:8px"><b>' + c.name + '</b> <span style="color:var(--t3)">' + c.id + '</span></div>'
-    + '<div style="font-size:12px;color:var(--red)">⚠ Это действие нельзя отменить. Клиент будет удалён из CRM.</div>'
+    + '<div style="font-size:13px;margin-bottom:8px"><b>' + (c.name||'') + '</b> <span style="color:var(--t3)">' + (c.id||'') + '</span></div>'
+    + '<div style="font-size:12px;color:var(--red)">⚠ Это действие нельзя отменить.</div>'
     + '</div>'
     + '<div class="mft">'
     + '<button class="btn btn-g" onclick="closeModal()">Отмена</button>'
-    + '<button class="btn" style="background:var(--red);color:#fff" onclick="confirmDeleteClient('' + cid + '')">Удалить →</button>'
-    + '</div>', 'narrow');
+    + '<button class="btn" style="background:var(--red);color:#fff" onclick="confirmDeleteClient(\'' + cid + '\')">Удалить →</button>'
+    + '</div>',
+    'narrow'
+  );
 }
 
 async function confirmDeleteClient(cid) {
