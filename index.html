@@ -1081,29 +1081,67 @@ input,select,textarea{font-family:'Manrope',sans-serif}
 
   <!-- =================== TRANSLATOR CABINET =================== -->
   <div class="view" id="view-translator">
-    <div class="sec-h"><div class="sec-t" data-i18n="pg_translator">Кабинет переводчика</div></div>
-    <div class="lw-kpi-g">
+    <div class="sec-h"><div class="sec-t">Кабинет переводчика</div></div>
+
+    <!-- KPI статистика -->
+    <div class="lw-kpi-g" style="margin-bottom:16px">
       <div class="lw-kpi">
-        <div class="lw-kpi-l" data-i18n="tr_active">Активные заказы</div>
-        <div class="lw-kpi-v" id="tr-kpi-active">0</div>
-        <div class="lw-kpi-s" data-i18n="tr_active_s">Назначены мне</div>
+        <div class="lw-kpi-l">Новые задания</div>
+        <div class="lw-kpi-v" id="tr-kpi-new" style="color:var(--ora)">0</div>
+        <div class="lw-kpi-s">Ожидают принятия</div>
       </div>
       <div class="lw-kpi">
-        <div class="lw-kpi-l" data-i18n="tr_pending">Ожидают действия</div>
+        <div class="lw-kpi-l">В работе</div>
+        <div class="lw-kpi-v" id="tr-kpi-active" style="color:#3b6ff5">0</div>
+        <div class="lw-kpi-s">Принято в работу</div>
+      </div>
+      <div class="lw-kpi">
+        <div class="lw-kpi-l">Ожидают действия</div>
         <div class="lw-kpi-v" id="tr-kpi-pending" style="color:var(--yel)">0</div>
-        <div class="lw-kpi-s" data-i18n="tr_pending_s">Требуют обновления</div>
+        <div class="lw-kpi-s">Требуют обновления</div>
       </div>
       <div class="lw-kpi">
-        <div class="lw-kpi-l" data-i18n="tr_done">Завершено</div>
+        <div class="lw-kpi-l">Завершено всего</div>
         <div class="lw-kpi-v" id="tr-kpi-done" style="color:var(--gre)">0</div>
-        <div class="lw-kpi-s" data-i18n="tr_done_s">В этом месяце</div>
+        <div class="lw-kpi-s">За всё время</div>
       </div>
     </div>
-    <!-- My orders -->
-    <div class="panel">
-      <div class="ph"><div class="ph-title" data-i18n="tr_my_orders">Мои заказы</div><div class="ph-cnt" id="tr-orders-cnt">—</div></div>
-      <div id="tr-orders-list"></div>
+
+    <!-- Статистика по месяцам -->
+    <div class="panel" style="margin-bottom:14px">
+      <div class="ph">
+        <div class="ph-title">📊 Статистика выполненных работ</div>
+        <div class="ph-cnt" id="tr-stats-period">Все время</div>
+      </div>
+      <div id="tr-stats-detail" style="display:flex;gap:10px;flex-wrap:wrap;padding:8px 0 4px"></div>
+      <div id="tr-stats-monthly" style="margin-top:10px"></div>
     </div>
+
+    <!-- Новые задания — требуют принятия -->
+    <div class="panel" style="margin-bottom:14px" id="tr-new-panel">
+      <div class="ph">
+        <div class="ph-title" style="color:var(--ora)">⚡ Новые задания — требуют принятия</div>
+        <div class="ph-cnt" id="tr-new-cnt">0</div>
+      </div>
+      <div id="tr-new-list"></div>
+    </div>
+
+    <!-- Задания в работе -->
+    <div class="panel" style="margin-bottom:14px">
+      <div class="ph">
+        <div class="ph-title">🔧 В работе</div>
+        <div class="ph-cnt" id="tr-active-cnt">0</div>
+      </div>
+      <div id="tr-active-list"></div>
+    </div>
+
+    <!-- Завершённые -->
+    <div class="panel">
+      <div class="ph">
+        <div class="ph-title">✅ Завершённые</div>
+        <div class="ph-cnt" id="tr-done-cnt">0</div>
+      </div>
+      <div id="tr-done-list"></div>
     </div>
   </div>
 
@@ -3017,8 +3055,7 @@ function showView(id,el){
   if(id==='clients') applyClientsFilter();
   if(id==='aima') filterAIMA(_aimaCurrentFilter||'all', document.querySelector('#aima-filter-chips .chip.active'));
   if(id==='courts') filterCourts(_courtsCurrentFilter||'all', document.querySelector('#courts-chips .chip.active'));
-  if(id==='translator') renderTranslatorCabinet();
-  if(id==='translator') renderTranslatorCabinet();
+  if(id==='translator') { renderTranslatorCabinet(); loadSpecTasks(); }
   if(id==='orders') renderOrders();
   if(el){el.classList.add('active');}else{document.querySelectorAll('.ni').forEach(n=>{if(n.onclick&&n.onclick.toString().includes("'"+id+"'"))n.classList.add('active');});}
   g('pg-title').textContent=VIEW_TITLES[id]||id;
@@ -6105,51 +6142,202 @@ async function translatorMarkDone(ordId){
 // TRANSLATOR CABINET
 // ════════════════════════════════════════════════════════════
 function renderTranslatorCabinet(){
-  const el=g('tr-orders-list'); if(!el) return;
   if(!currentUser) return;
-  const isTranslator=currentUser.role==='translator';
-  const myOrders=isTranslator
-    ? orders.filter(o=>o.translator===currentUser.name)
-    : orders; // admin sees all
+  var myName = currentUser.name || '';
+
+  // Получаем задания переводчика из specTasks
+  var myTasks = specTasks.filter(function(t){
+    return t.role === 'translator' && t.assignee === myName;
+  });
+
+  var newTasks    = myTasks.filter(function(t){ return t.stage === 'Новое'; });
+  var activeTasks = myTasks.filter(function(t){ return t.stage === 'В работе'; });
+  var doneTasks   = myTasks.filter(function(t){ return t.stage === 'Завершено'; });
+  var pendingTasks= myTasks.filter(function(t){ return t.stage === 'Готово к выдаче'; });
 
   // KPI
-  const steps_done=(svc)=>ORD_STATUSES[svc]?.slice(-1)[0];
-  const active=myOrders.filter(o=>o.status!==steps_done(o.svcType));
-  const myStep=myOrders.filter(o=>{
-    const ts=ORD_TRANSLATOR_STEP[o.svcType];
-    return ts&&o.status===ts;
+  var kN = g('tr-kpi-new');    if(kN) kN.textContent = newTasks.length;
+  var kA = g('tr-kpi-active'); if(kA) kA.textContent = activeTasks.length;
+  var kP = g('tr-kpi-pending');if(kP) kP.textContent = pendingTasks.length;
+  var kD = g('tr-kpi-done');   if(kD) kD.textContent = doneTasks.length;
+
+  // Скрыть панель "новых" если нет новых
+  var newPanel = g('tr-new-panel');
+  if(newPanel) newPanel.style.display = newTasks.length ? '' : 'none';
+  var nc = g('tr-new-cnt'); if(nc) nc.textContent = newTasks.length;
+  var ac = g('tr-active-cnt'); if(ac) ac.textContent = activeTasks.length;
+  var dc = g('tr-done-cnt'); if(dc) dc.textContent = doneTasks.length;
+
+  // Рендер карточек задания
+  function taskCard(t, mode) {
+    var driveBtn = t.driveUrl
+      ? '<a href="'+t.driveUrl+'" target="_blank" class="btn btn-g btn-sm" style="text-decoration:none;font-size:11px">📁 Открыть Drive</a>'
+      : '<span style="font-size:11px;color:var(--t3)">нет папки</span>';
+    var sc = STAGE_COLORS[t.stage] || '#6b7280';
+    var badge = '<span style="font-size:11px;font-weight:700;color:'+sc+';background:'+sc+'18;padding:2px 8px;border-radius:20px">'+t.stage+'</span>';
+
+    var actionBtns = '';
+    if(mode === 'new') {
+      actionBtns = '<button class="btn btn-p btn-sm" onclick="transAcceptTask(''+t.id+'')">✅ Принять в работу</button>';
+    } else if(mode === 'active') {
+      actionBtns = '<button class="btn btn-p btn-sm" onclick="transOpenReadyModal(''+t.id+'')">📤 Документы готовы</button>';
+    }
+
+    return '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap">'
+      + '<div style="flex:1;min-width:160px">'
+      +   '<div style="font-weight:700;font-size:13px">'+(t.client||'—')+'</div>'
+      +   '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+(t.type||'')+(t.due?' · 📅 '+t.due:'')+'</div>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +   badge + driveBtn + actionBtns
+      + '</div>'
+      + '</div>';
+  }
+
+  var newList = g('tr-new-list');
+  if(newList) newList.innerHTML = newTasks.length
+    ? newTasks.map(function(t){ return taskCard(t,'new'); }).join('')
+    : '<div style="padding:16px;color:var(--t3);font-size:12px;text-align:center">Нет новых заданий</div>';
+
+  var activeList = g('tr-active-list');
+  if(activeList) activeList.innerHTML = activeTasks.length
+    ? activeTasks.map(function(t){ return taskCard(t,'active'); }).join('')
+    : '<div style="padding:16px;color:var(--t3);font-size:12px;text-align:center">Нет заданий в работе</div>';
+
+  var doneList = g('tr-done-list');
+  if(doneList) doneList.innerHTML = doneTasks.length
+    ? doneTasks.slice().reverse().map(function(t){ return taskCard(t,'done'); }).join('')
+    : '<div style="padding:16px;color:var(--t3);font-size:12px;text-align:center">Нет завершённых заданий</div>';
+
+  // ── Статистика ──
+  _renderTranslatorStats(myTasks);
+}
+
+function _renderTranslatorStats(myTasks) {
+  var det = g('tr-stats-detail');
+  var mon = g('tr-stats-monthly');
+  if(!det || !mon) return;
+
+  var total  = myTasks.length;
+  var done   = myTasks.filter(function(t){ return t.stage==='Завершено'; }).length;
+  var active = myTasks.filter(function(t){ return t.stage==='В работе'; }).length;
+  var newT   = myTasks.filter(function(t){ return t.stage==='Новое'; }).length;
+
+  var cs = 'background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;flex:1;min-width:100px;text-align:center';
+  det.innerHTML = [
+    {v:total,  l:'Всего заданий', c:'var(--acc)'},
+    {v:done,   l:'Завершено',     c:'#10b981'},
+    {v:active, l:'В работе',      c:'#3b6ff5'},
+    {v:newT,   l:'Новые',         c:'#f59e0b'},
+  ].map(function(c){
+    return '<div style="'+cs+'">'
+      + '<div style="font-size:22px;font-weight:800;color:'+c.c+'">'+c.v+'</div>'
+      + '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+c.l+'</div>'
+      + '</div>';
+  }).join('');
+
+  // Статистика по месяцам (последние 6)
+  var byMonth = {};
+  myTasks.forEach(function(t) {
+    if(t.stage !== 'Завершено') return;
+    var d = t.updatedAt || t.createdAt || '';
+    var m = d ? d.slice(0,7) : 'неизвестно';
+    byMonth[m] = (byMonth[m]||0) + 1;
   });
-  const done=myOrders.filter(o=>o.status===steps_done(o.svcType));
+  var months = Object.keys(byMonth).sort().slice(-6);
+  if(!months.length) {
+    mon.innerHTML = '<div style="font-size:12px;color:var(--t3);padding:4px 0">Нет данных по месяцам</div>';
+    return;
+  }
+  var maxV = Math.max.apply(null, months.map(function(m){ return byMonth[m]; }));
+  mon.innerHTML = '<div style="font-size:11px;color:var(--t3);margin-bottom:6px">Завершено по месяцам:</div>'
+    + '<div style="display:flex;gap:8px;align-items:flex-end;height:60px">'
+    + months.map(function(m) {
+        var v = byMonth[m];
+        var h = maxV > 0 ? Math.max(8, Math.round(v/maxV*52)) : 8;
+        return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">'
+          + '<div style="font-size:10px;font-weight:700;color:var(--acc)">'+v+'</div>'
+          + '<div style="width:32px;height:'+h+'px;background:#3b6ff5;border-radius:4px 4px 0 0;opacity:.85"></div>'
+          + '<div style="font-size:9px;color:var(--t3)">'+m.slice(5)+'</div>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+}
 
-  const kA=g('tr-kpi-active'); if(kA) kA.textContent=active.length;
-  const kP=g('tr-kpi-pending'); if(kP) kP.textContent=myStep.length;
-  const kD=g('tr-kpi-done'); if(kD) kD.textContent=done.length;
-  const cnt=g('tr-orders-cnt'); if(cnt) cnt.textContent=myOrders.length;
+// Принять задание в работу
+async function transAcceptTask(id) {
+  var t = specTasks.find(function(x){ return x.id === id; });
+  if(!t) return;
+  var result = await apiPut('/spec-tasks', {id:id, stage:'В работе', role:'translator'}).catch(function(){ return null; });
+  if(result && result.ok) {
+    t.stage = 'В работе';
+    showToast('Задание принято в работу ✓');
+    renderTranslatorCabinet();
+    renderTranslatorTasks();
+  } else {
+    showToast('Ошибка — попробуйте ещё раз');
+  }
+}
 
-  el.innerHTML=myOrders.length?myOrders.map(o=>{
-    const c=clients.find(x=>x.id===o.clientId);
-    const steps=ORD_STATUSES[o.svcType]||[];
-    const isMyStep=o.status===ORD_TRANSLATOR_STEP[o.svcType];
-    const isDone=o.status===steps[steps.length-1];
-    const driveBdg=o.driveLink
-      ? `<a href="${o.driveLink}" target="_blank" class="bdg blu" style="text-decoration:none;font-size:10px">📁 Folder</a>`
-      : '<span class="bdg gry" style="font-size:10px">No folder</span>';
-    return `<div class="ord-card${isDone?' ord-card-done':''}" onclick="openOrderModal('${o.id}')">
-      <div class="ord-card-hdr">
-        <div>
-          <div class="ord-card-name">${c?c.name:o.clientId}</div>
-          <div class="ord-card-meta">${o.id} · Created: ${o.created||'—'}</div>
-        </div>
-        ${isMyStep?'<span class="bdg yel" style="font-size:10px;animation:pulse 1.5s infinite">⚡ Your turn</span>':isDone?'<span class="bdg gre" style="font-size:10px">✅ Done</span>':''}
-      </div>
-      <div class="ord-card-body">
-        ${svcBdg(o.svcType)}
-        ${ordStatusBdg(o.svcType,o.status)}
-        ${driveBdg}
-        ${o.comment?'<span style="font-size:10px;color:var(--t2)">'+o.comment+'</span>':''}
-      </div>
-    </div>`;
-  }).join(''):'<div style="padding:24px;text-align:center;color:var(--t3)">No orders assigned yet</div>';
+// Открыть модал "Документы готовы" — смена статуса + ссылка на Drive
+function transOpenReadyModal(id) {
+  var t = specTasks.find(function(x){ return x.id === id; });
+  if(!t) return;
+  openModal(
+    '<div class="mhdr">'
+    + '<div style="font-size:15px;font-weight:700">📤 Документы готовы</div>'
+    + '<button class="mcls" onclick="closeModal()">✕</button>'
+    + '</div>'
+    + '<div class="msec">'
+    + '<div style="font-size:13px;font-weight:600;margin-bottom:12px">'+(t.client||'')+'  ·  '+(t.type||'')+'</div>'
+    + (t.driveUrl
+        ? '<div style="margin-bottom:12px"><a href="'+t.driveUrl+'" target="_blank" class="btn btn-g btn-sm" style="text-decoration:none">📁 Открыть папку клиента на Drive</a><div style="font-size:10px;color:var(--t3);margin-top:4px">Загрузите документы в папку, затем нажмите "Завершить"</div></div>'
+        : '<div style="font-size:12px;color:var(--ora);margin-bottom:12px">⚠ Папка Drive не привязана к этому клиенту. Попросите менеджера добавить ссылку.</div>'
+      )
+    + '<label class="mfl" style="margin-top:8px">Ссылка на документы (необязательно)</label>'
+    + '<input class="mi" id="trans-doc-link" placeholder="https://drive.google.com/..." value="'+(t.driveUrl||'')+'">'
+    + '<div style="font-size:11px;color:var(--t3);margin-top:4px">Можно вставить прямую ссылку на файл или папку</div>'
+    + '</div>'
+    + '<div class="mft">'
+    + '<button class="btn btn-g" onclick="closeModal()">Отмена</button>'
+    + '<button class="btn btn-p" onclick="transCompleteTask(''+id+'')">✅ Завершить и передать менеджеру</button>'
+    + '</div>',
+    'narrow'
+  );
+}
+
+// Завершить задание и уведомить менеджера
+async function transCompleteTask(id) {
+  var t = specTasks.find(function(x){ return x.id === id; });
+  if(!t) return;
+  var docLink = (document.getElementById('trans-doc-link')||{}).value || t.driveUrl || '';
+
+  var payload = {id:id, stage:'Завершено', role:'translator', driveUrl: docLink, updatedAt: new Date().toISOString().split('T')[0]};
+  var result = await apiPut('/spec-tasks', payload).catch(function(){ return null; });
+
+  if(result && result.ok) {
+    t.stage = 'Завершено';
+    if(docLink) t.driveUrl = docLink;
+
+    // Создаём задачу менеджеру
+    await apiPost('/tasks', {
+      id: 'ntf_'+Date.now(),
+      title: '📤 Переводчик завершил: '+(t.client||'')+'',
+      text: '📤 Переводчик завершил: '+(t.client||'')+' · '+(t.type||''),
+      assignee: 'manager',
+      prio: 'high',
+      stage: 'todo',
+      created: new Date().toISOString().split('T')[0],
+      driveUrl: docLink
+    }).catch(function(){});
+
+    closeModal();
+    showToast('✅ Документы переданы менеджеру!');
+    renderTranslatorCabinet();
+    renderTranslatorTasks();
+  } else {
+    showToast('Ошибка — попробуйте ещё раз');
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -6732,6 +6920,7 @@ async function loadSpecTasks() {
 
   renderLawyerTasks();
   renderTranslatorTasks();
+  if(currentUser && currentUser.role === 'translator') renderTranslatorCabinet();
 }
 
 function setLawyerStage(el, stage) {
@@ -6846,8 +7035,7 @@ function renderTranslatorTasks() {
     if (t.role !== 'translator') return false;
     if (myRole === 'translator') {
       if (t.assignee !== myName) return false;
-      // Переводчик видит только задания «в работе» (не «Новое») или закрытые им
-      if (t.stage === 'Новое') return false;
+      // Переводчик теперь видит ВСЕ задания включая «Новое»
     }
     if (_transStageFilter !== 'all' && t.stage !== _transStageFilter) return false;
     if (search && !(t.client||'').toLowerCase().includes(search) && !(t.type||'').toLowerCase().includes(search)) return false;
@@ -6886,7 +7074,14 @@ function renderTranslatorTasks() {
       + '<td style="font-size:12px'+(overdue?';color:#dc2626;font-weight:600':'')+'">📅 '+(t.due||'—')+'</td>'
       + '<td>'+badge+'</td>'
       + '<td>'+drive+'</td>'
-      + '<td><button class="btn-ghost" style="font-size:11px;padding:2px 6px" onclick="openSpecDetail(\''+t.id+'\',\'translator\')">Изменить</button></td>'
+      + '<td style="white-space:nowrap">'
+      + (t.stage === 'Новое'
+          ? '<button class="btn btn-p btn-sm" onclick="transAcceptTask(\'' + t.id + '\')">✅ Принять</button>'
+          : t.stage === 'В работе'
+            ? '<button class="btn btn-p btn-sm" onclick="transOpenReadyModal(\'' + t.id + '\')">📤 Готово</button>'
+            : '<button class="btn-ghost" style="font-size:11px;padding:2px 6px" onclick="openSpecDetail(\'' + t.id + '\',\'translator\')">Просмотр</button>'
+        )
+      + '</td>'
       + '</tr>';
   }).join('');
 }
