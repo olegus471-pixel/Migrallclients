@@ -6178,9 +6178,9 @@ function renderTranslatorCabinet(){
 
     var actionBtns = '';
     if(mode === 'new') {
-      actionBtns = '<button class="btn btn-p btn-sm" onclick="transAcceptTask(''+t.id+'')">✅ Принять в работу</button>';
+      actionBtns = '<button class="btn btn-p btn-sm" onclick="transAcceptTask(\'' + t.id + '\')">✅ Принять в работу</button>';
     } else if(mode === 'active') {
-      actionBtns = '<button class="btn btn-p btn-sm" onclick="transOpenReadyModal(''+t.id+'')">📤 Документы готовы</button>';
+      actionBtns = '<button class="btn btn-p btn-sm" onclick="transOpenReadyModal(\'' + t.id + '\')">📤 Документы готовы</button>';
     }
 
     return '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap">'
@@ -6300,7 +6300,7 @@ function transOpenReadyModal(id) {
     + '</div>'
     + '<div class="mft">'
     + '<button class="btn btn-g" onclick="closeModal()">Отмена</button>'
-    + '<button class="btn btn-p" onclick="transCompleteTask(''+id+'')">✅ Завершить и передать менеджеру</button>'
+    + '<button class="btn btn-p" onclick="transCompleteTask(\x27' + id + '\x27)">✅ Завершить и передать менеджеру</button>'
     + '</div>',
     'narrow'
   );
