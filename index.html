@@ -885,7 +885,7 @@ input,select,textarea{font-family:'Manrope',sans-serif}
     </div>
     <div class="panel">
       <div class="dt-wrap"><div class="dt-wrap"><table class="dt">
-        <thead><tr><th>ID</th><th>Имя</th><th>Telegram</th><th>Тип услуги</th><th>Этап воронки</th><th>Подэтап</th><th>Посл. обновление</th><th id="clients-th-assign"></th></tr></thead>
+        <thead><tr><th style="width:36px;text-align:center;color:var(--t3)">#</th><th>ID</th><th>Имя</th><th>Telegram</th><th>Тип услуги</th><th>Этап воронки</th><th>Подэтап</th><th>Посл. обновление</th><th id="clients-th-assign"></th></tr></thead>
         <tbody id="clients-tbody"></tbody>
       </table></div></div>
       </div>
@@ -920,7 +920,7 @@ input,select,textarea{font-family:'Manrope',sans-serif}
     </div>
     <div class="panel">
       <div class="dt-wrap"><div class="dt-wrap"><table class="dt">
-        <thead><tr><th>№</th><th>Telegram</th><th>ФИО</th><th>NIPC / Дело</th><th>ДР</th><th>Паспорт</th><th>Статус</th><th>Дата проверки</th><th>Секция</th><th></th></tr></thead>
+        <thead><tr><th style="width:36px;text-align:center;color:var(--t3)">#</th><th>№</th><th>Telegram</th><th>ФИО</th><th>NIPC / Дело</th><th>ДР</th><th>Паспорт</th><th>Статус</th><th>Дата проверки</th><th>Секция</th><th></th></tr></thead>
         <tbody id="aima-tbody"></tbody>
       </table></div></div>
       </div>
@@ -999,7 +999,7 @@ input,select,textarea{font-family:'Manrope',sans-serif}
     </div>
     <div class="panel">
       <div class="dt-wrap"><div class="dt-wrap"><table class="dt">
-        <thead><tr><th>№</th><th>Telegram</th><th>ФИО</th><th>Адвокат</th><th>Статья</th><th>Дата</th><th>Место</th><th>Этап</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
+        <thead><tr><th style="width:36px;text-align:center;color:var(--t3)">#</th><th>№</th><th>Telegram</th><th>ФИО</th><th>Адвокат</th><th>Статья</th><th>Дата</th><th>Место</th><th>Этап</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
         <tbody id="courts-tbody"></tbody>
       </table></div></div>
       </div>
@@ -1017,7 +1017,7 @@ input,select,textarea{font-family:'Manrope',sans-serif}
     </div></div>
     <div class="panel">
       <div class="dt-wrap"><div class="dt-wrap"><table class="dt">
-        <thead><tr><th>№</th><th>Telegram</th><th>ФИО</th><th>Адвокат</th><th>Тип</th><th>Дата подачи</th><th>Трек-номер</th><th>Этап</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
+        <thead><tr><th style="width:36px;text-align:center;color:var(--t3)">#</th><th>№</th><th>Telegram</th><th>ФИО</th><th>Адвокат</th><th>Тип</th><th>Дата подачи</th><th>Трек-номер</th><th>Этап</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
         <tbody id="cit-tbody"></tbody>
       </table></div></div>
       </div>
@@ -1036,7 +1036,7 @@ input,select,textarea{font-family:'Manrope',sans-serif}
     </div></div>
     <div class="panel">
       <div class="dt-wrap"><div class="dt-wrap"><table class="dt">
-        <thead><tr><th>№</th><th>Telegram</th><th>ФИО</th><th>Страна прав</th><th>Дата подачи</th><th>Этап</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
+        <thead><tr><th style="width:36px;text-align:center;color:var(--t3)">#</th><th>№</th><th>Telegram</th><th>ФИО</th><th>Страна прав</th><th>Дата подачи</th><th>Этап</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
         <tbody id="rights-tbody"></tbody>
       </table></div></div>
       </div>
@@ -2160,6 +2160,7 @@ CRM ↔ Backend (Render) ↔ Google Sheets
       <div class="dt-wrap">
         <table class="dt">
           <thead><tr>
+            <th style="width:36px;text-align:center;color:var(--t3)">#</th>
             <th>№</th>
             <th>Telegram</th>
             <th>Клиент</th>
@@ -2198,6 +2199,7 @@ CRM ↔ Backend (Render) ↔ Google Sheets
       <div class="dt-wrap">
         <table class="dt">
           <thead><tr>
+            <th style="width:36px;text-align:center;color:var(--t3)">#</th>
             <th>№</th>
             <th>Telegram</th>
             <th>Клиент</th>
@@ -3562,7 +3564,7 @@ function applyClientsFilter() {
     if (hideDone && (c.stage === 'Завершён' || c.stage === 'Завершено')) return false;
     if (stage !== 'all' && c.stage !== stage) return false;
     if (q) {
-      var hay = ((c.name||'') + ' ' + (c.tg||'') + ' ' + (c.id||'')).toLowerCase();
+      var hay = ((c.name||'') + ' ' + (c.tg||'') + ' ' + (c.id||'') + ' ' + (c.num||'')).toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -3570,12 +3572,60 @@ function applyClientsFilter() {
   renderClients(data);
 }
 
+// Модалка редактирования номера клиента
+function openClientNumModal(cid, evt) {
+  if(evt) evt.stopPropagation();
+  var c = clients.find(function(x){ return x.id === cid; });
+  if(!c) return;
+  openModal(
+    '<div class="mhdr">'
+    + '<div style="font-size:15px;font-weight:700">✏ Номер клиента</div>'
+    + '<button class="mcls" onclick="closeModal()">✕</button>'
+    + '</div>'
+    + '<div class="msec">'
+    + '<div style="font-size:12px;color:var(--t2);margin-bottom:10px"><b>' + (c.name||'') + '</b> · ID: ' + c.id + '</div>'
+    + '<label class="mfl">Номер клиента (присваивает менеджер)</label>'
+    + '<input class="mi" id="cnum-input" value="' + (c.num||'') + '" placeholder="например: 001, A-42, 2024-007..." style="font-size:18px;font-weight:800;color:var(--acc);text-align:center">'
+    + '<div style="font-size:11px;color:var(--t3);margin-top:6px">Этот номер будет отображаться во всех таблицах напротив клиента</div>'
+    + '</div>'
+    + '<div class="mft">'
+    + '<button class="btn btn-g" onclick="closeModal()">Отмена</button>'
+    + '<button class="btn btn-p" onclick="saveClientNum(\x27' + cid + '\x27)">Сохранить</button>'
+    + '</div>',
+    'narrow'
+  );
+  setTimeout(function(){ var inp = document.getElementById('cnum-input'); if(inp){ inp.focus(); inp.select(); } }, 100);
+}
+
+async function saveClientNum(cid) {
+  var inp = document.getElementById('cnum-input');
+  var num = inp ? inp.value.trim() : '';
+  var c = clients.find(function(x){ return x.id === cid; });
+  if(!c) return;
+  c.num = num;
+  closeModal();
+  applyClientsFilter();
+  showToast(num ? ('Номер клиента: ' + num + ' ✓') : 'Номер клиента удалён');
+  if(API_BASE) {
+    await apiPut('/clients/' + cid, { num: num }).catch(function(){});
+  }
+}
+
+// Номер клиента, присвоенный менеджером (поле num)
+function getClientSeqNum(clientId) {
+  var c = clients.find(function(x){ return x.id === clientId; });
+  return (c && c.num) ? c.num : '—';
+}
+
 function renderClients(data){
   const canAssign=currentUser&&(currentUser.role==='manager'||currentUser.role==='admin');
-  g('clients-tbody').innerHTML=(data||clients).map(c=>{
+  const arr = data || clients;
+  g('clients-tbody').innerHTML=arr.map((c, _i)=>{
+    const seqNum = c.num || '—';
     const lwBdg=c.lawyer?'<span class="bdg pnk" style="font-size:9px;margin-left:4px">⚖ '+c.lawyer+'</span>':'';
     const submitBdg=c.submitDate?'<span class="mono" style="font-size:9px;color:var(--acc);margin-left:4px">📅'+c.submitDate+'</span>':'';
     return '<tr onclick="openClientModal(\''+c.id+'\')">'
+      +'<td style="width:40px;text-align:center;font-size:12px;font-weight:800;color:'+(c.num?'var(--acc)':'var(--t4)')+';background:var(--bg2);cursor:pointer" title="Нажмите чтобы изменить номер клиента" onclick="openClientNumModal(\''+c.id+'\',event)">'+seqNum+'</td>'
       +'<td class="mono" style="color:var(--acc)">'+c.id+'</td>'
       +'<td style="font-weight:600">'+c.name+lwBdg+submitBdg+'</td>'
       +'<td class="mono" style="color:var(--acc)">'+c.tg+'</td>'
@@ -3644,7 +3694,7 @@ function renderKCard(c){
   const openTasks=tasks.filter(t=>t.client===c.id&&t.stage!=='done').length;
   const sc=SVC_COLORS[c.serviceType]||'var(--t3)';
   return`<div class="kcard" onclick="openClientModal('${c.id}')">
-    <div class="kcard-id">${c.id}</div>
+    <div class="kcard-id" style="display:flex;gap:6px;align-items:center">${c.num?'<span style="font-weight:800;color:var(--acc)"># '+c.num+'</span><span style="color:var(--t4)">·</span>':''}<span style="font-size:9px;opacity:.6">${c.id}</span></div>
     <div class="kcard-name">${c.name}</div>
     ${c.serviceType?`<div class="kcard-svc" style="color:${sc}">${c.serviceType}</div>`:''}
     ${c.substage?`<div class="kcard-sub">${c.substage}</div>`:''}
@@ -3667,7 +3717,11 @@ function openClientModal(cid){
   openModal(`
     <div class="mhdr">
       <div>
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)">ID: ${c.id}</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${c.num?'<span style="font-family:\'IBM Plex Mono\',monospace;font-size:14px;font-weight:800;color:var(--acc);background:var(--acc)18;padding:2px 8px;border-radius:6px"># '+c.num+'</span>':''}
+          <span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--t3)">ID: ${c.id}</span>
+          <button style="font-size:10px;padding:2px 7px;border-radius:5px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;color:var(--t2)" onclick="openClientNumModal('${cid}')">✏ номер</button>
+        </div>
         <div style="font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;margin-top:2px">${c.name}</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${svcBdg(c.serviceType)} ${bdg(c.stage)}</div>
       </div>
@@ -3844,8 +3898,9 @@ function openAddClientModal(){
   const svcOpts = SVC_TYPES.map(s=>'<option value="'+s+'">'+s+'</option>').join('');
   const lwOpts  = roleOptions('lawyer', '');
   openModal('<div class="mhdr"><div style="font-family:\'Unbounded\',sans-serif;font-size:16px;font-weight:700">➕ Новый клиент</div><button class="mcls" onclick="closeModal()">✕</button></div>'
-    +'<div class="mrow"><div class="mf"><label class="mfl">Telegram ID</label><input class="mi" id="nc-id" placeholder="123456789" type="number"></div>'
+    +'<div class="mrow"><div class="mf" style="flex:0.6"><label class="mfl">№ клиента</label><input class="mi" id="nc-num" placeholder="001" style="font-weight:800;font-size:15px;color:var(--acc)"></div>'
     +'<div class="mf"><label class="mfl">Имя *</label><input class="mi" id="nc-name" placeholder="Иван Иванов"></div></div>'
+    +'<div class="mrow"><div class="mf"><label class="mfl">Telegram ID</label><input class="mi" id="nc-id" placeholder="123456789" type="number"></div>'
     +'<div class="mrow"><div class="mf"><label class="mfl">Telegram</label><input class="mi" id="nc-tg" placeholder="@username"></div>'
     +'<div class="mf"><label class="mfl">Телефон</label><input class="mi" id="nc-phone" placeholder="+351 900 000 000"></div></div>'
     +'<div class="mrow"><div class="mf" style="flex:2"><label class="mfl">Услуга</label>'
@@ -3874,10 +3929,11 @@ async function createClient(){
   const tg       = g('nc-tg')       ? g('nc-tg').value.trim() : '';
   const phone    = g('nc-phone')    ? g('nc-phone').value.trim():'';
   const ncid     = g('nc-id')       ? g('nc-id').value.trim() : '';
+  const ncnum    = g('nc-num')      ? g('nc-num').value.trim() : '';
   const id       = ncid || String(Date.now());
   const today    = nowDMY();
 
-  const newClient = {id,name,tg,phone,serviceType:svc,stage:'новый',substage,
+  const newClient = {id,num:ncnum,name,tg,phone,serviceType:svc,stage:'новый',substage,
     last:today,consulate:city,city,lawyer,driveLink:'',onboard:[false,false,false]};
 
   clients.push(newClient);
@@ -4640,7 +4696,9 @@ function renderAIMA(data){
   const arr=data||statuses;
   g('aima-tbody').innerHTML=arr.map((s)=>{
     const ri=statuses.findIndex(x=>x.num===s.num&&x.name===s.name);
+    const _sn=getClientSeqNum(s.num);
     return '<tr>'
+      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_sn+'</td>'
       +'<td class="mono" style="color:var(--acc)">'+s.num+'</td>'
       +'<td class="mono" style="font-size:11px;color:var(--acc)">'+(function(){var tg=getClientTg(s.num,s.name);return tg!=='—'?'<a href="tg://resolve?domain='+tg.replace('@','')+'">'+tg+'</a>':'—';})()+'</td>'
       +'<td style="font-weight:600">'+s.name+'</td>'
@@ -4820,7 +4878,9 @@ function renderCourts(data){
   if(_u.role === 'lawyer') _src = _src.filter(function(c){ return (c.lawyer||c.name||'') === _u.name || (c.assignee||'') === _u.name; });
   g('courts-tbody').innerHTML=_src.map((c,i)=>{
     const ri=courts.findIndex(x=>x.num===c.num&&x.name===c.name);
+    const _cn=getClientSeqNum(c.num);
     return '<tr>'
+      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_cn+'</td>'
       +'<td class="mono" style="color:var(--pur)">'+c.num+'</td>'
       +'<td style="font-weight:600">'+c.name+'</td>'
       +'<td><span class="bdg pur">'+c.article+'</span></td>'
@@ -4983,7 +5043,9 @@ function renderCitizenship(){
     return true;
   });
   g('cit-tbody').innerHTML=_src.length?_src.map((c,i)=>{
+    const _citsn=getClientSeqNum(c.num);
     return '<tr>'
+      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_citsn+'</td>'
       +'<td class="mono" style="color:var(--ora)">'+c.num+'</td>'
       +'<td class="mono" style="font-size:11px;color:var(--acc)">'+(function(){var tg=getClientTg(c.num,c.name);return tg!=='—'?'<a href="tg://resolve?domain='+tg.replace('@','')+'">'+tg+'</a>':'—';})()+'</td>'
       +'<td style="font-weight:600">'+c.name+'</td>'
@@ -5073,7 +5135,9 @@ function renderRights(){
     return true;
   });
   g('rights-tbody').innerHTML=_rightsArr.length?_rightsArr.map((r,i)=>{
+    const _rtssn=getClientSeqNum(r.num);
     return '<tr>'
+      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_rtssn+'</td>'
       +'<td class="mono" style="color:var(--gre)">'+r.num+'</td>'
       +'<td class="mono" style="font-size:11px;color:var(--acc)">'+(getClientTg(r.num,r.name)!='—'?'<a href="tg://resolve?domain='+getClientTg(r.num,r.name).replace('@','')+'">'+getClientTg(r.num,r.name)+'</a>':'—')+'</td>'
       +'<td style="font-weight:600">'+r.name+'</td>'
@@ -7009,7 +7073,9 @@ function renderLawyerTasks() {
     var cNum = t.clientId || t.num || '—';
     var tg = getClientTg(t.clientId, t.client);
     var tgHtml = tg !== '—' ? '<a href="tg://resolve?domain='+tg.replace('@','')+'">'+tg+'</a>' : '—';
+    var _ltsn = t.clientId ? getClientSeqNum(t.clientId) : '—';
     return '<tr>'
+      + '<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_ltsn+'</td>'
       + '<td class="mono" style="color:var(--pur);font-size:12px">'+cNum+'</td>'
       + '<td class="mono" style="font-size:11px;color:var(--acc)">'+tgHtml+'</td>'
       + '<td style="font-weight:600">'+(t.client||'—')+'</td>'
@@ -7065,7 +7131,9 @@ function renderTranslatorTasks() {
     var cNum = t.clientId || t.num || '—';
     var tg = getClientTg(t.clientId, t.client);
     var tgHtml = tg !== '—' ? '<a href="tg://resolve?domain='+tg.replace('@','')+'">'+tg+'</a>' : '—';
+    var _ttsn = t.clientId ? getClientSeqNum(t.clientId) : '—';
     return '<tr>'
+      + '<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_ttsn+'</td>'
       + '<td class="mono" style="color:var(--gre);font-size:12px">'+cNum+'</td>'
       + '<td class="mono" style="font-size:11px;color:var(--acc)">'+tgHtml+'</td>'
       + '<td style="font-weight:600">'+(t.client||'—')+'</td>'
