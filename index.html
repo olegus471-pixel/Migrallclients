@@ -2811,19 +2811,20 @@ function setTaskScope(scope, el){
 }
 
 function getVisibleTasks(){
-  if(!currentUser) return tasks;
-  if(currentUser.role==='admin'||currentUser.canSeeAll) return tasks;
+  // Не показывать удалённые задачи
+  var alive = tasks.filter(function(t){ return t.stage !== 'deleted' && t.deleted !== '1'; });
+  if(!currentUser) return alive;
+  if(currentUser.role==='admin'||currentUser.canSeeAll) return alive;
   if(currentUser.role==='lawyer'){
     const myIds=new Set(clients.filter(c=>c.lawyer===currentUser.name).map(c=>c.id));
-    return tasks.filter(t=>myIds.has(t.client)||t.assignee===currentUser.name);
+    return alive.filter(t=>myIds.has(t.client)||t.assignee===currentUser.name);
   }
   if(currentUser.role==='translator'){
-    // Translator видит только задачи по своим заказам
     const myOrdClients=new Set(orders.filter(o=>o.translator===currentUser.name).map(o=>o.clientId));
-    return tasks.filter(t=>myOrdClients.has(t.client)&&t.assignee===currentUser.name);
+    return alive.filter(t=>myOrdClients.has(t.client)&&t.assignee===currentUser.name);
   }
-  if(taskScope==='all') return tasks;
-  return tasks.filter(t=>!t.assignee||t.assignee==='—'||t.assignee===currentUser.name);
+  if(taskScope==='all') return alive;
+  return alive.filter(t=>!t.assignee||t.assignee==='—'||t.assignee===currentUser.name);
 }
 
 
@@ -3310,14 +3311,29 @@ async function doSync(silent=false){
   ]);
 
   API_ONLINE = results.some(r=>r!==null);
-  if(results[0] && Array.isArray(results[0])) clients=results[0];
+  if(results[0] && Array.isArray(results[0])){
+    // Сохраняем локальные num если сервер их ещё не вернул
+    var prevClients = clients;
+    clients = results[0];
+    clients.forEach(function(c){
+      var prev = prevClients.find(function(p){ return p.id === c.id; });
+      if(prev && prev.num && !c.num) c.num = prev.num; // держим локальный num до следующего sync
+    });
+  }
   if(results[1] && Array.isArray(results[1])) statuses=results[1];
   if(results[2] && Array.isArray(results[2])) courts=results[2];
   if(results[3] && Array.isArray(results[3])) meetings=results[3];
   if(results[4] && Array.isArray(results[4])) citizenship=results[4];
   if(results[5] && Array.isArray(results[5])) rights=results[5];
   if(results[6] && Array.isArray(results[6])) orders=results[6];
-  if(results[7] && Array.isArray(results[7])){ tasks=results[7]; persistTasks(); renderTasks(); }
+  if(results[7] && Array.isArray(results[7])){
+    // Мёрдж: берём сервер как основу, добавляем локальные задачи которых нет на сервере
+    var serverTasks = results[7].filter(function(t){ return t.stage !== 'deleted' && t.deleted !== '1'; });
+    var serverIds = new Set(serverTasks.map(function(t){ return t.id; }));
+    var localOnly = tasks.filter(function(t){ return !serverIds.has(t.id); });
+    tasks = serverTasks.concat(localOnly);
+    persistTasks(); renderTasks();
+  }
   if(results[8]) {
     var _ud = results[8];
     // Логируем сырой ответ для диагностики
@@ -3605,10 +3621,14 @@ async function saveClientNum(cid) {
   c.num = num;
   closeModal();
   applyClientsFilter();
-  showToast(num ? ('Номер клиента: ' + num + ' ✓') : 'Номер клиента удалён');
-  if(API_BASE) {
-    await apiPut('/clients/' + cid, { num: num }).catch(function(){});
+  if(!API_BASE) {
+    showToast(num ? ('Номер: ' + num + ' (только локально — API не настроен)') : 'Номер удалён');
+    return;
   }
+  showToast('Сохраняю номер клиента...');
+  const res = await apiPut('/clients/' + cid, { num: num }).catch(function(){ return null; });
+  if(res && res.ok) showToast(num ? ('Номер клиента: ' + num + ' ✓ сохранён в таблице') : 'Номер клиента удалён ✓');
+  else showToast('⚠ Номер сохранён локально. Проверьте колонку num в листе CRM_Clients');
 }
 
 // Номер клиента, присвоенный менеджером (поле num)
@@ -3830,11 +3850,12 @@ function openClientModal(cid){
   `,'wide');
 }
 
-function toggleOnboard(cid,i,v){
+async function toggleOnboard(cid,i,v){
   const c=clients.find(x=>x.id===cid);if(!c)return;
   if(!c.onboard)c.onboard=[false,false,false];
   c.onboard[i]=v;
   const el=g('obi-'+i);if(el)el.className='ob-item'+(v?' done':'');
+  if(API_BASE) await apiPut('/clients/'+cid,{onboard:JSON.stringify(c.onboard)}).catch(()=>{});
 }
 
 function doActivateClient(cid){
@@ -3873,7 +3894,14 @@ async function confirmActivate(cid){
   c.last=today();
   const subs=SUBSTAGES[type]||[];c.substage=subs[0]||'';
   if(c.substage&&STAGE_TASKS[c.substage]){
-    STAGE_TASKS[c.substage].forEach(txt=>tasks.unshift({id:uid(),text:txt,client:cid,assignee:'',prio:'mid',stage:'todo',due:'',created:today(),cmts:[]}));
+    for(const txt of STAGE_TASKS[c.substage]){
+      if(!tasks.find(t=>t.client===cid&&t.text===txt)){
+        const nt={id:uid(),text:txt,title:txt,client:cid,assignee:'',prio:'mid',stage:'todo',due:'',created:today(),cmts:[]};
+        tasks.unshift(nt);
+        if(API_BASE) await apiPost('/tasks',nt).catch(()=>{});
+      }
+    }
+    persistTasks();
   }
   closeModal();renderAll();
   await apiPut('/clients/'+cid, c);
@@ -3888,7 +3916,14 @@ async function setSubstage(cid,sub){
   const c=clients.find(x=>x.id===cid);if(!c)return;
   c.substage=sub;c.last=today();
   if(STAGE_TASKS[sub]){
-    STAGE_TASKS[sub].forEach(txt=>{if(!tasks.find(t=>t.client===cid&&t.text===txt))tasks.unshift({id:uid(),text:txt,client:cid,assignee:'',prio:'mid',stage:'todo',due:'',created:today(),cmts:[]});});
+    for(const txt of STAGE_TASKS[sub]){
+      if(!tasks.find(t=>t.client===cid&&t.text===txt)){
+        const nt={id:uid(),text:txt,title:txt,client:cid,assignee:'',prio:'mid',stage:'todo',due:'',created:today(),cmts:[]};
+        tasks.unshift(nt);
+        if(API_BASE) await apiPost('/tasks',nt).catch(()=>{});
+      }
+    }
+    persistTasks();
   }
   closeModal();openClientModal(cid);renderKanban();renderTasks();renderTaskStats();
   await apiPut('/clients/'+cid, c);
@@ -5247,11 +5282,24 @@ function renderTCard(t){
 function tDragStart(e,id){_dragId=id;setTimeout(()=>{const el=g('tc-'+id);if(el)el.classList.add('dragging');},0);}
 function tDragOver(e,col){e.preventDefault();e.currentTarget.classList.add('drop-active');}
 function tDragLeave(e){e.currentTarget.classList.remove('drop-active');}
-function tDrop(e,col){
+async function tDrop(e,col){
   e.preventDefault();e.currentTarget.classList.remove('drop-active');
-  if(_dragId){const t=tasks.find(x=>x.id===_dragId);if(t)t.stage=col;_dragId=null;renderTasks();renderTaskStats();}
+  if(_dragId){
+    const t=tasks.find(x=>x.id===_dragId);
+    if(t){ t.stage=col; persistTasks(); renderTasks();renderTaskStats();
+      if(API_BASE) await apiPut('/tasks/'+_dragId,{stage:col}).catch(()=>{});
+    }
+    _dragId=null;
+  }
 }
-function moveTask(id,stage,e){if(e)e.stopPropagation();const t=tasks.find(x=>x.id===id);if(t)t.stage=stage;renderTasks();renderTaskStats();}
+async function moveTask(id,stage,e){
+  if(e)e.stopPropagation();
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  t.stage=stage;
+  persistTasks();
+  renderTasks();renderTaskStats();
+  if(API_BASE) await apiPut('/tasks/'+id,{stage:stage}).catch(()=>{});
+}
 document.addEventListener('dragend',()=>{document.querySelectorAll('.tcard').forEach(c=>c.classList.remove('dragging'));document.querySelectorAll('.tcol').forEach(c=>c.classList.remove('drop-active'));});
 
 function openTaskModal(id){
@@ -5296,22 +5344,35 @@ function openTaskModal(id){
     </div>`,'wide');
 }
 
-function addComment(tid){
+async function addComment(tid){
   const t=tasks.find(x=>x.id===tid);const txt=(g('tm-new-cmt').value||'').trim();
   if(!t||!txt)return;
   if(!t.cmts)t.cmts=[];
-  t.cmts.push({a:'Менеджер',d:nowDMY(),t:txt});
+  t.cmts.push({a:(currentUser&&currentUser.name)||'Менеджер',d:nowDMY(),t:txt});
   const el=g('tm-cmtlist');
   if(el)el.innerHTML=t.cmts.map(c=>`<div class="cmt"><div class="cmt-m"><span>${c.a}</span> · ${c.d}</div><div class="cmt-t">${c.t}</div></div>`).join('');
   g('tm-new-cmt').value='';
+  persistTasks();
+  if(API_BASE) await apiPut('/tasks/'+tid,{cmts:JSON.stringify(t.cmts)}).catch(()=>{});
 }
-function saveTask(tid){
+async function saveTask(tid){
   const t=tasks.find(x=>x.id===tid);if(!t)return;
   t.stage=g('tm-stage').value;t.prio=g('tm-prio').value;t.assignee=g('tm-assignee').value;t.due=g('tm-due').value;t.client=g('tm-client').value;
   persistTasks();
   closeModal();renderTasks();renderTaskStats();
+  if(API_BASE){
+    await apiPut('/tasks/'+tid, t).catch(function(){});
+  }
 }
-function deleteTask(tid){if(confirm('Удалить задачу?')){tasks=tasks.filter(x=>x.id!==tid);closeModal();renderTasks();renderTaskStats();}}
+async function deleteTask(tid){
+  if(!confirm('Удалить задачу?')) return;
+  tasks=tasks.filter(x=>x.id!==tid);
+  persistTasks();
+  closeModal();renderTasks();renderTaskStats();
+  if(API_BASE){
+    await apiPut('/tasks/'+tid, {stage:'deleted',deleted:'1'}).catch(function(){});
+  }
+}
 
 function openAddTaskModal(defaultStage='todo',defaultClient=''){
   openModal(`
@@ -5334,11 +5395,17 @@ function openAddTaskModal(defaultStage='todo',defaultClient=''){
       <button class="btn btn-p" onclick="createTask()">Создать</button>
     </div>`,'narrow');
 }
-function createTask(){
+async function createTask(){
   const txt=(g('nt-text').value||'').trim();if(!txt)return;
-  tasks.unshift({id:uid(),text:txt,client:g('nt-client').value,assignee:g('nt-assignee').value,prio:g('nt-prio').value,stage:g('nt-stage').value,due:g('nt-due').value,created:today(),cmts:[]});
+  const newTask={id:uid(),text:txt,title:txt,client:g('nt-client').value,assignee:g('nt-assignee').value,prio:g('nt-prio').value,stage:g('nt-stage').value,due:g('nt-due').value,created:today(),cmts:[]};
+  tasks.unshift(newTask);
   persistTasks();
   closeModal();renderTasks();renderTaskStats();
+  if(API_BASE){
+    const res = await apiPost('/tasks', newTask).catch(function(){ return null; });
+    if(res && res.ok) showToast('Задача сохранена в таблице ✓');
+    else if(API_ONLINE) showToast('⚠ Задача создана локально, не удалось сохранить на сервере');
+  }
 }
 
 function persistTasks(){
