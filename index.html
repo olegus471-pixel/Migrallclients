@@ -2294,18 +2294,18 @@ async function apiFetch(path, options={}){
   if(!API_BASE) return null;
   try {
     let url, fetchOpts;
+    // Кодируем path без слэшей чтобы GAS мог разобрать resource/id
+    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
     if(!options.method || options.method==='GET'){
-      // GET: Apps Script принимает path как query parameter
-      url = API_BASE + '?path=' + encodeURIComponent(path);
+      url = API_BASE + '?path=' + encodedPath;
       fetchOpts = { method:'GET' };
     } else {
-      // POST/PUT: отправляем как POST с _method в теле
-      url = API_BASE + '?path=' + encodeURIComponent(path);
+      url = API_BASE + '?path=' + encodedPath;
       const body = options.body ? JSON.parse(options.body) : {};
       if(options.method !== 'POST') body._method = options.method;
       fetchOpts = {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain' }, // Apps Script требует text/plain для CORS
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(body),
       };
     }
