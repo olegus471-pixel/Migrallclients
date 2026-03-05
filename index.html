@@ -740,10 +740,13 @@ input,select,textarea{font-family:'Manrope',sans-serif}
     <div class="ni admin-only" onclick="showView('integration',this)"><span class="ni-ic">⚡</span>API / Интеграции</div>
     <div class="ni manager-only" onclick="showView('orders',this)"><span class="ni-ic">📦</span><span data-i18n="ni_orders">Заказы</span><span class="ni-bdg y" id="bdg-orders">0</span></div>
     <div class="ni admin-only" onclick="showView('users',this)"><span class="ni-ic">👥</span>Пользователи</div>
+    <div class="ni admin-only" onclick="showView('stats-lawyers',this)"><span class="ni-ic">📊</span>Статистика адвокатов</div>
+    <div class="ni admin-only" onclick="showView('stats-activity',this)"><span class="ni-ic">📈</span>Активность команды</div>
 
     <!-- АДВОКАТ: только его разделы -->
     <div class="sb-sec lawyer-only" style="display:none">Моя работа</div>
     <div class="ni lawyer-only" style="display:none" id="sb-lawyer-tasks" onclick="showView('lawyer-tasks',this)"><span class="ni-ic">⚖</span>Мои дела<span class="ni-bdg" id="bdg-lawyer"></span></div>
+    <div class="ni lawyer-only" style="display:none" onclick="showView('orders',this)"><span class="ni-ic">📦</span>Мои заказы</div>
     <div class="sb-sec lawyer-only" style="display:none">По клиентам</div>
     <div class="ni lawyer-only" style="display:none" onclick="showView('courts',this)"><span class="ni-ic">⚖</span>Суды</div>
     <div class="ni lawyer-only" style="display:none" id="sb-filings" onclick="showView('filings',this)"><span class="ni-ic">📤</span>Подачи</div>
@@ -752,6 +755,7 @@ input,select,textarea{font-family:'Manrope',sans-serif}
     <!-- ПЕРЕВОДЧИК: только его разделы -->
     <div class="sb-sec translator-only" style="display:none">Моя работа</div>
     <div class="ni translator-only" style="display:none" id="sb-translator-tasks" onclick="showView('translator-tasks',this)"><span class="ni-ic">📝</span>Мои задания<span class="ni-bdg" id="bdg-translator"></span></div>
+    <div class="ni translator-only" style="display:none" onclick="showView('orders',this)"><span class="ni-ic">📦</span>Мои заказы</div>
     <div class="sb-sec translator-only" style="display:none">По клиентам</div>
     <div class="ni translator-only" style="display:none" onclick="showView('rights',this)"><span class="ni-ic">🚗</span>Права</div>
     <div class="ni translator-only" style="display:none" onclick="showView('translations',this)"><span class="ni-ic">📝</span>Переводы</div>
@@ -2244,6 +2248,62 @@ CRM ↔ Backend (Render) ↔ Google Sheets
   </div>
 
   </div><!-- /content -->
+
+
+  <!-- =================== STATS: LAWYERS =================== -->
+  <div class="view" id="view-stats-lawyers">
+    <div class="sec-h">
+      <div class="sec-t">📊 Статистика адвокатов</div>
+      <div class="sec-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="date" id="sl-from" class="inp" style="width:140px;font-size:12px">
+        <span style="color:var(--t3);font-size:12px">—</span>
+        <input type="date" id="sl-to" class="inp" style="width:140px;font-size:12px">
+        <select id="sl-lawyer" class="inp" style="width:160px;font-size:12px">
+          <option value="">Все адвокаты</option>
+        </select>
+        <button class="btn btn-p btn-sm" onclick="renderLawyerStats()">Показать</button>
+        <button class="btn-ghost btn-sm" onclick="exportLawyerStats()">⬇ CSV</button>
+      </div>
+    </div>
+    <div id="sl-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"></div>
+    <div class="panel" style="padding:0;overflow:hidden">
+      <table class="tbl">
+        <thead><tr>
+          <th>Адвокат</th><th>Клиент</th><th>Тип услуги</th><th>Статус</th>
+          <th>Этап</th><th>Дата создания</th><th>Дата обновления</th><th>Дней в работе</th>
+        </tr></thead>
+        <tbody id="sl-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- =================== STATS: ACTIVITY =================== -->
+  <div class="view" id="view-stats-activity">
+    <div class="sec-h">
+      <div class="sec-t">📈 Активность команды</div>
+      <div class="sec-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="date" id="sa-from" class="inp" style="width:140px;font-size:12px">
+        <span style="color:var(--t3);font-size:12px">—</span>
+        <input type="date" id="sa-to" class="inp" style="width:140px;font-size:12px">
+        <select id="sa-user" class="inp" style="width:160px;font-size:12px">
+          <option value="">Все пользователи</option>
+        </select>
+        <button class="btn btn-p btn-sm" onclick="renderActivityStats()">Показать</button>
+        <button class="btn-ghost btn-sm" onclick="exportActivityStats()">⬇ CSV</button>
+      </div>
+    </div>
+    <div id="sa-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"></div>
+    <div class="panel" style="padding:0;overflow:hidden">
+      <table class="tbl">
+        <thead><tr>
+          <th>Пользователь</th><th>Роль</th><th>Действие</th><th>Объект</th>
+          <th>Детали</th><th>Дата/время</th>
+        </tr></thead>
+        <tbody id="sa-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
 </main>
 </div><!-- /app -->
 
@@ -3091,6 +3151,7 @@ function showView(id,el){
   closeSb();
   if(id==='calendar') renderCal();
   if(id==='users') loadUsers();
+  if(id==='stats-lawyers'||id==='stats-activity') { initStatsFilters(); }
   if(id==='integration') {
     try {
       var sid = localStorage.getItem('crm_users_sheet_id') || '';
@@ -3346,12 +3407,12 @@ async function doSync(silent=false){
       if(prev && prev.num && !c.num) c.num = prev.num; // держим локальный num до следующего sync
     });
   }
-  if(results[1] && Array.isArray(results[1])) statuses=results[1];
-  if(results[2] && Array.isArray(results[2])) courts=results[2];
+  if(results[1] && Array.isArray(results[1])) statuses=results[1].filter(s=>s.deleted!=='1');
+  if(results[2] && Array.isArray(results[2])) courts=results[2].filter(c=>c.deleted!=='1');
   if(results[3] && Array.isArray(results[3])) meetings=results[3];
-  if(results[4] && Array.isArray(results[4])) citizenship=results[4];
-  if(results[5] && Array.isArray(results[5])) rights=results[5];
-  if(results[6] && Array.isArray(results[6])) orders=results[6];
+  if(results[4] && Array.isArray(results[4])) citizenship=results[4].filter(c=>c.deleted!=='1');
+  if(results[5] && Array.isArray(results[5])) rights=results[5].filter(r=>r.deleted!=='1');
+  if(results[6] && Array.isArray(results[6])) orders=results[6].filter(o=>o.deleted!=='1');
   if(results[7] && Array.isArray(results[7])){
     // Мёрдж: для каждой задачи сравниваем локальную и серверную версии
     // Если локальная была изменена позже (есть _localUpdated) — берём её
@@ -3664,8 +3725,10 @@ async function saveClientNum(cid) {
   }
   toast('Сохраняю номер клиента...');
   const res = await apiPut('/clients/' + cid, { num: num }).catch(function(){ return null; });
-  if(res && res.ok) toast(num ? ('Номер клиента: ' + num + ' ✓ сохранён в таблице') : 'Номер клиента удалён ✓');
-  else toast('⚠ Номер сохранён локально. Проверьте колонку num в листе CRM_Clients');
+  if(res && res.ok) {
+    toast(num ? ('Номер клиента: ' + num + ' ✓ сохранён в таблице') : 'Номер клиента удалён ✓');
+    logActivity('Изменил номер клиента', cid, 'num=' + num);
+  } else toast('⚠ Номер сохранён локально. Проверьте колонку num в листе CRM_Clients');
 }
 
 // Номер клиента, присвоенный менеджером (поле num)
@@ -4597,7 +4660,8 @@ async function _execDelete(mod, idx){
     rights.splice(idx,1); renderRights();
   }
   toast(_t('del_done'));
-  if(key) await apiFetch(apiPath+'/'+key,{method:'DELETE'}).catch(()=>{});
+  // Помечаем deleted='1' через PUT (GAS не поддерживает DELETE)
+  if(key && API_BASE) await apiPut(apiPath+'/'+key, {deleted:'1'}).catch(()=>{});
 }
 
 // ============================================================
@@ -5109,7 +5173,7 @@ async function deleteOrder(ordId, e){
   if(!confirm('Удалить запись?')) return;
   orders = orders.filter(o => o.id !== ordId);
   renderTranslations(); renderNocrims(); renderDash();
-  if(API_BASE) await apiPut('/orders/'+ordId, {status:'deleted', deleted:'1'}).catch(()=>{});
+  if(API_BASE) await apiPut('/orders/'+ordId, {deleted:'1', status:'deleted'}).catch(()=>{});
   toast('Запись удалена ✓');
 }
 
@@ -5349,6 +5413,7 @@ async function tDrop(e,col){
 async function moveTask(id,stage,e){
   if(e)e.stopPropagation();
   const t=tasks.find(x=>x.id===id);if(!t)return;
+  logActivity('Сменил статус задачи', t.text||t.id, t.stage+'→'+stage);
   t.stage=stage; t._dirty=true;
   persistTasks(); renderTasks(); renderTaskStats();
   if(API_BASE){
@@ -6070,14 +6135,24 @@ function ordStatusBdg(svc, status){
 
 function renderOrders(){
   const tbody = g('orders-tbody'); if(!tbody) return;
+  const _u = _myUser();
+
+  // Фильтр по роли: переводчик — только свои, адвокат — по своим клиентам
+  let allOrders = orders.filter(o=>o.deleted!=='1'&&o.status!=='deleted');
+  if(_u.role==='translator') allOrders=allOrders.filter(o=>(o.translator||'')=== _u.name);
+  else if(_u.role==='lawyer'){
+    var myClientIds=new Set(clients.filter(c=>(c.lawyer||'')=== _u.name).map(c=>c.id));
+    allOrders=allOrders.filter(o=>myClientIds.has(o.clientId));
+  }
+
   // Update badge
-  const openOrds = orders.filter(o=>{
+  const openOrds = allOrders.filter(o=>{
     const steps=ORD_STATUSES[o.svcType]||[];
     return o.status!==steps[steps.length-1];
   });
   const bdg=g('bdg-orders'); if(bdg) bdg.textContent=openOrds.length;
 
-  let data = orders;
+  let data = allOrders;
   if(_ordSvcFilter!=='all') data=data.filter(o=>o.svcType===_ordSvcFilter);
   if(_ordFilter!=='all'){
     data=data.filter(o=>o.status===_ordFilter);
@@ -6229,6 +6304,26 @@ async function saveNewOrder(){
   renderOrders(); renderTranslatorCabinet(); renderDash();
   toast(_t('ord_created'));
   await apiFetch('/orders',{method:'POST',body:JSON.stringify(ord)}).catch(()=>{});
+
+  // Если тип услуги 'Права' — добавить запись в таблицу rights
+  if(svcType === 'Права') {
+    const c = clients.find(x=>x.id===clientId);
+    const rightsEntry = {
+      num: ord.id,
+      name: c ? c.name : clientId,
+      country: '',
+      date: today,
+      stage: 'Документы приняты',
+      status: 'В обработке',
+      translator: trans||'',
+      driveLink: drive||'',
+      comment: comment||'',
+      updated: today,
+    };
+    rights.push(rightsEntry);
+    renderRights();
+    await apiPost('/rights', rightsEntry).catch(()=>{});
+  }
 }
 
 /** Открыть карточку заказа */
@@ -7521,6 +7616,7 @@ function openCreateUserModal() {
   document.getElementById('user-modal-title').textContent = 'Новый пользователь';
   document.getElementById('umod-name').value = '';
   document.getElementById('umod-email').value = '';
+  var _pwdEl = document.getElementById('umod-password'); if(_pwdEl) _pwdEl.value = '';
   document.getElementById('umod-role').value = 'manager';
   document.getElementById('umod-err').style.display = 'none';
   document.getElementById('user-modal').style.display = 'flex';
@@ -7539,27 +7635,38 @@ function openEditUserModal(uid) {
 }
 
 async function saveNewUser() {
-  var name  = (document.getElementById('umod-name').value||'').trim();
-  var email = (document.getElementById('umod-email').value||'').trim();
-  var role  = document.getElementById('umod-role').value;
-  var errEl = document.getElementById('umod-err');
+  var name     = (document.getElementById('umod-name').value||'').trim();
+  var email    = (document.getElementById('umod-email').value||'').trim();
+  var role     = document.getElementById('umod-role').value;
+  var pwdEl    = document.getElementById('umod-password');
+  var password = pwdEl ? (pwdEl.value||'').trim() : '';
+  var errEl    = document.getElementById('umod-err');
 
   if(!name || !email) { errEl.textContent='Заполните имя и email'; errEl.style.display='block'; return; }
   if(!email.includes('@')) { errEl.textContent='Некорректный email'; errEl.style.display='block'; return; }
+  if(!editingUserId && password.length < 6) { errEl.textContent='Пароль минимум 6 символов'; errEl.style.display='block'; return; }
 
   var result;
   if(editingUserId) {
-    result = await apiPut('/users', {id: editingUserId, name: name, email: email, role: role}).catch(function(){ return null; });
+    var upd = {id: editingUserId, name: name, email: email, role: role};
+    if(password.length >= 6) upd.password = password;
+    result = await apiPut('/users/'+editingUserId, upd).catch(function(){ return null; });
   } else {
-    result = await apiPost('/users', {name: name, email: email, role: role}).catch(function(){ return null; });
+    var newId = 'user_' + Date.now();
+    result = await apiPost('/users', {
+      id: newId, name: name, email: email, role: role,
+      password: password, status: 'active',
+      loginAttempts: '0', lockUntil: '', lastLogin: '', createdAt: new Date().toISOString()
+    }).catch(function(){ return null; });
   }
 
   if(result && result.ok) {
     document.getElementById('user-modal').style.display = 'none';
     loadUsers();
-    toast(editingUserId ? 'Пользователь обновлён' : 'Пользователь создан · Пароль отправлен на почту');
+    toast(editingUserId ? 'Пользователь обновлён ✓' : 'Пользователь создан ✓');
+    logActivity(editingUserId ? 'Обновил пользователя' : 'Создал пользователя', name, email+'|'+role);
   } else {
-    errEl.textContent = result && result.error || 'Ошибка сервера';
+    errEl.textContent = result && result.error || 'Ошибка сервера — проверьте API';
     errEl.style.display = 'block';
   }
 }
@@ -7606,6 +7713,225 @@ async function resetUserPass(email) {
     if(sdModal) sdModal.addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
   });
 })();
+
+
+
+// ════════════════════════════════════════════════════════════
+// ACTIVITY LOG — логируем действия пользователей
+// ════════════════════════════════════════════════════════════
+var _activityLog = [];
+try { _activityLog = JSON.parse(localStorage.getItem('crm_activity')||'[]'); } catch(e) { _activityLog = []; }
+
+function logActivity(action, obj, details) {
+  var u = _myUser();
+  var entry = {
+    ts: new Date().toISOString(),
+    user: u.name || u.email || '—',
+    role: u.role || '—',
+    action: action,
+    obj: obj || '',
+    details: details || '',
+  };
+  _activityLog.unshift(entry);
+  if(_activityLog.length > 2000) _activityLog = _activityLog.slice(0, 2000);
+  try { localStorage.setItem('crm_activity', JSON.stringify(_activityLog)); } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════════════
+// STATS: АДВОКАТЫ
+// ════════════════════════════════════════════════════════════
+function renderLawyerStats() {
+  var fromVal = document.getElementById('sl-from').value;
+  var toVal   = document.getElementById('sl-to').value;
+  var lawFilter = document.getElementById('sl-lawyer').value;
+  var tbody = document.getElementById('sl-tbody');
+  var summary = document.getElementById('sl-summary');
+  if(!tbody) return;
+
+  var from = fromVal ? new Date(fromVal) : null;
+  var to   = toVal   ? new Date(toVal + 'T23:59:59') : null;
+
+  // Собрать данные из specTasks (дела адвоката), citizenship, courts, filings
+  var rows = [];
+
+  // Из specTasks
+  (window.specTasks||[]).forEach(function(t) {
+    if(t.role !== 'lawyer') return;
+    if(lawFilter && t.assignee !== lawFilter) return;
+    var d = t.createdAt ? new Date(t.createdAt) : null;
+    if(from && d && d < from) return;
+    if(to && d && d > to) return;
+    var days = d ? Math.floor((Date.now() - d.getTime()) / 86400000) : '—';
+    rows.push({ lawyer: t.assignee||'—', client: t.client||'—', type: t.type||'Дело', status: t.stage||'—', stage: t.stage||'—', created: t.createdAt ? t.createdAt.slice(0,10) : '—', updated: t.due||'—', days: days });
+  });
+
+  // Из citizenship (по полю lawyer)
+  (citizenship||[]).forEach(function(c) {
+    if(!c.lawyer) return;
+    if(lawFilter && c.lawyer !== lawFilter) return;
+    rows.push({ lawyer: c.lawyer, client: c.name||'—', type: 'Гражданство', status: c.status||'—', stage: c.stage||'—', created: c.date||'—', updated: c.updated||'—', days: '—' });
+  });
+
+  // Из courts (по полю lawyer)
+  (courts||[]).forEach(function(c) {
+    if(!c.lawyer) return;
+    if(lawFilter && c.lawyer !== lawFilter) return;
+    rows.push({ lawyer: c.lawyer, client: c.name||'—', type: 'Суд', status: c.status||'—', stage: c.stage||'—', created: c.date||'—', updated: c.updated||'—', days: '—' });
+  });
+
+  if(!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--t3)">Нет данных за выбранный период</td></tr>';
+    summary.innerHTML = '';
+    return;
+  }
+
+  // Сводка
+  var lawyerMap = {};
+  rows.forEach(function(r) {
+    if(!lawyerMap[r.lawyer]) lawyerMap[r.lawyer] = { total:0, done:0, inprog:0 };
+    lawyerMap[r.lawyer].total++;
+    var s = (r.status||'').toLowerCase();
+    if(s.includes('завершен') || s.includes('готово') || s.includes('выдан')) lawyerMap[r.lawyer].done++;
+    else lawyerMap[r.lawyer].inprog++;
+  });
+  var totalCases = rows.length;
+  var totalDone = rows.filter(function(r){ var s=(r.status||'').toLowerCase(); return s.includes('завершен')||s.includes('готово')||s.includes('выдан'); }).length;
+  var uniqueLawyers = Object.keys(lawyerMap).length;
+  summary.innerHTML = [
+    { label: 'Всего дел', val: totalCases, color: 'var(--acc)' },
+    { label: 'Завершено', val: totalDone, color: 'var(--gre)' },
+    { label: 'В процессе', val: totalCases - totalDone, color: 'var(--yel)' },
+    { label: 'Адвокатов', val: uniqueLawyers, color: 'var(--ora)' },
+  ].map(function(s) {
+    return '<div class="card" style="padding:14px;text-align:center"><div style="font-size:24px;font-weight:800;color:'+s.color+'">'+s.val+'</div><div style="font-size:11px;color:var(--t3);margin-top:4px">'+s.label+'</div></div>';
+  }).join('');
+
+  tbody.innerHTML = rows.map(function(r) {
+    return '<tr>'
+      +'<td style="font-weight:600;color:#db2777">⚖ '+r.lawyer+'</td>'
+      +'<td>'+r.client+'</td>'
+      +'<td><span class="bdg">'+r.type+'</span></td>'
+      +'<td>'+bdg(r.status)+'</td>'
+      +'<td style="color:var(--t3);font-size:11px">'+r.stage+'</td>'
+      +'<td class="mono" style="font-size:11px;color:var(--t3)">'+r.created+'</td>'
+      +'<td class="mono" style="font-size:11px;color:var(--t3)">'+r.updated+'</td>'
+      +'<td style="text-align:center;color:var(--t3)">'+r.days+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function exportLawyerStats() {
+  var tbody = document.getElementById('sl-tbody');
+  if(!tbody) return;
+  var rows = [['Адвокат','Клиент','Тип','Статус','Этап','Создано','Обновлено','Дней']];
+  tbody.querySelectorAll('tr').forEach(function(tr) {
+    var cells = Array.from(tr.querySelectorAll('td')).map(function(td){ return '"'+td.textContent.trim().replace(/"/g,'""')+'"'; });
+    if(cells.length) rows.push(cells);
+  });
+  var csv = rows.map(function(r){ return r.join(','); }).join('\n');
+  var a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('\uFEFF'+csv);
+  a.download = 'lawyers_stats_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+// ════════════════════════════════════════════════════════════
+// STATS: АКТИВНОСТЬ КОМАНДЫ
+// ════════════════════════════════════════════════════════════
+function renderActivityStats() {
+  var fromVal  = document.getElementById('sa-from').value;
+  var toVal    = document.getElementById('sa-to').value;
+  var userFilter = document.getElementById('sa-user').value;
+  var tbody  = document.getElementById('sa-tbody');
+  var summary = document.getElementById('sa-summary');
+  if(!tbody) return;
+
+  var from = fromVal ? new Date(fromVal) : null;
+  var to   = toVal   ? new Date(toVal + 'T23:59:59') : null;
+
+  var log = (_activityLog||[]).filter(function(e) {
+    if(userFilter && e.user !== userFilter) return false;
+    var d = new Date(e.ts);
+    if(from && d < from) return false;
+    if(to && d > to) return false;
+    return true;
+  });
+
+  if(!log.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--t3)">Нет активности за выбранный период</td></tr>';
+    summary.innerHTML = '';
+    return;
+  }
+
+  // Сводка
+  var userMap = {};
+  log.forEach(function(e) {
+    if(!userMap[e.user]) userMap[e.user] = 0;
+    userMap[e.user]++;
+  });
+  var topUser = Object.entries(userMap).sort(function(a,b){ return b[1]-a[1]; })[0];
+  summary.innerHTML = [
+    { label: 'Всего действий', val: log.length, color: 'var(--acc)' },
+    { label: 'Пользователей', val: Object.keys(userMap).length, color: 'var(--gre)' },
+    { label: 'Сегодня', val: log.filter(function(e){ return e.ts.startsWith(new Date().toISOString().slice(0,10)); }).length, color: 'var(--yel)' },
+    { label: 'Лидер', val: topUser ? topUser[0].split(' ')[0] : '—', color: 'var(--ora)' },
+  ].map(function(s) {
+    return '<div class="card" style="padding:14px;text-align:center"><div style="font-size:20px;font-weight:800;color:'+s.color+'">'+s.val+'</div><div style="font-size:11px;color:var(--t3);margin-top:4px">'+s.label+'</div></div>';
+  }).join('');
+
+  var roleColors = {admin:'#16a34a',manager:'#3b6ff5',lawyer:'#db2877',translator:'#0f766e'};
+  tbody.innerHTML = log.slice(0, 500).map(function(e) {
+    var rc = roleColors[e.role]||'#999';
+    var dt = e.ts ? new Date(e.ts).toLocaleString('ru-RU') : '—';
+    return '<tr>'
+      +'<td style="font-weight:600">'+e.user+'</td>'
+      +'<td><span style="font-size:10px;font-weight:600;color:'+rc+';background:'+rc+'20;padding:1px 6px;border-radius:10px">'+e.role+'</span></td>'
+      +'<td><span class="bdg" style="background:var(--s2)">'+e.action+'</span></td>'
+      +'<td style="color:var(--t2)">'+e.obj+'</td>'
+      +'<td style="color:var(--t3);font-size:11px">'+e.details+'</td>'
+      +'<td class="mono" style="font-size:11px;color:var(--t3)">'+dt+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function exportActivityStats() {
+  var tbody = document.getElementById('sa-tbody');
+  if(!tbody) return;
+  var rows = [['Пользователь','Роль','Действие','Объект','Детали','Дата']];
+  tbody.querySelectorAll('tr').forEach(function(tr) {
+    var cells = Array.from(tr.querySelectorAll('td')).map(function(td){ return '"'+td.textContent.trim().replace(/"/g,'""')+'"'; });
+    if(cells.length) rows.push(cells);
+  });
+  var csv = rows.map(function(r){ return r.join(','); }).join('\n');
+  var a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('\uFEFF'+csv);
+  a.download = 'activity_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+// Заполнять фильтры при открытии статистики
+function initStatsFilters() {
+  // Адвокаты
+  var slLaw = document.getElementById('sl-lawyer');
+  if(slLaw && usersData.length) {
+    var lawyers = usersData.filter(function(u){ return u.role==='lawyer'; });
+    slLaw.innerHTML = '<option value="">Все адвокаты</option>' +
+      lawyers.map(function(u){ return '<option value="'+u.name+'">'+u.name+'</option>'; }).join('');
+  }
+  // Пользователи активности
+  var saUser = document.getElementById('sa-user');
+  if(saUser && usersData.length) {
+    var uniq = [...new Set((_activityLog||[]).map(function(e){ return e.user; }))].filter(Boolean);
+    saUser.innerHTML = '<option value="">Все пользователи</option>' +
+      uniq.map(function(u){ return '<option value="'+u+'">'+u+'</option>'; }).join('');
+  }
+  // Дефолтные даты: последние 30 дней
+  var now = new Date();
+  var ago = new Date(now); ago.setDate(ago.getDate()-30);
+  var fmt = function(d){ return d.toISOString().slice(0,10); };
+  ['sl-from','sa-from'].forEach(function(id){ var el=document.getElementById(id); if(el&&!el.value) el.value=fmt(ago); });
+  ['sl-to','sa-to'].forEach(function(id){ var el=document.getElementById(id); if(el&&!el.value) el.value=fmt(now); });
+}
 
 </script>
 
@@ -7716,6 +8042,7 @@ async function resetUserPass(email) {
     <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
       <input id="umod-name" placeholder="Имя" class="inp">
       <input id="umod-email" type="email" placeholder="Email" class="inp">
+      <input id="umod-password" type="password" placeholder="Пароль (мин. 6 символов)" class="inp">
       <select id="umod-role" class="inp">
         <option value="admin">Администратор</option>
         <option value="manager" selected>Менеджер</option>
