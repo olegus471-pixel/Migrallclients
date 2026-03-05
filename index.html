@@ -1604,28 +1604,41 @@ function putLocalRow(sheetName, keyValue, data) {
 function _updateRow(sheet, keyValue, data) {
   var values = sheet.getDataRange().getValues();
   var headers = values[0].map(function(h) { return String(h).trim(); });
-  
-  // Найти строку по _row (если передан) или по первому совпадению значения
+
+  // Найти строку: сначала по _row, затем по любой колонке совпадающей с keyValue
   var rowIdx = -1;
   if (data._row) {
     rowIdx = parseInt(data._row) - 1;
   } else {
     for (var i = 1; i < values.length; i++) {
-      if (String(values[i][0]).trim() === String(keyValue).trim()) {
-        rowIdx = i; break;
+      for (var k = 0; k < values[i].length; k++) {
+        if (String(values[i][k]).trim() === String(keyValue).trim()) {
+          rowIdx = i; break;
+        }
       }
+      if (rowIdx >= 0) break;
     }
   }
-  
+
   if (rowIdx < 1) return { ok: false, error: 'Row not found: ' + keyValue };
-  
-  // Обновить значения
-  headers.forEach(function(h, j) {
-    if (h && data[h] !== undefined && h !== '_row') {
-      sheet.getRange(rowIdx + 1, j + 1).setValue(data[h]);
+
+  // Обновить существующие колонки; новые — добавить в конец заголовков
+  var dataKeys = Object.keys(data).filter(function(k) { return k !== '_row'; });
+  dataKeys.forEach(function(h) {
+    if (!h || data[h] === undefined) return;
+    var colIdx = headers.indexOf(h);
+    if (colIdx >= 0) {
+      // Колонка уже есть — обновляем
+      sheet.getRange(rowIdx + 1, colIdx + 1).setValue(data[h]);
+    } else {
+      // Колонки нет — добавляем заголовок и значение
+      var newCol = headers.length + 1;
+      sheet.getRange(1, newCol).setValue(h);
+      sheet.getRange(rowIdx + 1, newCol).setValue(data[h]);
+      headers.push(h); // чтобы следующие поля считали правильный индекс
     }
   });
-  
+
   return { ok: true };
 }
 
@@ -1926,28 +1939,41 @@ function putLocalRow(sheetName, keyValue, data) {
 function _updateRow(sheet, keyValue, data) {
   var values = sheet.getDataRange().getValues();
   var headers = values[0].map(function(h) { return String(h).trim(); });
-  
-  // Найти строку по _row (если передан) или по первому совпадению значения
+
+  // Найти строку: сначала по _row, затем по любой колонке совпадающей с keyValue
   var rowIdx = -1;
   if (data._row) {
     rowIdx = parseInt(data._row) - 1;
   } else {
     for (var i = 1; i < values.length; i++) {
-      if (String(values[i][0]).trim() === String(keyValue).trim()) {
-        rowIdx = i; break;
+      for (var k = 0; k < values[i].length; k++) {
+        if (String(values[i][k]).trim() === String(keyValue).trim()) {
+          rowIdx = i; break;
+        }
       }
+      if (rowIdx >= 0) break;
     }
   }
-  
+
   if (rowIdx < 1) return { ok: false, error: 'Row not found: ' + keyValue };
-  
-  // Обновить значения
-  headers.forEach(function(h, j) {
-    if (h && data[h] !== undefined && h !== '_row') {
-      sheet.getRange(rowIdx + 1, j + 1).setValue(data[h]);
+
+  // Обновить существующие колонки; новые — добавить в конец заголовков
+  var dataKeys = Object.keys(data).filter(function(k) { return k !== '_row'; });
+  dataKeys.forEach(function(h) {
+    if (!h || data[h] === undefined) return;
+    var colIdx = headers.indexOf(h);
+    if (colIdx >= 0) {
+      // Колонка уже есть — обновляем
+      sheet.getRange(rowIdx + 1, colIdx + 1).setValue(data[h]);
+    } else {
+      // Колонки нет — добавляем заголовок и значение
+      var newCol = headers.length + 1;
+      sheet.getRange(1, newCol).setValue(h);
+      sheet.getRange(rowIdx + 1, newCol).setValue(data[h]);
+      headers.push(h); // чтобы следующие поля считали правильный индекс
     }
   });
-  
+
   return { ok: true };
 }
 
@@ -3327,11 +3353,22 @@ async function doSync(silent=false){
   if(results[5] && Array.isArray(results[5])) rights=results[5];
   if(results[6] && Array.isArray(results[6])) orders=results[6];
   if(results[7] && Array.isArray(results[7])){
-    // Мёрдж: берём сервер как основу, добавляем локальные задачи которых нет на сервере
+    // Мёрдж: для каждой задачи сравниваем локальную и серверную версии
+    // Если локальная была изменена позже (есть _localUpdated) — берём её
     var serverTasks = results[7].filter(function(t){ return t.stage !== 'deleted' && t.deleted !== '1'; });
+    var localMap = {};
+    tasks.forEach(function(t){ localMap[t.id] = t; });
+    var merged = serverTasks.map(function(srv){
+      var loc = localMap[srv.id];
+      // Если локальная версия помечена как "грязная" (изменена после последнего sync) — берём её
+      if(loc && loc._dirty) return loc;
+      return srv;
+    });
+    // Добавить задачи которые есть только локально (ещё не дошли до сервера)
     var serverIds = new Set(serverTasks.map(function(t){ return t.id; }));
-    var localOnly = tasks.filter(function(t){ return !serverIds.has(t.id); });
-    tasks = serverTasks.concat(localOnly);
+    tasks.filter(function(t){ return !serverIds.has(t.id) && t.stage !== 'deleted' && t.deleted !== '1'; })
+         .forEach(function(t){ merged.push(t); });
+    tasks = merged;
     persistTasks(); renderTasks();
   }
   if(results[8]) {
@@ -5286,8 +5323,13 @@ async function tDrop(e,col){
   e.preventDefault();e.currentTarget.classList.remove('drop-active');
   if(_dragId){
     const t=tasks.find(x=>x.id===_dragId);
-    if(t){ t.stage=col; persistTasks(); renderTasks();renderTaskStats();
-      if(API_BASE) await apiPut('/tasks/'+_dragId,{stage:col}).catch(()=>{});
+    if(t){
+      t.stage=col; t._dirty=true;
+      persistTasks(); renderTasks(); renderTaskStats();
+      if(API_BASE){
+        const r=await apiPut('/tasks/'+_dragId,{stage:col}).catch(()=>null);
+        if(r&&r.ok) t._dirty=false;
+      }
     }
     _dragId=null;
   }
@@ -5295,10 +5337,12 @@ async function tDrop(e,col){
 async function moveTask(id,stage,e){
   if(e)e.stopPropagation();
   const t=tasks.find(x=>x.id===id);if(!t)return;
-  t.stage=stage;
-  persistTasks();
-  renderTasks();renderTaskStats();
-  if(API_BASE) await apiPut('/tasks/'+id,{stage:stage}).catch(()=>{});
+  t.stage=stage; t._dirty=true;
+  persistTasks(); renderTasks(); renderTaskStats();
+  if(API_BASE){
+    const r=await apiPut('/tasks/'+id,{stage:stage}).catch(()=>null);
+    if(r&&r.ok) t._dirty=false;
+  }
 }
 document.addEventListener('dragend',()=>{document.querySelectorAll('.tcard').forEach(c=>c.classList.remove('dragging'));document.querySelectorAll('.tcol').forEach(c=>c.classList.remove('drop-active'));});
 
@@ -5358,10 +5402,11 @@ async function addComment(tid){
 async function saveTask(tid){
   const t=tasks.find(x=>x.id===tid);if(!t)return;
   t.stage=g('tm-stage').value;t.prio=g('tm-prio').value;t.assignee=g('tm-assignee').value;t.due=g('tm-due').value;t.client=g('tm-client').value;
-  persistTasks();
-  closeModal();renderTasks();renderTaskStats();
+  t._dirty=true;
+  persistTasks(); closeModal(); renderTasks(); renderTaskStats();
   if(API_BASE){
-    await apiPut('/tasks/'+tid, t).catch(function(){});
+    const r=await apiPut('/tasks/'+tid, t).catch(()=>null);
+    if(r&&r.ok) t._dirty=false;
   }
 }
 async function deleteTask(tid){
@@ -5944,14 +5989,18 @@ function openLawyerClientCard(cid){
 async function lawyerDoneTask(tid, e){
   if(e) e.stopPropagation();
   const t=tasks.find(x=>x.id===tid); if(!t) return;
-  t.stage='done'; renderLawyerCabinet(); toast('Task done ✓');
-  await apiPut('/tasks/'+tid,{stage:'done'}).catch(()=>{});
+  t.stage='done'; t._dirty=true;
+  persistTasks(); renderLawyerCabinet(); toast('Task done ✓');
+  const r=await apiPut('/tasks/'+tid,{stage:'done'}).catch(()=>null);
+  if(r&&r.ok) t._dirty=false;
 }
 
 async function lawyerDoneTaskModal(tid){
   const t=tasks.find(x=>x.id===tid); if(!t) return;
-  t.stage='done'; closeModal(); renderLawyerCabinet(); toast('Task done ✓');
-  await apiPut('/tasks/'+tid,{stage:'done'}).catch(()=>{});
+  t.stage='done'; t._dirty=true;
+  persistTasks(); closeModal(); renderLawyerCabinet(); toast('Task done ✓');
+  const r=await apiPut('/tasks/'+tid,{stage:'done'}).catch(()=>null);
+  if(r&&r.ok) t._dirty=false;
 }
 
 function openLawyerTaskModal(tid){
