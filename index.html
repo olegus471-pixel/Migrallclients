@@ -3145,14 +3145,14 @@ function copyGasCode() {
   ta.select();
   try {
     navigator.clipboard.writeText(ta.value).then(function(){
-      showToast('GAS код скопирован в буфер ✓');
+      toast('GAS код скопирован в буфер ✓');
     }).catch(function(){
       document.execCommand('copy');
-      showToast('GAS код скопирован ✓');
+      toast('GAS код скопирован ✓');
     });
   } catch(e) {
     document.execCommand('copy');
-    showToast('GAS код скопирован ✓');
+    toast('GAS код скопирован ✓');
   }
 }
 
@@ -3161,8 +3161,8 @@ function copyGasCode() {
   if (!ta) return;
   ta.select();
   navigator.clipboard.writeText(ta.value)
-    .then(function(){ showToast('GAS код скопирован ✓'); })
-    .catch(function(){ document.execCommand('copy'); showToast('GAS код скопирован ✓'); });
+    .then(function(){ toast('GAS код скопирован ✓'); })
+    .catch(function(){ document.execCommand('copy'); toast('GAS код скопирован ✓'); });
 }
 
 function copyGasCode() {
@@ -3170,8 +3170,8 @@ function copyGasCode() {
   if (!ta) return;
   ta.select();
   navigator.clipboard.writeText(ta.value)
-    .then(function(){ showToast('GAS код скопирован в буфер ✓'); })
-    .catch(function(){ document.execCommand('copy'); showToast('GAS код скопирован ✓'); });
+    .then(function(){ toast('GAS код скопирован в буфер ✓'); })
+    .catch(function(){ document.execCommand('copy'); toast('GAS код скопирован ✓'); });
 }
 
 function _renderEnvStatus() {
@@ -3206,13 +3206,13 @@ function _renderEnvStatus() {
 function saveUsersSheetId() {
   var val = (document.getElementById('users-sheet-id-input').value || '').trim();
   try { localStorage.setItem('crm_users_sheet_id', val); } catch(e){}
-  showToast(val ? 'ID таблицы Users сохранён ✓' : 'ID очищен');
+  toast(val ? 'ID таблицы Users сохранён ✓' : 'ID очищен');
 }
 
 function saveSheetsApiKey() {
   var val = (document.getElementById('sheets-api-key-input').value || '').trim();
   try { localStorage.setItem('crm_sheets_api_key', val); } catch(e){}
-  showToast(val ? 'API Key сохранён ✓' : 'Key очищен');
+  toast(val ? 'API Key сохранён ✓' : 'Key очищен');
 }
 
 async function testUsersSheetLoad() {
@@ -3267,7 +3267,7 @@ async function testUsersSheetLoad() {
     var lines = ['Загружено: ' + usersData.length + ' пользователей', ''];
     usersData.forEach(function(u){ lines.push('  ' + u.role + ' | ' + u.name + ' | ' + u.email); });
     out.textContent = lines.join('\n');
-    showToast('Пользователи загружены: ' + usersData.length + ' ✓');
+    toast('Пользователи загружены: ' + usersData.length + ' ✓');
   } catch(e) {
     out.textContent = 'Ошибка: ' + e.message;
   }
@@ -3659,13 +3659,13 @@ async function saveClientNum(cid) {
   closeModal();
   applyClientsFilter();
   if(!API_BASE) {
-    showToast(num ? ('Номер: ' + num + ' (только локально — API не настроен)') : 'Номер удалён');
+    toast(num ? ('Номер: ' + num + ' (только локально — API не настроен)') : 'Номер удалён');
     return;
   }
-  showToast('Сохраняю номер клиента...');
+  toast('Сохраняю номер клиента...');
   const res = await apiPut('/clients/' + cid, { num: num }).catch(function(){ return null; });
-  if(res && res.ok) showToast(num ? ('Номер клиента: ' + num + ' ✓ сохранён в таблице') : 'Номер клиента удалён ✓');
-  else showToast('⚠ Номер сохранён локально. Проверьте колонку num в листе CRM_Clients');
+  if(res && res.ok) toast(num ? ('Номер клиента: ' + num + ' ✓ сохранён в таблице') : 'Номер клиента удалён ✓');
+  else toast('⚠ Номер сохранён локально. Проверьте колонку num в листе CRM_Clients');
 }
 
 // Номер клиента, присвоенный менеджером (поле num)
@@ -3722,7 +3722,7 @@ async function confirmDeleteClient(cid) {
   applyClientsFilter();
   renderKanban();
   renderDash();
-  showToast('Клиент удалён ✓');
+  toast('Клиент удалён ✓');
   // Помечаем как удалённого на сервере
   await apiPut('/clients/' + cid, { stage: 'Удалён', substage: 'deleted', last: today() }).catch(() => {});
 }
@@ -5448,8 +5448,8 @@ async function createTask(){
   closeModal();renderTasks();renderTaskStats();
   if(API_BASE){
     const res = await apiPost('/tasks', newTask).catch(function(){ return null; });
-    if(res && res.ok) showToast('Задача сохранена в таблице ✓');
-    else if(API_ONLINE) showToast('⚠ Задача создана локально, не удалось сохранить на сервере');
+    if(res && res.ok) toast('Задача сохранена в таблице ✓');
+    else if(API_ONLINE) toast('⚠ Задача создана локально, не удалось сохранить на сервере');
   }
 }
 
@@ -6451,11 +6451,11 @@ async function transAcceptTask(id) {
   var result = await apiPut('/spec-tasks', {id:id, stage:'В работе', role:'translator'}).catch(function(){ return null; });
   if(result && result.ok) {
     t.stage = 'В работе';
-    showToast('Задание принято в работу ✓');
+    toast('Задание принято в работу ✓');
     renderTranslatorCabinet();
     renderTranslatorTasks();
   } else {
-    showToast('Ошибка — попробуйте ещё раз');
+    toast('Ошибка — попробуйте ещё раз');
   }
 }
 
@@ -6512,11 +6512,11 @@ async function transCompleteTask(id) {
     }).catch(function(){});
 
     closeModal();
-    showToast('✅ Документы переданы менеджеру!');
+    toast('✅ Документы переданы менеджеру!');
     renderTranslatorCabinet();
     renderTranslatorTasks();
   } else {
-    showToast('Ошибка — попробуйте ещё раз');
+    toast('Ошибка — попробуйте ещё раз');
   }
 }
 
@@ -6900,10 +6900,10 @@ async function setFilingStatusQuick(id, status) {
   var updated = Object.assign({}, f, {status: status});
   var result = await apiPut('/filings', updated).catch(function(){ return null; });
   if (result && result.ok) {
-    showToast('Статус: ' + status + ' ✓');
+    toast('Статус: ' + status + ' ✓');
     loadFilings();
   } else {
-    showToast('Ошибка обновления');
+    toast('Ошибка обновления');
   }
 }
 
@@ -6989,7 +6989,7 @@ function fillLawyerSelect(selId, currentVal) {
 
 async function saveFiling() {
   var client = (document.getElementById('fm-client').value||'').trim();
-  if (!client) { showToast('Введите клиента'); return; }
+  if (!client) { toast('Введите клиента'); return; }
   var editingId = document.getElementById('fm-editing-id').value;
   var filing = {
     id: editingId || ('fil_' + Date.now()),
@@ -7009,9 +7009,9 @@ async function saveFiling() {
   if (result && result.ok) {
     document.getElementById('modal-filing').style.display = 'none';
     loadFilings();
-    showToast(editingId ? 'Подача обновлена' : 'Подача создана ✓');
+    toast(editingId ? 'Подача обновлена' : 'Подача создана ✓');
   } else {
-    showToast('Ошибка: ' + (result && result.error || 'нет ответа'));
+    toast('Ошибка: ' + (result && result.error || 'нет ответа'));
   }
 }
 
@@ -7311,7 +7311,7 @@ async function changeSpecStage(id, role, newStage) {
   if (result && result.ok) {
     document.getElementById('modal-spec-detail').style.display = 'none';
     if (newStage === 'Завершено' || newStage === 'Готово к выдаче') {
-      showToast('Статус: ' + newStage + '  ✓');
+      toast('Статус: ' + newStage + '  ✓');
       var t = specTasks.find(function(x){ return x.id === id; });
       if (t) {
         await apiPost('/tasks', {
@@ -7323,11 +7323,11 @@ async function changeSpecStage(id, role, newStage) {
         }).catch(function(){});
       }
     } else {
-      showToast('Статус обновлён: ' + newStage);
+      toast('Статус обновлён: ' + newStage);
     }
     loadSpecTasks();
   } else {
-    showToast('Ошибка обновления статуса');
+    toast('Ошибка обновления статуса');
   }
 }
 
@@ -7378,7 +7378,7 @@ async function saveSpecTask() {
       document.getElementById('st-client-id').value = clientPicker.value;
   }
   var client = (document.getElementById('st-client').value||'').trim();
-  if (!client) { showToast('Выберите клиента из списка или введите ФИО'); return; }
+  if (!client) { toast('Выберите клиента из списка или введите ФИО'); return; }
   var role = specTaskRole;
   var clientId = (document.getElementById('st-client-id') ? document.getElementById('st-client-id').value : '') || '';
   var task = {
@@ -7398,10 +7398,10 @@ async function saveSpecTask() {
   var result = await apiPost('/spec-tasks', task).catch(function(){ return null; });
   if (result && result.ok) {
     document.getElementById('modal-spec-task').style.display = 'none';
-    showToast((role==='lawyer'?'Дело':'Задание') + ' создано ✓');
+    toast((role==='lawyer'?'Дело':'Задание') + ' создано ✓');
     loadSpecTasks();
   } else {
-    showToast('Ошибка сохранения');
+    toast('Ошибка сохранения');
   }
 }
 
@@ -7534,7 +7534,7 @@ async function saveNewUser() {
   if(result && result.ok) {
     document.getElementById('user-modal').style.display = 'none';
     loadUsers();
-    showToast(editingUserId ? 'Пользователь обновлён' : 'Пользователь создан · Пароль отправлен на почту');
+    toast(editingUserId ? 'Пользователь обновлён' : 'Пользователь создан · Пароль отправлен на почту');
   } else {
     errEl.textContent = result && result.error || 'Ошибка сервера';
     errEl.style.display = 'block';
@@ -7546,7 +7546,7 @@ async function toggleUserStatus(uid, currentStatus) {
   var result = await apiPut('/users', {id: uid, status: newStatus}).catch(function(){ return null; });
   if(result && result.ok) {
     loadUsers();
-    showToast(newStatus === 'blocked' ? 'Пользователь заблокирован' : 'Пользователь разблокирован');
+    toast(newStatus === 'blocked' ? 'Пользователь заблокирован' : 'Пользователь разблокирован');
   }
 }
 
@@ -7557,7 +7557,7 @@ async function resetUserPass(email) {
     headers: {'Content-Type': 'text/plain'},
     body: JSON.stringify({action: 'request_otp', email: email})
   }).then(function(r){ return r.json(); }).catch(function(){ return null; });
-  showToast(result && result.ok ? 'Код сброса отправлен на ' + email : 'Ошибка: ' + (result && result.error || ''));
+  toast(result && result.ok ? 'Код сброса отправлен на ' + email : 'Ошибка: ' + (result && result.error || ''));
 }
 
 // Обновить user-modal — закрытие через стандартный ID
