@@ -3786,8 +3786,11 @@ async function confirmDeleteClient(cid) {
   renderKanban();
   renderDash();
   toast('Клиент удалён ✓');
-  // Помечаем как удалённого на сервере
-  await apiPut('/clients/' + cid, { stage: 'Удалён', substage: 'deleted', last: today() }).catch(() => {});
+  // Физически удаляем строку из таблицы
+  if (API_BASE) await apiFetch('/clients/' + cid, {
+    method: 'POST',
+    body: JSON.stringify({ _delete: true, id: cid })
+  }).catch(() => {});
 }
 
 // ============================================================
@@ -4660,8 +4663,11 @@ async function _execDelete(mod, idx){
     rights.splice(idx,1); renderRights();
   }
   toast(_t('del_done'));
-  // Помечаем deleted='1' через PUT (GAS не поддерживает DELETE)
-  if(key && API_BASE) await apiPut(apiPath+'/'+key, {deleted:'1'}).catch(()=>{});
+  // Физически удаляем строку из таблицы Google Sheets
+  if(key && API_BASE) await apiFetch(apiPath+'/'+key, {
+    method: 'POST',
+    body: JSON.stringify({ _delete: true, id: key })
+  }).catch(()=>{});
 }
 
 // ============================================================
@@ -5173,7 +5179,10 @@ async function deleteOrder(ordId, e){
   if(!confirm('Удалить запись?')) return;
   orders = orders.filter(o => o.id !== ordId);
   renderTranslations(); renderNocrims(); renderDash();
-  if(API_BASE) await apiPut('/orders/'+ordId, {deleted:'1', status:'deleted'}).catch(()=>{});
+  if(API_BASE) await apiFetch('/orders/'+ordId, {
+    method: 'POST',
+    body: JSON.stringify({ _delete: true, id: ordId })
+  }).catch(()=>{});
   toast('Запись удалена ✓');
 }
 
