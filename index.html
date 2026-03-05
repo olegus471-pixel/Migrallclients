@@ -3786,11 +3786,19 @@ async function confirmDeleteClient(cid) {
   renderKanban();
   renderDash();
   toast('Клиент удалён ✓');
-  // Физически удаляем строку из таблицы
-  if (API_BASE) await apiFetch('/clients/' + cid, {
+  logActivity('Удалил клиента', cid, '');
+  if (!API_BASE) return;
+  // Попытка 1: физически удалить строку
+  const r = await apiFetch('/clients/' + cid, {
     method: 'POST',
     body: JSON.stringify({ _delete: true, id: cid })
-  }).catch(() => {});
+  }).catch(() => null);
+  console.log('[deleteClient] GAS response:', JSON.stringify(r));
+  // Попытка 2 (fallback): пометить deleted='1' + stage='Удалён'
+  if (!r || !r.ok) {
+    console.warn('[deleteClient] deleteRow failed, fallback to PUT deleted=1');
+    await apiPut('/clients/' + cid, { deleted: '1', stage: 'Удалён', substage: 'deleted' }).catch(() => {});
+  }
 }
 
 // ============================================================
