@@ -737,7 +737,7 @@ input,select,textarea{font-family:'Manrope',sans-serif}
     <div class="ni manager-only" id="sb-filings-mgr" onclick="showView('filings',this)"><span class="ni-ic">📤</span>Подачи<span class="ni-bdg" id="bdg-filings"></span></div>
     <div class="ni manager-only" id="sb-lawyer-tasks-mgr" onclick="showView('lawyer-tasks',this)"><span class="ni-ic">⚖</span>Дела адвокатов<span class="ni-bdg" id="bdg-lawyer-mgr"></span></div>
     <div class="ni manager-only" id="sb-translator-tasks-mgr" onclick="showView('translator-tasks',this)"><span class="ni-ic">📝</span>Задания переводчиков<span class="ni-bdg" id="bdg-trans-mgr"></span></div>
-    <div class="ni manager-only" onclick="showView('integration',this)"><span class="ni-ic">⚡</span>API / Интеграции</div>
+    <div class="ni admin-only" onclick="showView('integration',this)"><span class="ni-ic">⚡</span>API / Интеграции</div>
     <div class="ni manager-only" onclick="showView('orders',this)"><span class="ni-ic">📦</span><span data-i18n="ni_orders">Заказы</span><span class="ni-bdg y" id="bdg-orders">0</span></div>
     <div class="ni admin-only" onclick="showView('users',this)"><span class="ni-ic">👥</span>Пользователи</div>
 
@@ -2837,8 +2837,8 @@ function setTaskScope(scope, el){
 }
 
 function getVisibleTasks(){
-  // Не показывать удалённые задачи
-  var alive = tasks.filter(function(t){ return t.stage !== 'deleted' && t.deleted !== '1'; });
+  // Не показывать удалённые и архивированные задачи
+  var alive = tasks.filter(function(t){ return t.stage !== 'deleted' && t.deleted !== '1' && !t._archived && t.archived !== '1'; });
   if(!currentUser) return alive;
   if(currentUser.role==='admin'||currentUser.canSeeAll) return alive;
   if(currentUser.role==='lawyer'){
@@ -5050,7 +5050,7 @@ function renderTranslations(filter){
   const filtered = filter && filter !== 'all' ? arr.filter(o=>o.status===filter) : arr;
   const tbody = g('trans-tbody');
   if(!tbody) return;
-  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:24px">Нет переводов</td></tr>'; return; }
+  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:24px">Нет переводов</td></tr>'; return; }
   tbody.innerHTML = filtered.map(o => {
     const client = clients.find(c=>c.id===o.clientId);
     const cName  = client ? client.name : (o.clientId||'—');
@@ -5062,6 +5062,7 @@ function renderTranslations(filter){
       +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'
       +'<td>'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'
       +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'
+      +'<td><button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)" title="Удалить">🗑</button></td>'
       +'</tr>';
   }).join('');
 }
@@ -5080,7 +5081,7 @@ function renderNocrims(filter){
   const filtered = filter && filter !== 'all' ? arr.filter(o=>o.status===filter) : arr;
   const tbody = g('nocrims-tbody');
   if(!tbody) return;
-  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:24px">Нет справок</td></tr>'; return; }
+  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:24px">Нет справок</td></tr>'; return; }
   tbody.innerHTML = filtered.map(o => {
     const client = clients.find(c=>c.id===o.clientId);
     const cName  = client ? client.name : (o.clientId||'—');
@@ -5092,6 +5093,7 @@ function renderNocrims(filter){
       +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'
       +'<td>'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'
       +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'
+      +'<td><button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)" title="Удалить">🗑</button></td>'
       +'</tr>';
   }).join('');
 }
@@ -5100,6 +5102,15 @@ function filterNocrims(val, el){
   document.querySelectorAll('#nocrims-filter-chips .chip').forEach(c=>c.classList.remove('active'));
   if(el) el.classList.add('active');
   renderNocrims(val);
+}
+
+async function deleteOrder(ordId, e){
+  if(e) e.stopPropagation();
+  if(!confirm('Удалить запись?')) return;
+  orders = orders.filter(o => o.id !== ordId);
+  renderTranslations(); renderNocrims(); renderDash();
+  if(API_BASE) await apiPut('/orders/'+ordId, {status:'deleted', deleted:'1'}).catch(()=>{});
+  toast('Запись удалена ✓');
 }
 
 function renderCitizenship(){
@@ -5311,7 +5322,8 @@ function renderTCard(t){
     <div class="tcard-acts" onclick="event.stopPropagation()">
       ${t.stage!=='todo'?`<button class="btn btn-g btn-xs" onclick="moveTask('${t.id}','todo',event)">← Todo</button>`:''}
       ${t.stage!=='inprogress'?`<button class="btn btn-g btn-xs" onclick="moveTask('${t.id}','inprogress',event)">→ Процесс</button>`:''}
-      ${t.stage!=='done'?`<button class="btn btn-p btn-xs" onclick="moveTask('${t.id}','done',event)">✓</button>`:''}
+      ${t.stage!=='done'?`<button class="btn btn-p btn-xs" onclick="moveTask('${t.id}','done',event)">✓ Готово</button>`:''}
+      ${t.stage==='done'?`<button class="btn btn-xs" style="background:var(--s2);color:var(--t3);font-size:9px" onclick="archiveTask('${t.id}',event)" title="Убрать из списка (останется в таблице)">✕ Убрать</button>`:''}
     </div>
   </div>`;
 }
@@ -5451,6 +5463,17 @@ async function createTask(){
     if(res && res.ok) toast('Задача сохранена в таблице ✓');
     else if(API_ONLINE) toast('⚠ Задача создана локально, не удалось сохранить на сервере');
   }
+}
+
+async function archiveTask(id, e){
+  if(e) e.stopPropagation();
+  const t = tasks.find(x=>x.id===id); if(!t) return;
+  t._archived = true; // скрыть из визуала, но не удалять
+  persistTasks();
+  renderTasks(); renderTaskStats();
+  // На сервере помечаем archived=1, stage остаётся done
+  if(API_BASE) await apiPut('/tasks/'+id, {archived:'1'}).catch(()=>{});
+  toast('Задача убрана из списка ✓');
 }
 
 function persistTasks(){
