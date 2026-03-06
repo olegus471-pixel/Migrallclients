@@ -1019,6 +1019,14 @@ input,select,textarea{font-family:'Manrope',sans-serif}
       </label>
       <button class="btn btn-p btn-sm" onclick="editCitizenship(-1)">+ Добавить</button>
     </div></div>
+    <div class="chips" id="cit-status-chips" style="margin-bottom:8px">
+      <div class="chip active" onclick="filterCitStatus('all',this)">Все</div>
+      <div class="chip" onclick="filterCitStatus('В процессе',this)">В процессе</div>
+      <div class="chip" onclick="filterCitStatus('Готово',this)">Готово</div>
+      <div class="chip" onclick="filterCitStatus('Ожидание',this)">Ожидание</div>
+      <div class="chip" onclick="filterCitStatus('Завершено',this)">Завершено</div>
+      <div class="chip" onclick="filterCitStatus('Отказ',this)">Отказ</div>
+    </div>
     <div class="panel">
       <div class="dt-wrap"><div class="dt-wrap"><table class="dt">
         <thead><tr><th style="width:36px;text-align:center;color:var(--t3)">#</th><th>№</th><th>Telegram</th><th>ФИО</th><th>Адвокат</th><th>Тип</th><th>Дата подачи</th><th>Трек-номер</th><th>Этап</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
@@ -1038,6 +1046,15 @@ input,select,textarea{font-family:'Manrope',sans-serif}
       <button class="btn btn-p btn-sm" onclick="editRights(-1)">+ Добавить (legacy)</button>
       <button class="btn btn-p btn-sm" onclick="showView('orders',null);openNewOrderModal()"><span data-i18n="ord_new">+ Новый заказ</span> ↗</button>
     </div></div>
+    <div class="chips" id="rights-status-chips" style="margin-bottom:8px">
+      <div class="chip active" onclick="filterRightsStatus('all',this)">Все</div>
+      <div class="chip" onclick="filterRightsStatus('В обработке',this)">В обработке</div>
+      <div class="chip" onclick="filterRightsStatus('Принято',this)">Принято</div>
+      <div class="chip" onclick="filterRightsStatus('Апрув',this)">Апрув</div>
+      <div class="chip" onclick="filterRightsStatus('Дозапрос',this)">Дозапрос</div>
+      <div class="chip" onclick="filterRightsStatus('Отказ',this)">Отказ</div>
+      <div class="chip" onclick="filterRightsStatus('Права выданы',this)">Права выданы</div>
+    </div>
     <div class="panel">
       <div class="dt-wrap"><div class="dt-wrap"><table class="dt">
         <thead><tr><th style="width:36px;text-align:center;color:var(--t3)">#</th><th>№</th><th>Telegram</th><th>ФИО</th><th>Страна прав</th><th>Дата подачи</th><th>Этап</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
@@ -1280,7 +1297,7 @@ input,select,textarea{font-family:'Manrope',sans-serif}
       </div>
       <div class="cal-sb">
         <div class="cal-sb-hdr">
-          <span id="cal-sb-date">Выберите день</span>
+          <span id="cal-sb-date"></span>
         </div>
         <div id="cal-sb-content" style="padding:8px;overflow-y:auto;flex:1">
           <div style="color:var(--t3);padding:12px;text-align:center">Нажмите на день</div>
@@ -2953,7 +2970,7 @@ const SUBSTAGES = {
   'Продление ВНЖ':['Документы собраны','Запись получена','Подача сделана','Статус проверяется','Апрув/Готово'],
   'Суд':['Документы собраны','Подача в суд сделана','→ Отслеживание статуса','Результат'],
   'Гражданство':['Документы собраны','Заявка подана','Трек-номер получен','→ Отслеживание гражданства'],
-  'Права':['Документы приняты','Права заверены','Заявка подана','Апрув получен','Запись сделана','Готово'],
+  'Права':['Документы приняты','Перевод готов','Заявка подана','Апрув получен','Запись сделана','Права выданы'],
   'Разовая услуга':[],
   'Сопровождение по аренде':['Поиск объекта','Просмотры','Переговоры','Подписание договора','Заселение'],
   'Сопровождение по продаже':['Оценка объекта','Размещение объявлений','Показы','Переговоры','Подписание','Сделка завершена'],
@@ -2992,7 +3009,7 @@ const AIMA_STATUSES = ['Анализ','Апрув','Печать','Дозапр�
 const VD_STATUSES = ['Записан','Подача сделана','Виза одобрена','Дозапрос','Отказ','Анализ','Рассматривается','Анализ Лиссабон','Лиссабон рассматривает','Есть в системе, записи нет'];
 const COURT_STAGES = ['Документы собраны','Подача в суд сделана','→ Отслеживание статуса','Результат получен'];
 const CIT_STAGES = ['Документы собраны','Заявка подана','Трек-номер получен','→ Отслеживание гражданства'];
-const RIGHTS_STAGES = ['Документы приняты','Права заверены','Заявка подана','Апрув получен','Запись сделана','Готово'];
+const RIGHTS_STAGES = ['Документы приняты','Перевод готов','Заявка подана','Апрув получен','Запись сделана','Права выданы'];
 const COURT_STATUSES  = ['В процессе','Ожидание решения','Слушание назначено','Перенесено','Апелляция','Завершено','Условный','Штраф','Арест'];
 const CIT_STATUSES    = ['В обработке','Апрув','Отказ','Дозапрос','Завершено','Присяга назначена','Паспорт готов'];
 const RIGHTS_STATUSES = ['В обработке','Принято','Апрув','Отказ','Дозапрос','Завершено','Права выданы'];
@@ -3152,6 +3169,7 @@ function showView(id,el){
   if(id==='calendar') renderCal();
   if(id==='users') loadUsers();
   if(id==='stats-lawyers'||id==='stats-activity') { initStatsFilters(); }
+  if(id==='calendar') { setTimeout(function(){ var _td=new Date(); calDayClick(_td.getDate().toString().padStart(2,'0')+'.'+((_td.getMonth()+1).toString().padStart(2,'0'))+'.'+_td.getFullYear()); },100); }
   if(id==='integration') {
     try {
       var sid = localStorage.getItem('crm_users_sheet_id') || '';
@@ -3754,6 +3772,7 @@ function renderClients(data){
       +'<td style="font-size:10.5px;color:var(--t2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(c.substage||'—')+'</td>'
       +'<td class="mono" style="color:var(--t3)">'+fmtDate(c.last)+'</td>'
       +(canAssign?'<td style="white-space:nowrap"><button class="edit-btn" title="Назначить адвоката" onclick="openAssignModal(\''+c.id+'\',event)">⚖</button>'
+        +'<button class="edit-btn" title="Редактировать" onclick="openEditClientModal(\''+c.id+'\',event)">✏</button>'
         +(currentUser&&currentUser.role==='admin'?'<button class="del-btn" style="margin-left:4px" title="Удалить клиента" onclick="deleteClient(\''+c.id+'\',event)">🗑</button>':'')
         +'</td>':'<td></td>')
       +'</tr>';
@@ -4043,21 +4062,46 @@ async function setSubstage(cid,sub){
 function openAddClientModal(){
   const svcOpts = SVC_TYPES.map(s=>'<option value="'+s+'">'+s+'</option>').join('');
   const lwOpts  = roleOptions('lawyer', '');
-  openModal('<div class="mhdr"><div style="font-family:\'Unbounded\',sans-serif;font-size:16px;font-weight:700">➕ Новый клиент</div><button class="mcls" onclick="closeModal()">✕</button></div>'
-    +'<div class="mrow"><div class="mf" style="flex:0.6"><label class="mfl">№ клиента</label><input class="mi" id="nc-num" placeholder="001" style="font-weight:800;font-size:15px;color:var(--acc)"></div>'
-    +'<div class="mf"><label class="mfl">Имя *</label><input class="mi" id="nc-name" placeholder="Иван Иванов"></div></div>'
-    +'<div class="mrow"><div class="mf"><label class="mfl">Telegram ID</label><input class="mi" id="nc-id" placeholder="123456789" type="number"></div>'
-    +'<div class="mrow"><div class="mf"><label class="mfl">Telegram</label><input class="mi" id="nc-tg" placeholder="@username"></div>'
-    +'<div class="mf"><label class="mfl">Телефон</label><input class="mi" id="nc-phone" placeholder="+351 900 000 000"></div></div>'
-    +'<div class="mrow"><div class="mf" style="flex:2"><label class="mfl">Услуга</label>'
-    +'<select class="ms" id="nc-svc" onchange="ncSvcChange(this.value)"><option value="">— выбрать —</option>'+svcOpts+'</select></div>'
-    +'<div class="mf" style="flex:2"><label class="mfl">Этап</label>'
-    +'<select class="ms" id="nc-substage"><option value="">— сначала услугу —</option></select></div></div>'
-    +'<div class="mrow"><div class="mf"><label class="mfl">Город / Консульство</label><input class="mi" id="nc-city" placeholder="Лиссабон"></div>'
-    +'<div class="mf"><label class="mfl">Адвокат</label><select class="ms" id="nc-lawyer"><option value="">— не назначен —</option>'+lwOpts+'</select></div></div>'
-    +'<div style="margin:8px 0;padding:10px 12px;background:var(--s2);border-radius:8px;font-size:11px;color:var(--t3)">📁 Папка клиента на Google Drive создастся автоматически</div>'
-    +'<div class="mft"><button class="btn btn-g" onclick="closeModal()">Отмена</button>'
-    +'<button class="btn btn-p" onclick="createClient()">Создать клиента</button></div>','narrow');
+  openModal(`
+    <div class="mhdr">
+      <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700">➕ Новый клиент</div>
+      <button class="mcls" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:0.7"><label class="mfl">№ клиента</label>
+        <input class="mi" id="nc-num" placeholder="001" style="font-weight:800;font-size:15px;color:var(--acc)"></div>
+      <div class="mf" style="flex:2"><label class="mfl">Имя *</label>
+        <input class="mi" id="nc-name" placeholder="Иван Иванов"></div>
+    </div>
+    <div class="mrow">
+      <div class="mf"><label class="mfl">Telegram ID</label>
+        <input class="mi" id="nc-id" placeholder="123456789" type="number"></div>
+      <div class="mf"><label class="mfl">Telegram</label>
+        <input class="mi" id="nc-tg" placeholder="@username"></div>
+      <div class="mf"><label class="mfl">Телефон</label>
+        <input class="mi" id="nc-phone" placeholder="+351 900 000 000"></div>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:2"><label class="mfl">Услуга</label>
+        <select class="ms" id="nc-svc" onchange="ncSvcChange(this.value)">
+          <option value="">— выбрать —</option>${svcOpts}
+        </select></div>
+      <div class="mf" style="flex:2"><label class="mfl">Подэтап</label>
+        <select class="ms" id="nc-substage"><option value="">— сначала услугу —</option></select></div>
+    </div>
+    <div class="mrow">
+      <div class="mf"><label class="mfl">Город / Консульство</label>
+        <input class="mi" id="nc-city" placeholder="Лиссабон"></div>
+      <div class="mf"><label class="mfl">Адвокат</label>
+        <select class="ms" id="nc-lawyer"><option value="">— не назначен —</option>${lwOpts}</select></div>
+    </div>
+    <div style="margin:8px 0;padding:10px 12px;background:var(--s2);border-radius:8px;font-size:11px;color:var(--t3)">
+      📁 Папка клиента на Google Drive создастся автоматически
+    </div>
+    <div class="mft">
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-p" onclick="createClient()">Создать клиента</button>
+    </div>`,'narrow');
 }
 
 function ncSvcChange(svc){
@@ -4098,6 +4142,92 @@ async function createClient(){
       toast('📁 Папка на Drive создана ✓');
     }
   }
+}
+
+// ── РЕДАКТИРОВАНИЕ КЛИЕНТА ────────────────────────────────────
+function openEditClientModal(cid, e) {
+  if(e) e.stopPropagation();
+  const c = clients.find(x => x.id === cid);
+  if(!c) return;
+  const svcOpts = SVC_TYPES.map(s=>`<option value="${s}"${c.serviceType===s?' selected':''}>${s}</option>`).join('');
+  const lwOpts  = roleOptions('lawyer', c.lawyer||'');
+  const stageOpts = STAGES.map(s=>`<option value="${s}"${c.stage===s?' selected':''}>${s}</option>`).join('');
+  const subOpts = (SUBSTAGES[c.serviceType]||[]).map(s=>`<option value="${s}"${c.substage===s?' selected':''}>${s}</option>`).join('');
+
+  openModal(`
+    <div class="mhdr">
+      <div style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700">✏ Редактировать клиента</div>
+      <button class="mcls" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:0.7"><label class="mfl">№ клиента</label>
+        <input class="mi" id="ec-num" value="${c.num||''}" style="font-weight:800;font-size:15px;color:var(--acc)"></div>
+      <div class="mf" style="flex:2"><label class="mfl">Имя *</label>
+        <input class="mi" id="ec-name" value="${c.name||''}"></div>
+    </div>
+    <div class="mrow">
+      <div class="mf"><label class="mfl">Telegram ID</label>
+        <input class="mi" id="ec-id" value="${c.id||''}" placeholder="123456789"></div>
+      <div class="mf"><label class="mfl">Telegram</label>
+        <input class="mi" id="ec-tg" value="${c.tg||''}"></div>
+      <div class="mf"><label class="mfl">Телефон</label>
+        <input class="mi" id="ec-phone" value="${c.phone||''}"></div>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:2"><label class="mfl">Услуга</label>
+        <select class="ms" id="ec-svc" onchange="ecSvcChange(this.value)">${svcOpts}</select></div>
+      <div class="mf" style="flex:2"><label class="mfl">Подэтап</label>
+        <select class="ms" id="ec-substage">${subOpts||'<option value="">—</option>'}</select></div>
+    </div>
+    <div class="mrow">
+      <div class="mf"><label class="mfl">Этап воронки</label>
+        <select class="ms" id="ec-stage">${stageOpts}</select></div>
+      <div class="mf"><label class="mfl">Город / Консульство</label>
+        <input class="mi" id="ec-city" value="${c.city||c.consulate||''}"></div>
+      <div class="mf"><label class="mfl">Адвокат</label>
+        <select class="ms" id="ec-lawyer"><option value="">— не назначен —</option>${lwOpts}</select></div>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:3"><label class="mfl">Комментарий</label>
+        <input class="mi" id="ec-comment" value="${c.comment||''}"></div>
+    </div>
+    <div class="mft">
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-p" onclick="saveClientEdit('${cid}')">Сохранить</button>
+    </div>`,'narrow');
+}
+
+function ecSvcChange(svc){
+  const sel = document.getElementById('ec-substage');
+  if(!sel) return;
+  const stages = SUBSTAGES[svc]||[];
+  sel.innerHTML = stages.length ? stages.map(s=>`<option value="${s}">${s}</option>`).join('') : '<option value="">— нет этапов —</option>';
+}
+
+async function saveClientEdit(cid) {
+  const c = clients.find(x => x.id === cid);
+  if(!c) return;
+  const name = (document.getElementById('ec-name').value||'').trim();
+  if(!name){ toast('Введите имя'); return; }
+  c.num        = document.getElementById('ec-num').value.trim();
+  c.name       = name;
+  c.tg         = document.getElementById('ec-tg').value.trim();
+  c.phone      = document.getElementById('ec-phone').value.trim();
+  c.serviceType= document.getElementById('ec-svc').value;
+  c.substage   = document.getElementById('ec-substage').value;
+  c.stage      = document.getElementById('ec-stage').value;
+  c.city       = document.getElementById('ec-city').value.trim();
+  c.consulate  = c.city;
+  c.lawyer     = document.getElementById('ec-lawyer').value;
+  c.comment    = document.getElementById('ec-comment').value.trim();
+  c.last       = nowDMY();
+  closeModal();
+  applyClientsFilter();
+  renderKanban();
+  renderDash();
+  toast('Клиент обновлён ✓');
+  logActivity('Редактировал клиента', c.name, 'этап:'+c.stage);
+  if(API_BASE) await apiPut('/clients/'+cid, c).catch(()=>{});
 }
 
 // ============================================================
@@ -5029,10 +5159,13 @@ function renderCourts(data){
   g('courts-tbody').innerHTML=_src.map((c,i)=>{
     const ri=courts.findIndex(x=>x.num===c.num&&x.name===c.name);
     const _cn=getClientSeqNum(c.num);
+    const _ctg = getClientTg(c.num, c.name);
     return '<tr>'
       +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_cn+'</td>'
       +'<td class="mono" style="color:var(--pur)">'+c.num+'</td>'
+      +'<td class="mono" style="font-size:11px;color:var(--acc)">'+(_ctg!=='—'?'<a href="tg://resolve?domain='+_ctg.replace('@','')+'" style="color:var(--acc)">'+_ctg+'</a>':'—')+'</td>'
       +'<td style="font-weight:600">'+c.name+'</td>'
+      +'<td>'+(c.lawyer?'<span style="font-size:11px;color:#db2777;font-weight:600">⚖ '+c.lawyer+'</span>':'<span style="color:var(--t3);font-size:11px">—</span>')+'</td>'
       +'<td><span class="bdg pur">'+c.article+'</span></td>'
       +'<td class="mono" style="font-size:12.5px">'+c.date+'</td>'
       +'<td style="font-size:12.5px">'+c.place+'</td>'
@@ -5048,6 +5181,22 @@ function renderCourts(data){
   }).join('');
 }
 var _courtsCurrentFilter = 'all';
+function filterCitStatus(status, el) {
+  document.querySelectorAll('#cit-status-chips .chip').forEach(c=>c.classList.remove('active'));
+  if(el) el.classList.add('active');
+  _citStatusFilter = status;
+  renderCitizenship();
+}
+var _citStatusFilter = 'all';
+
+function filterRightsStatus(status, el) {
+  document.querySelectorAll('#rights-status-chips .chip').forEach(c=>c.classList.remove('active'));
+  if(el) el.classList.add('active');
+  _rightsStatusFilter = status;
+  renderRights();
+}
+var _rightsStatusFilter = 'all';
+
 function filterCourts(f, el) {
   if (el) { document.querySelectorAll('#courts-chips .chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); }
   _courtsCurrentFilter = f || 'all';
@@ -5140,7 +5289,10 @@ function renderTranslations(filter){
       +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'
       +'<td>'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'
       +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'
-      +'<td><button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)" title="Удалить">🗑</button></td>'
+      +'<td style="white-space:nowrap">'
+        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)" title="Редактировать">✏</button>'
+        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)" title="Удалить">🗑</button>'
+      +'</td>'
       +'</tr>';
   }).join('');
 }
@@ -5171,7 +5323,10 @@ function renderNocrims(filter){
       +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'
       +'<td>'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'
       +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'
-      +'<td><button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)" title="Удалить">🗑</button></td>'
+      +'<td style="white-space:nowrap">'
+        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)" title="Редактировать">✏</button>'
+        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)" title="Удалить">🗑</button>'
+      +'</td>'
       +'</tr>';
   }).join('');
 }
@@ -5180,6 +5335,63 @@ function filterNocrims(val, el){
   document.querySelectorAll('#nocrims-filter-chips .chip').forEach(c=>c.classList.remove('active'));
   if(el) el.classList.add('active');
   renderNocrims(val);
+}
+
+function editOrder(ordId, e) {
+  if(e) e.stopPropagation();
+  const o = orders.find(x => x.id === ordId);
+  if(!o) return;
+  const c = clients.find(x => x.id === o.clientId);
+  const translators = getUsersByRole('translator');
+  const stepsForType = ORD_STATUSES[o.svcType] || [];
+  openModal(`
+    <div class="mhdr">
+      <div style="font-family:'Unbounded',sans-serif;font-size:15px;font-weight:700">✏ Редактировать заказ</div>
+      <button class="mcls" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:2"><label class="mfl">Клиент</label>
+        <input class="mi" value="${c?c.name:o.clientId}" disabled style="opacity:.6"></div>
+      <div class="mf" style="flex:2"><label class="mfl">Тип услуги</label>
+        <input class="mi" value="${o.svcType}" disabled style="opacity:.6"></div>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:2"><label class="mfl">Статус</label>
+        <select class="ms" id="eo-status">
+          ${stepsForType.map(s=>`<option value="${s}"${o.status===s?' selected':''}>${s}</option>`).join('')}
+        </select></div>
+      <div class="mf" style="flex:2"><label class="mfl">Переводчик</label>
+        <select class="ms" id="eo-trans">
+          <option value="">— не назначен —</option>
+          ${translators.map(t=>`<option value="${t.name}"${o.translator===t.name?' selected':''}>${t.name}</option>`).join('')}
+        </select></div>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:3"><label class="mfl">Ссылка на Drive</label>
+        <input class="mi" id="eo-drive" value="${o.driveLink||''}"></div>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:3"><label class="mfl">Комментарий</label>
+        <input class="mi" id="eo-comment" value="${o.comment||''}"></div>
+    </div>
+    <div class="mft">
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-p" onclick="saveOrderEdit('${ordId}')">Сохранить</button>
+    </div>`,'narrow');
+}
+
+async function saveOrderEdit(ordId) {
+  const o = orders.find(x => x.id === ordId);
+  if(!o) return;
+  o.status    = document.getElementById('eo-status').value;
+  o.translator= document.getElementById('eo-trans').value;
+  o.driveLink = document.getElementById('eo-drive').value.trim();
+  o.comment   = document.getElementById('eo-comment').value.trim();
+  o.updated   = nowDMY();
+  closeModal();
+  renderTranslations(); renderNocrims(); renderOrders(); renderDash();
+  toast('Заказ обновлён ✓');
+  if(API_BASE) await apiPut('/orders/'+ordId, o).catch(()=>{});
 }
 
 async function deleteOrder(ordId, e){
@@ -5203,6 +5415,7 @@ function renderCitizenship(){
   var q = (document.getElementById('cit-search') ? document.getElementById('cit-search').value : '').toLowerCase().trim();
   _src = _src.filter(function(c) {
     if (hideDone && c.status === 'Завершено') return false;
+    if (typeof _citStatusFilter !== 'undefined' && _citStatusFilter !== 'all' && c.status !== _citStatusFilter) return false;
     if (q) { var hay = ((c.name||'') + ' ' + (c.nipc||'') + ' ' + (c.num||'')).toLowerCase(); if (!hay.includes(q)) return false; }
     return true;
   });
@@ -5289,6 +5502,9 @@ async function saveCitizenship(idx){
 function renderRights(){
   var _u = _myUser();
   var _rightsArr = rights;
+  if(typeof _rightsStatusFilter !== 'undefined' && _rightsStatusFilter !== 'all') {
+    _rightsArr = _rightsArr.filter(function(r){ return r.status === _rightsStatusFilter; });
+  }
   if(_u.role === 'translator') _rightsArr = rights.filter(function(r){ return (r.translator||r.name||'') === _u.name || (r.assignee||'') === _u.name; });
   // Фильтр: скрыть завершённых + поиск
   var hideDone = document.getElementById('rights-hide-done') ? document.getElementById('rights-hide-done').checked : false;
