@@ -55,7 +55,7 @@
    ============================================================ */
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
-body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--t1);font-size:14px;line-height:1.55}
+body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--t1);font-size:15px;line-height:1.55}
 a{color:var(--acc);text-decoration:none}
 a:hover{text-decoration:underline}
 ::-webkit-scrollbar{width:4px;height:4px}
@@ -4151,7 +4151,7 @@ function openEditClientModal(cid, e) {
   if(!c) return;
   const svcOpts = SVC_TYPES.map(s=>`<option value="${s}"${c.serviceType===s?' selected':''}>${s}</option>`).join('');
   const lwOpts  = roleOptions('lawyer', c.lawyer||'');
-  const stageOpts = STAGES.map(s=>`<option value="${s}"${c.stage===s?' selected':''}>${s}</option>`).join('');
+  const stageOpts = KB_COLS.map(col=>`<option value="${col.id}"${c.stage===col.id?' selected':''}>${col.label}</option>`).join('');
   const subOpts = (SUBSTAGES[c.serviceType]||[]).map(s=>`<option value="${s}"${c.substage===s?' selected':''}>${s}</option>`).join('');
 
   openModal(`
