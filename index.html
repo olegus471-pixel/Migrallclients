@@ -2586,7 +2586,8 @@ function clientPickerHTML(selectedNum, selectedName) {
   var opts = '<option value="">— Выбрать из списка —</option>';
   clients.slice().sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); }).forEach(function(c){
     var sel = (c.id === selectedNum || c.name === selectedName) ? ' selected' : '';
-    opts += '<option value="'+c.id+'" data-name="'+encodeURIComponent(c.name)+'" data-tg="'+encodeURIComponent(c.tg||'')+'"'+sel+'>'+c.id+' — '+c.name+(c.tg?' ('+c.tg+')':'')+'</option>';
+    var label = (c.num ? '№'+c.num+' — ' : '') + c.name;
+    opts += '<option value="'+c.id+'" data-name="'+encodeURIComponent(c.name)+'" data-tg="'+encodeURIComponent(c.tg||'')+'"'+sel+'>'+label+'</option>';
   });
   return opts;
 }
@@ -5284,7 +5285,7 @@ function renderTranslations(filter){
     return '<tr>'
       +'<td style="font-weight:600">'+cName+'</td>'
       +'<td>'+(o.translator||'—')+'</td>'
-      +'<td>'+bdg(o.status)+'</td>'
+      +'<td class="inline-edit-cell"><span class="inline-status" onclick="applyOrderStatus(\''+o.id+'\',event)" title="Нажмите для смены статуса">'+bdg(o.status)+'</span></td>'
       +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'
       +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'
       +'<td>'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'
@@ -5318,7 +5319,7 @@ function renderNocrims(filter){
     return '<tr>'
       +'<td style="font-weight:600">'+cName+'</td>'
       +'<td>'+(o.translator||'—')+'</td>'
-      +'<td>'+bdg(o.status)+'</td>'
+      +'<td class="inline-edit-cell"><span class="inline-status" onclick="applyOrderStatus(\''+o.id+'\',event)" title="Нажмите для смены статуса">'+bdg(o.status)+'</span></td>'
       +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'
       +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'
       +'<td>'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'
@@ -5392,6 +5393,42 @@ async function saveOrderEdit(ordId) {
   renderTranslations(); renderNocrims(); renderOrders(); renderDash();
   toast('Заказ обновлён ✓');
   if(API_BASE) await apiPut('/orders/'+ordId, o).catch(()=>{});
+}
+
+function applyOrderStatus(ordId, e) {
+  e.stopPropagation();
+  closeAllDropdowns();
+  const o = orders.find(x => x.id === ordId);
+  if(!o) return;
+  const steps = ORD_STATUSES[o.svcType] || ['В работе','Готово'];
+  const rect = e.currentTarget.getBoundingClientRect();
+  const dd = document.createElement('div');
+  dd.className = 'status-dropdown';
+  dd.style.top = (rect.bottom + 4) + 'px';
+  dd.style.left = rect.left + 'px';
+  dd.innerHTML = steps.map(s =>
+    `<div class="status-dropdown-item ${s===o.status?'current':''}" onclick="confirmOrderStatus('${ordId}','${s.replace(/'/g,"\\'")}',this)">
+      ${s===o.status?'✓ ':''}<span>${s}</span>
+    </div>`
+  ).join('');
+  document.body.appendChild(dd);
+  _openDropdown = dd;
+  requestAnimationFrame(() => {
+    const r = dd.getBoundingClientRect();
+    if(r.right > window.innerWidth - 8) dd.style.left = (window.innerWidth - r.width - 8) + 'px';
+    if(r.bottom > window.innerHeight - 8) dd.style.top = (rect.top - r.height - 4) + 'px';
+  });
+}
+
+async function confirmOrderStatus(ordId, newStatus, el) {
+  closeAllDropdowns();
+  const o = orders.find(x => x.id === ordId);
+  if(!o) return;
+  o.status = newStatus;
+  o.updated = nowDMY();
+  renderTranslations(); renderNocrims(); renderOrders(); renderDash();
+  toast('Статус: ' + newStatus + ' ✓');
+  if(API_BASE) await apiPut('/orders/' + ordId, {status: newStatus, updated: o.updated}).catch(()=>{});
 }
 
 async function deleteOrder(ordId, e){
@@ -5505,7 +5542,14 @@ function renderRights(){
   if(typeof _rightsStatusFilter !== 'undefined' && _rightsStatusFilter !== 'all') {
     _rightsArr = _rightsArr.filter(function(r){ return r.status === _rightsStatusFilter; });
   }
-  if(_u.role === 'translator') _rightsArr = rights.filter(function(r){ return (r.translator||r.name||'') === _u.name || (r.assignee||'') === _u.name; });
+  if(_u.role === 'translator') {
+    _rightsArr = rights.filter(function(r){
+      if((r.translator||'') === _u.name) return true;
+      // Также проверить через orders — если есть заказ 'Права' назначенный этому переводчику
+      var matchOrd = orders.find(function(ord){ return ord.svcType==='Права' && ord.id===r.num && (ord.translator||'')=== _u.name; });
+      return !!matchOrd;
+    });
+  }
   // Фильтр: скрыть завершённых + поиск
   var hideDone = document.getElementById('rights-hide-done') ? document.getElementById('rights-hide-done').checked : false;
   var q = (document.getElementById('rights-search') ? document.getElementById('rights-search').value : '').toLowerCase().trim();
@@ -6526,9 +6570,9 @@ async function saveNewOrder(){
     id: _genOrdId(),
     clientId, svcType,
     status: ORD_STATUSES[svcType]?.[0]||'Принято',
-    translator: trans||undefined,
-    driveLink: drive||undefined,
-    comment: comment||undefined,
+    translator: trans||'',
+    driveLink: drive||'',
+    comment: comment||'',
     created: today,
     updated: today,
   };
@@ -7846,13 +7890,21 @@ function renderUsers() {
 
 function openCreateUserModal() {
   editingUserId = null;
+  // Безопасный доступ к элементам
+  var _nm = document.getElementById('umod-name');
+  var _em = document.getElementById('umod-email');
+  var _pw = document.getElementById('umod-password');
+  var _rl = document.getElementById('umod-role');
+  var _er = document.getElementById('umod-err');
+  var _mo = document.getElementById('user-modal');
+  if(!_mo){ toast('Ошибка: модальное окно не найдено'); return; }
   document.getElementById('user-modal-title').textContent = 'Новый пользователь';
-  document.getElementById('umod-name').value = '';
-  document.getElementById('umod-email').value = '';
-  var _pwdEl = document.getElementById('umod-password'); if(_pwdEl) _pwdEl.value = '';
-  document.getElementById('umod-role').value = 'manager';
-  document.getElementById('umod-err').style.display = 'none';
-  document.getElementById('user-modal').style.display = 'flex';
+  if(_nm) _nm.value = '';
+  if(_em) _em.value = '';
+  if(_pw) _pw.value = '';
+  if(_rl) _rl.value = 'manager';
+  if(_er) _er.style.display = 'none';
+  _mo.style.display = 'flex';
 }
 
 function openEditUserModal(uid) {
