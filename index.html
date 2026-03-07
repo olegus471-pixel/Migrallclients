@@ -2316,10 +2316,20 @@ CRM ↔ Backend (Render) ↔ Google Sheets
     <div id="sa-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"></div>
     <div class="panel" style="padding:0;overflow:hidden">
       <table class="tbl">
-        <thead><tr>
-          <th>Пользователь</th><th>Роль</th><th>Действие</th><th>Объект</th>
-          <th>Детали</th><th>Дата/время</th>
-        </tr></thead>
+        <thead>
+          <tr>
+            <th>Пользователь</th><th>Роль</th><th>Действие</th><th>Объект</th>
+            <th>Детали</th><th>Дата/время</th>
+          </tr>
+          <tr style="background:var(--bg2)">
+            <td><input class="mi" style="width:100%;font-size:11px;padding:3px 6px" placeholder="фильтр..." oninput="filterStatsTable('sa-tbody',this,0)"></td>
+            <td><input class="mi" style="width:100%;font-size:11px;padding:3px 6px" placeholder="фильтр..." oninput="filterStatsTable('sa-tbody',this,1)"></td>
+            <td><input class="mi" style="width:100%;font-size:11px;padding:3px 6px" placeholder="фильтр..." oninput="filterStatsTable('sa-tbody',this,2)"></td>
+            <td><input class="mi" style="width:100%;font-size:11px;padding:3px 6px" placeholder="фильтр..." oninput="filterStatsTable('sa-tbody',this,3)"></td>
+            <td><input class="mi" style="width:100%;font-size:11px;padding:3px 6px" placeholder="фильтр..." oninput="filterStatsTable('sa-tbody',this,4)"></td>
+            <td></td>
+          </tr>
+        </thead>
         <tbody id="sa-tbody"></tbody>
       </table>
     </div>
@@ -2586,6 +2596,49 @@ function userOptsByRole(role, selectedName) {
 }
 
 /** HTML выбора клиента из списка clients */
+
+// ── Callbacks для searchable client pickers ──────────────────
+function _fillFromClientSearch_ct(cid) {
+  var c = clients.find(function(x){ return x.id === cid; });
+  if(!c) return;
+  var n = document.getElementById('ct-num'); if(n) n.value = c.num||c.id;
+  var nm = document.getElementById('ct-name'); if(nm) nm.value = c.name;
+}
+function _fillFromClientSearch_ci(cid) {
+  var c = clients.find(function(x){ return x.id === cid; });
+  if(!c) return;
+  var n = document.getElementById('ci-num'); if(n) n.value = c.num||c.id;
+  var nm = document.getElementById('ci-name'); if(nm) nm.value = c.name;
+}
+function _fillFromClientSearch_nt(cid) {
+  var c = clients.find(function(x){ return x.id === cid; });
+  if(!c) return;
+  // nt-client-val is already set by clientPickerOnInput
+}
+function _fillFromClientSearch_st(cid) {
+  var c = clients.find(function(x){ return x.id === cid; });
+  if(!c) return;
+  var cl = document.getElementById('st-client'); if(cl) cl.value = c.name;
+  var ci = document.getElementById('st-client-id'); if(ci) ci.value = c.id;
+}
+function _fillFromClientSearch_fm(cid) {
+  var c = clients.find(function(x){ return x.id === cid; });
+  if(!c) return;
+  var cl = document.getElementById('fm-client'); if(cl) cl.value = c.name;
+  var ci = document.getElementById('fm-client-id'); if(ci) ci.value = c.id;
+}
+function _fillFromClientSearch_ri(cid) {
+  var c = clients.find(function(x){ return x.id === cid; });
+  if(!c) return;
+  var n = document.getElementById('ri-num'); if(n) n.value = c.num||c.id;
+  var nm = document.getElementById('ri-name'); if(nm) nm.value = c.name;
+}
+function _fillFromClientSearch_vd(cid) {
+  var c = clients.find(function(x){ return x.id === cid; });
+  if(!c) return;
+  var n = document.getElementById('vd-num'); if(n) n.value = c.num||c.id;
+  var nm = document.getElementById('vd-name'); if(nm) nm.value = c.name;
+}
 function clientPickerHTML(selectedNum, selectedName) {
   var opts = '<option value="">— Выбрать из списка —</option>';
   clients.slice().sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); }).forEach(function(c){
@@ -5142,9 +5195,7 @@ function editVisaD(idx,e){
     <div class="mrow">
       <div class="mf" style="flex:2">
         <label class="mfl">Клиент <span style="color:var(--t3);font-size:9px">(выбрать из списка)</span></label>
-        <select class="ms" id="vd-client-picker" onchange="_fillFromClient('vd-num','vd-name',this)">
-          ${clientPickerHTML(v.num, v.name)}
-        </select>
+        ${clientPickerSearchHTML('vd-client', v.num, v.name, '_fillFromClientSearch_vd')}
       </div>
       <div class="mf"><label class="mfl">№ клиента</label><input class="mi" id="vd-num" value="${v.num}"></div>
       <div class="mf"><label class="mfl">ФИО</label><input class="mi" id="vd-name" value="${v.name}"></div>
@@ -5280,10 +5331,8 @@ function editCourt(idx,e){
     </div>
     <div class="mrow">
       <div class="mf" style="flex:2">
-        <label class="mfl">Клиент <span style="color:var(--t3);font-size:9px">(выбрать из списка)</span></label>
-        <select class="ms" id="ct-client-picker" onchange="_fillFromClient('ct-num','ct-name',this)">
-          ${clientPickerHTML(c.num, c.name)}
-        </select>
+        <label class="mfl">Клиент</label>
+        ${clientPickerSearchHTML('ct-client', c.num, c.name, '_fillFromClientSearch_ct')}
       </div>
       <div class="mf"><label class="mfl">№ клиента</label><input class="mi" id="ct-num" value="${c.num}"></div>
       <div class="mf"><label class="mfl">ФИО</label><input class="mi" id="ct-name" value="${c.name}"></div>
@@ -5546,10 +5595,8 @@ function editCitizenship(idx,e){
     </div>
     <div class="mrow">
       <div class="mf" style="flex:2">
-        <label class="mfl">Клиент <span style="color:var(--t3);font-size:9px">(выбрать из списка)</span></label>
-        <select class="ms" id="ci-client-picker" onchange="_fillFromClient('ci-num','ci-name',this)">
-          ${clientPickerHTML(c.num, c.name)}
-        </select>
+        <label class="mfl">Клиент</label>
+        ${clientPickerSearchHTML('ci-client', c.num, c.name, '_fillFromClientSearch_ci')}
       </div>
       <div class="mf"><label class="mfl">№ клиента</label><input class="mi" id="ci-num" value="${c.num}"></div>
       <div class="mf"><label class="mfl">ФИО</label><input class="mi" id="ci-name" value="${c.name}"></div>
@@ -5647,9 +5694,7 @@ function editRights(idx,e){
     <div class="mrow">
       <div class="mf" style="flex:2">
         <label class="mfl">Клиент <span style="color:var(--t3);font-size:9px">(выбрать из списка)</span></label>
-        <select class="ms" id="ri-client-picker" onchange="_fillFromClient('ri-num','ri-name',this)">
-          ${clientPickerHTML(r.num, r.name)}
-        </select>
+        ${clientPickerSearchHTML('ri-client', r.num, r.name, '_fillFromClientSearch_ri')}
       </div>
       <div class="mf"><label class="mfl">№ клиента</label><input class="mi" id="ri-num" value="${r.num}"></div>
       <div class="mf"><label class="mfl">ФИО</label><input class="mi" id="ri-name" value="${r.name}"></div>
@@ -5839,7 +5884,9 @@ function openAddTaskModal(defaultStage='todo',defaultClient=''){
     </div>
     <div class="msec"><label class="mfl">Описание *</label><textarea class="mta" id="nt-text" placeholder="Описание задачи..."></textarea></div>
     <div class="mrow">
-      <div class="mf"><label class="mfl">Клиент №</label><input class="mi" id="nt-client" value="${defaultClient}" placeholder="541"></div>
+      <div class="mf"><label class="mfl">Клиент</label>
+        ${clientPickerSearchHTML('nt-client', defaultClient, '', '_fillFromClientSearch_nt')}
+      </div>
       <div class="mf"><label class="mfl">Ответственный</label><select class="ms" id="nt-assignee">${getTeamList().map(a=>`<option>${a}</option>`).join('')}</select></div>
     </div>
     <div class="mrow">
@@ -5854,7 +5901,7 @@ function openAddTaskModal(defaultStage='todo',defaultClient=''){
 }
 async function createTask(){
   const txt=(g('nt-text').value||'').trim();if(!txt)return;
-  const newTask={id:uid(),text:txt,title:txt,client:g('nt-client').value,assignee:g('nt-assignee').value,prio:g('nt-prio').value,stage:g('nt-stage').value,due:g('nt-due').value,created:today(),cmts:[]};
+  const newTask={id:uid(),text:txt,title:txt,client:(g('nt-client-val')||g('nt-client')||{}).value||'',assignee:g('nt-assignee').value,prio:g('nt-prio').value,stage:g('nt-stage').value,due:g('nt-due').value,created:today(),cmts:[]};
   tasks.unshift(newTask);
   persistTasks();
   closeModal();renderTasks();renderTaskStats();
@@ -7398,31 +7445,9 @@ function openEditFilingModal(id) {
 }
 
 function _fillFilingClientPicker(selectedId, selectedName) {
-  var sel = document.getElementById('fm-client-picker');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">— Выбрать из списка —</option>';
-  clients.slice().sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); }).forEach(function(c){
-    var opt = document.createElement('option');
-    opt.value = c.id;
-    opt.setAttribute('data-name', encodeURIComponent(c.name));
-    opt.textContent = c.id + ' — ' + c.name + (c.tg ? ' (' + c.tg + ')' : '');
-    if (c.id === selectedId || c.name === selectedName) opt.selected = true;
-    sel.appendChild(opt);
-  });
-}
-
-function _fillFilingClientPicker(selectedId, selectedName) {
-  var sel = document.getElementById('fm-client-picker');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">— Выбрать из списка —</option>';
-  clients.slice().sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); }).forEach(function(c){
-    var opt = document.createElement('option');
-    opt.value = c.id;
-    opt.setAttribute('data-name', encodeURIComponent(c.name));
-    opt.textContent = c.id + ' — ' + c.name + (c.tg ? ' (' + c.tg + ')' : '');
-    if (c.id === selectedId || c.name === selectedName) opt.selected = true;
-    sel.appendChild(opt);
-  });
+  var wrap = document.getElementById('fm-client-picker-wrap');
+  if(!wrap) return;
+  wrap.innerHTML = clientPickerSearchHTML('fm-cp', selectedId||'', selectedName||'', '_fillFromClientSearch_fm');
 }
 
 function fillLawyerSelect(selId, currentVal) {
@@ -7800,18 +7825,10 @@ function openAddSpecTaskModal(role) {
   var assigneeSelect = document.getElementById('st-assignee');
   fillRoleSelect(assigneeSelect, role, '');
 
-  // Заполнить client picker
-  var stPicker = document.getElementById('st-client-picker');
-  if(stPicker) {
-    stPicker.innerHTML = '<option value="">— Выбрать из списка —</option>';
-    var sortedClients = clients.slice().sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
-    sortedClients.forEach(function(c){
-      var opt = document.createElement('option');
-      opt.value = c.id;
-      opt.setAttribute('data-name', c.name);
-      opt.textContent = c.id + ' — ' + c.name + (c.tg ? ' (' + c.tg + ')' : '');
-      stPicker.appendChild(opt);
-    });
+  // Заполнить searchable client picker
+  var stWrap = document.getElementById('st-client-picker-wrap');
+  if(stWrap) {
+    stWrap.innerHTML = clientPickerSearchHTML('st-cp', '', '', '_fillFromClientSearch_st');
   }
   document.getElementById('st-client').value = '';
   if(document.getElementById('st-client-id')) document.getElementById('st-client-id').value = '';
@@ -7825,14 +7842,16 @@ function openAddSpecTaskModal(role) {
 }
 
 async function saveSpecTask() {
-  var clientPicker = document.getElementById('st-client-picker');
-  // Если клиент выбран из пикера — автозаполнить поля
-  if(clientPicker && clientPicker.value) {
-    var selOpt = clientPicker.options[clientPicker.selectedIndex];
-    if(!document.getElementById('st-client').value && selOpt)
-      document.getElementById('st-client').value = selOpt.getAttribute('data-name') || selOpt.value;
-    if(!document.getElementById('st-client-id').value && selOpt)
-      document.getElementById('st-client-id').value = clientPicker.value;
+  // Читать из searchable picker
+  var stCpVal = document.getElementById('st-cp-val');
+  if(stCpVal && stCpVal.value) {
+    var matchC = clients.find(function(c){ return c.id === stCpVal.value; });
+    if(matchC) {
+      if(!document.getElementById('st-client').value)
+        document.getElementById('st-client').value = matchC.name;
+      if(!document.getElementById('st-client-id').value)
+        document.getElementById('st-client-id').value = matchC.id;
+    }
   }
   var client = (document.getElementById('st-client').value||'').trim();
   if (!client) { toast('Выберите клиента из списка или введите ФИО'); return; }
@@ -8087,6 +8106,27 @@ function logActivity(action, obj, details) {
 // ════════════════════════════════════════════════════════════
 // STATS: АДВОКАТЫ
 // ════════════════════════════════════════════════════════════
+
+// ── Фильтр по столбцам в таблицах статистики ─────────────────
+// Работает ТОЛЬКО с DOM — не трогает данные
+function filterStatsTable(tbodyId, inputEl, colIdx) {
+  var tbody = document.getElementById(tbodyId);
+  if(!tbody) return;
+  // Собрать все активные фильтры из строки col-filters
+  var filterRow = inputEl.closest('tr');
+  var allInputs = filterRow ? Array.from(filterRow.querySelectorAll('input')) : [inputEl];
+  var filters = allInputs.map(function(inp){ return (inp.value||'').toLowerCase().trim(); });
+  
+  Array.from(tbody.rows).forEach(function(row) {
+    var cells = Array.from(row.cells);
+    var visible = filters.every(function(f, fi) {
+      if(!f) return true;
+      var cell = cells[fi];
+      return cell && cell.textContent.toLowerCase().includes(f);
+    });
+    row.style.display = visible ? '' : 'none';
+  });
+}
 function renderLawyerStats() {
   var fromVal = document.getElementById('sl-from').value;
   var toVal   = document.getElementById('sl-to').value;
@@ -8452,9 +8492,7 @@ function initStatsFilters() {
     <div style="display:flex;flex-direction:column;gap:12px">
       <div>
         <div style="font-size:11px;font-weight:700;color:var(--t3,#888);text-transform:uppercase;margin-bottom:4px">Клиент * <span style="font-size:9px;font-weight:400;color:var(--t3)">(выбрать из списка)</span></div>
-        <select id="fm-client-picker" class="inp" style="margin-bottom:6px" onchange="(function(s){var o=s.options[s.selectedIndex];if(!o.value)return;document.getElementById('fm-client').value=decodeURIComponent(o.getAttribute('data-name')||o.value);document.getElementById('fm-client-id').value=s.value;})(this)">
-          <option value="">— Выбрать из списка —</option>
-        </select>
+        <div id="fm-client-picker-wrap" style="margin-bottom:6px"></div>
         <div style="display:flex;gap:6px">
           <input id="fm-client-id" class="inp" placeholder="№" style="width:80px;flex-shrink:0">
           <input id="fm-client" class="inp" placeholder="ФИО клиента">
@@ -8510,9 +8548,7 @@ function initStatsFilters() {
     <div style="display:flex;flex-direction:column;gap:12px">
       <div>
         <div style="font-size:11px;font-weight:700;color:var(--t3,#888);text-transform:uppercase;margin-bottom:4px">Клиент *</div>
-        <select id="st-client-picker" class="inp" onchange="document.getElementById('st-client').value=this.options[this.selectedIndex].getAttribute('data-name')||this.value;document.getElementById('st-client-id').value=this.value">
-          <option value="">— Выбрать из списка —</option>
-        </select>
+        <div id="st-client-picker-wrap"></div>
         <div style="display:flex;gap:6px;margin-top:4px">
           <input id="st-client-id" class="inp" placeholder="№ клиента" style="width:90px;flex-shrink:0">
           <input id="st-client" class="inp" placeholder="ФИО (заполнится автоматически)">
