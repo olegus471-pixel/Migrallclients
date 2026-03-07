@@ -2191,6 +2191,10 @@ CRM ↔ Backend (Render) ↔ Google Sheets
       <div class="sec-t">⚖ Мои дела</div>
       <div class="sec-a" style="display:flex;gap:8px;align-items:center">
         <input id="lawyer-tasks-search" class="inp" style="width:180px;font-size:12px" placeholder="🔍 Поиск..." oninput="renderLawyerTasks()">
+        <label style="font-size:12px;color:var(--t2);display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="checkbox" id="lawyer-hide-done" checked onchange="renderLawyerTasks()">
+          Скрыть завершённые
+        </label>
         <button id="btn-new-lawyer-task" class="btn btn-p btn-sm" onclick="openAddSpecTaskModal('lawyer')">+ Новое дело</button>
       </div>
     </div>
@@ -2590,6 +2594,35 @@ function clientPickerHTML(selectedNum, selectedName) {
     opts += '<option value="'+c.id+'" data-name="'+encodeURIComponent(c.name)+'" data-tg="'+encodeURIComponent(c.tg||'')+'"'+sel+'>'+label+'</option>';
   });
   return opts;
+}
+
+// Searchable client picker — заменяет select на input с поиском
+function clientPickerSearchHTML(pickerId, selectedId, selectedName, onChangeFn) {
+  var selectedClient = clients.find(function(c){ return c.id === selectedId; });
+  var displayVal = selectedClient ? ((selectedClient.num ? '№'+selectedClient.num+' — ' : '') + selectedClient.name) : (selectedName || '');
+  var listId = pickerId + '-list';
+  var opts = clients.slice().sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); })
+    .map(function(c){
+      var label = (c.num ? '№'+c.num+' — ' : '') + c.name;
+      return '<option value="'+label+'" data-id="'+c.id+'" data-name="'+encodeURIComponent(c.name)+'">';
+    }).join('');
+  return '<input class="mi" id="'+pickerId+'-input" list="'+listId+'" placeholder="🔍 Поиск по №, ФИО..." value="'+displayVal+'" oninput="clientPickerOnInput(this,\''+pickerId+'\',\''+onChangeFn+'\')" autocomplete="off">'
+    + '<datalist id="'+listId+'">' + opts + '</datalist>'
+    + '<input type="hidden" id="'+pickerId+'-val" value="'+selectedId+'">';
+}
+
+function clientPickerOnInput(input, pickerId, onChangeFn) {
+  var listId = pickerId + '-list';
+  var datalist = document.getElementById(listId);
+  if(!datalist) return;
+  var val = input.value;
+  var matched = Array.from(datalist.options).find(function(o){ return o.value === val; });
+  if(matched) {
+    var cid = matched.getAttribute('data-id');
+    var hiddenEl = document.getElementById(pickerId+'-val');
+    if(hiddenEl) hiddenEl.value = cid;
+    if(onChangeFn && window[onChangeFn]) window[onChangeFn](cid);
+  }
 }
 
 /** Получить TG по num/name клиента */
@@ -4192,6 +4225,12 @@ function openEditClientModal(cid, e) {
       <div class="mf" style="flex:3"><label class="mfl">Комментарий</label>
         <input class="mi" id="ec-comment" value="${c.comment||''}"></div>
     </div>
+    <div style="margin:8px 0;padding:10px 12px;background:var(--s2);border-radius:8px;font-size:11px;color:var(--t3);display:flex;align-items:center;justify-content:space-between;gap:8px">
+      ${c.driveLink
+        ? '<span>📁 <a href="'+c.driveLink+'" target="_blank" style="color:var(--acc)">Открыть папку на Drive</a></span>'
+        : '<span style="color:var(--t3)">📁 Папка на Drive не создана</span>'}
+      ${!c.driveLink ? '<button type="button" class="btn btn-sm" style="font-size:11px" onclick="createDriveFolderForClient(\''+cid+'\')">📁 Создать папку</button>' : ''}
+    </div>
     <div class="mft">
       <button class="btn btn-g" onclick="closeModal()">Отмена</button>
       <button class="btn btn-p" onclick="saveClientEdit('${cid}')">Сохранить</button>
@@ -4203,6 +4242,25 @@ function ecSvcChange(svc){
   if(!sel) return;
   const stages = SUBSTAGES[svc]||[];
   sel.innerHTML = stages.length ? stages.map(s=>`<option value="${s}">${s}</option>`).join('') : '<option value="">— нет этапов —</option>';
+}
+
+async function createDriveFolderForClient(cid) {
+  const c = clients.find(x => x.id === cid);
+  if(!c) return;
+  if(!API_BASE){ toast('API не настроен — нужен деплой GAS'); return; }
+  toast('Создаю папку на Drive...');
+  const res = await apiPost('/drive/createClientFolder', {clientId: cid, clientName: c.name, serviceType: c.serviceType||''}).catch(()=>null);
+  if(res && res.folderUrl) {
+    c.driveLink = res.folderUrl;
+    await apiPut('/clients/'+cid, {driveLink: res.folderUrl}).catch(()=>{});
+    closeModal();
+    renderClients();
+    toast('📁 Папка создана ✓');
+    // Переоткрыть модалку с обновлёнными данными
+    setTimeout(()=>openEditClientModal(cid), 300);
+  } else {
+    toast('Ошибка создания папки — проверьте GAS и DRIVE_ROOT_FOLDER_ID');
+  }
 }
 
 async function saveClientEdit(cid) {
@@ -6492,10 +6550,8 @@ function openNewOrderModal(prefillClientId){
     <div class="mrow">
       <div class="mf">
         <label class="mfl">${_t('ord_client')}</label>
-        <select class="ms" id="nord-client" onchange="nordClientChange(this.value)">
-          <option value="">— выбрать из списка —</option><option value="__new__">➕ Создать нового клиента...</option>
-          ${clients.map(c=>`<option value="${c.id}"${prefillClientId===c.id?' selected':''}>${c.name} · #${c.id}</option>`).join('')}
-        </select>
+        ${clientPickerSearchHTML('nord-client', prefillClientId||'', '', 'nordClientChange')}
+        <div style="font-size:10px;color:var(--t3);margin-top:2px">Или <button type="button" class="btn-ghost" style="font-size:10px;padding:1px 6px" onclick="closeModal();setTimeout(openAddClientModal,200)">➕ Новый клиент</button></div>
       </div>
       <div class="mf">
         <label class="mfl">${_t('ord_svc_type')}</label>
@@ -6556,7 +6612,7 @@ function nordSvcChange(svc){
 }
 
 async function saveNewOrder(){
-  const clientId = g('nord-client').value;
+  const clientId = (g('nord-client-val')||g('nord-client')||{}).value||'';
   const _svcRaw  = g('nord-svc').value;
   const _customEl = g('nord-custom-svc');
   const svcType  = _svcRaw==='__custom__' ? (_customEl&&_customEl.value.trim()||'Custom') : _svcRaw;
@@ -7185,10 +7241,15 @@ function renderFilingsList() {
 
   var filtered = filingsData.filter(function(f) {
     // Адвокат видит только подачи своих клиентов
-    if(_myClientIds && !_myClientIds.has(f.clientId || f.num || '')) {
-      // Попробуем сравнить по имени клиента тоже
-      var clientMatch = clients.find(function(c){ return _myClientIds.has(c.id) && c.name === (f.client||f.name||''); });
-      if(!clientMatch) return false;
+    if(_myClientIds) {
+      var fClientId = f.clientId || f.num || '';
+      var fClientName = (f.client||f.name||'').toLowerCase();
+      var hasById = _myClientIds.has(fClientId);
+      var hasByName = !hasById && Array.from(_myClientIds).some(function(cid){
+        var cl = clients.find(function(c){ return c.id === cid; });
+        return cl && cl.name.toLowerCase() === fClientName;
+      });
+      if(!hasById && !hasByName) return false;
     }
     if (_filingStatusFilter !== 'all' && f.status !== _filingStatusFilter) return false;
     // Фильтр по выбранному месяцу (_filingMonth)
@@ -7549,13 +7610,14 @@ function renderLawyerTasks() {
   var saved = (function(){ try{ return JSON.parse(localStorage.getItem('crm_user')||'{}'); }catch(e){ return {}; } })();
   var myRole = saved.role || ''; var myName = saved.name || '';
 
+  var hideDoneLawyer = document.getElementById('lawyer-hide-done') ? document.getElementById('lawyer-hide-done').checked : false;
   var tasks = specTasks.filter(function(t) {
     if (t.role !== 'lawyer') return false;
     if (myRole === 'lawyer') {
       if (t.assignee !== myName) return false;
-      // Адвокат видит только дела «в работе» (не «Новое») или закрытые им
       if (t.stage === 'Новое') return false;
     }
+    if (hideDoneLawyer && t.stage === 'Завершено') return false;
     if (_lawyerStageFilter !== 'all' && t.stage !== _lawyerStageFilter) return false;
     if (search && !(t.client||'').toLowerCase().includes(search) && !(t.type||'').toLowerCase().includes(search)) return false;
     return true;
@@ -8036,32 +8098,60 @@ function renderLawyerStats() {
   var from = fromVal ? new Date(fromVal) : null;
   var to   = toVal   ? new Date(toVal + 'T23:59:59') : null;
 
-  // Собрать данные из specTasks (дела адвоката), citizenship, courts, filings
+  // Парсер дат DD.MM.YYYY и YYYY-MM-DD
+  function parseAnyDate(s) {
+    if(!s) return null;
+    var dm = String(s).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if(dm) return new Date(+dm[3], +dm[2]-1, +dm[1]);
+    var iso = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(iso) return new Date(+iso[1], +iso[2]-1, +iso[3]);
+    return null;
+  }
+  function inRange(dateStr) {
+    var d = parseAnyDate(dateStr);
+    if(!d) return true; // без даты — показываем
+    if(from && d < from) return false;
+    if(to && d > to) return false;
+    return true;
+  }
+  function daysSince(dateStr) {
+    var d = parseAnyDate(dateStr);
+    return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : '—';
+  }
+
   var rows = [];
 
   // Из specTasks
-  (window.specTasks||[]).forEach(function(t) {
+  (window.specTasks||specTasks||[]).forEach(function(t) {
     if(t.role !== 'lawyer') return;
     if(lawFilter && t.assignee !== lawFilter) return;
-    var d = t.createdAt ? new Date(t.createdAt) : null;
-    if(from && d && d < from) return;
-    if(to && d && d > to) return;
-    var days = d ? Math.floor((Date.now() - d.getTime()) / 86400000) : '—';
-    rows.push({ lawyer: t.assignee||'—', client: t.client||'—', type: t.type||'Дело', status: t.stage||'—', stage: t.stage||'—', created: t.createdAt ? t.createdAt.slice(0,10) : '—', updated: t.due||'—', days: days });
+    if(!inRange(t.createdAt || t.due)) return;
+    rows.push({ lawyer: t.assignee||'—', client: t.client||'—', type: t.type||'Дело', status: t.stage||'—', stage: t.stage||'—', created: t.createdAt||'—', updated: t.due||'—', days: daysSince(t.createdAt) });
   });
 
   // Из citizenship (по полю lawyer)
   (citizenship||[]).forEach(function(c) {
     if(!c.lawyer) return;
     if(lawFilter && c.lawyer !== lawFilter) return;
-    rows.push({ lawyer: c.lawyer, client: c.name||'—', type: 'Гражданство', status: c.status||'—', stage: c.stage||'—', created: c.date||'—', updated: c.updated||'—', days: '—' });
+    if(!inRange(c.date || c.updated)) return;
+    rows.push({ lawyer: c.lawyer, client: c.name||'—', type: 'Гражданство', status: c.status||'—', stage: c.stage||'—', created: c.date||'—', updated: c.updated||'—', days: daysSince(c.date) });
   });
 
   // Из courts (по полю lawyer)
   (courts||[]).forEach(function(c) {
     if(!c.lawyer) return;
     if(lawFilter && c.lawyer !== lawFilter) return;
-    rows.push({ lawyer: c.lawyer, client: c.name||'—', type: 'Суд', status: c.status||'—', stage: c.stage||'—', created: c.date||'—', updated: c.updated||'—', days: '—' });
+    if(!inRange(c.date || c.updated)) return;
+    rows.push({ lawyer: c.lawyer, client: c.name||'—', type: 'Суд', status: c.status||'—', stage: c.stage||'—', created: c.date||'—', updated: c.updated||'—', days: daysSince(c.date) });
+  });
+
+  // Из orders — услуги назначенные адвокату (через клиента)
+  (orders||[]).forEach(function(o) {
+    var c = clients.find(function(cl){ return cl.id === o.clientId; });
+    if(!c || !c.lawyer) return;
+    if(lawFilter && c.lawyer !== lawFilter) return;
+    if(!inRange(o.created || o.updated)) return;
+    rows.push({ lawyer: c.lawyer, client: c.name||'—', type: o.svcType||'Услуга', status: o.status||'—', stage: o.status||'—', created: o.created||'—', updated: o.updated||'—', days: daysSince(o.created) });
   });
 
   if(!rows.length) {
@@ -8124,9 +8214,9 @@ function exportLawyerStats() {
 // STATS: АКТИВНОСТЬ КОМАНДЫ
 // ════════════════════════════════════════════════════════════
 function renderActivityStats() {
-  var fromVal  = document.getElementById('sa-from').value;
-  var toVal    = document.getElementById('sa-to').value;
-  var userFilter = document.getElementById('sa-user').value;
+  var fromVal  = (document.getElementById('sa-from')||{}).value || '';
+  var toVal    = (document.getElementById('sa-to')||{}).value || '';
+  var userFilter = (document.getElementById('sa-user')||{}).value || '';
   var tbody  = document.getElementById('sa-tbody');
   var summary = document.getElementById('sa-summary');
   if(!tbody) return;
@@ -8216,6 +8306,12 @@ function initStatsFilters() {
   var fmt = function(d){ return d.toISOString().slice(0,10); };
   ['sl-from','sa-from'].forEach(function(id){ var el=document.getElementById(id); if(el&&!el.value) el.value=fmt(ago); });
   ['sl-to','sa-to'].forEach(function(id){ var el=document.getElementById(id); if(el&&!el.value) el.value=fmt(now); });
+  // Сразу показать данные
+  setTimeout(function(){
+    var activeView = document.querySelector('.view.active');
+    if(activeView && activeView.id === 'view-stats-lawyers') renderLawyerStats();
+    if(activeView && activeView.id === 'view-stats-activity') renderActivityStats();
+  }, 100);
 }
 
 </script>
