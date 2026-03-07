@@ -4284,6 +4284,30 @@ function openEditClientModal(cid, e) {
         : '<span style="color:var(--t3)">📁 Папка на Drive не создана</span>'}
       ${!c.driveLink ? '<button type="button" class="btn btn-sm" style="font-size:11px" onclick="createDriveFolderForClient(\''+cid+'\')">📁 Создать папку</button>' : ''}
     </div>
+    <div style="margin:10px 0 0;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="background:var(--s2);padding:8px 12px;font-size:12px;font-weight:700;color:var(--acc);display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleAIMASection(this)">
+        <span>📋 Добавить отслеживание AIMA</span>
+        <span id="aima-toggle-icon" style="font-size:16px;transition:transform .2s">▾</span>
+      </div>
+      <div id="ec-aima-section" style="display:none;padding:12px">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:10px">Создаст запись в таблице проверок AIMA со статусом «Анализ»</div>
+        <div class="mrow">
+          <div class="mf"><label class="mfl">Дата рождения</label>
+            <input class="mi" id="ec-dob" value="${c.dob||''}" placeholder="DD.MM.YYYY"></div>
+          <div class="mf"><label class="mfl">Номер паспорта</label>
+            <input class="mi" id="ec-pass" value="${c.pass||''}" placeholder="AA000000"></div>
+        </div>
+        <div class="mrow">
+          <div class="mf"><label class="mfl">NIPC / Номер дела</label>
+            <input class="mi" id="ec-nipc" value="${c.nipc||c.num||''}" placeholder="NI 000000000"></div>
+          <div class="mf"><label class="mfl">Секция</label>
+            <input class="mi" id="ec-sec" value="${c.sec||''}" placeholder="напр: Лиссабон"></div>
+        </div>
+        <button type="button" class="btn btn-p btn-sm" style="margin-top:4px" onclick="createAIMAFromClient('${cid}')">
+          ➕ Создать запись AIMA
+        </button>
+      </div>
+    </div>
     <div class="mft">
       <button class="btn btn-g" onclick="closeModal()">Отмена</button>
       <button class="btn btn-p" onclick="saveClientEdit('${cid}')">Сохранить</button>
@@ -4297,6 +4321,57 @@ function ecSvcChange(svc){
   sel.innerHTML = stages.length ? stages.map(s=>`<option value="${s}">${s}</option>`).join('') : '<option value="">— нет этапов —</option>';
 }
 
+
+function toggleAIMASection(header) {
+  var sec = document.getElementById('ec-aima-section');
+  var icon = document.getElementById('aima-toggle-icon');
+  if(!sec) return;
+  var open = sec.style.display === 'block';
+  sec.style.display = open ? 'none' : 'block';
+  if(icon) icon.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+async function createAIMAFromClient(cid) {
+  var c = clients.find(function(x){ return x.id === cid; });
+  if(!c) return;
+  var dob  = (document.getElementById('ec-dob')||{}).value||'';
+  var pass = (document.getElementById('ec-pass')||{}).value||'';
+  var nipc = (document.getElementById('ec-nipc')||{}).value||c.num||'';
+  var sec  = (document.getElementById('ec-sec')||{}).value||'';
+  if(!dob && !pass){ toast('Введите хотя бы дату рождения или паспорт'); return; }
+
+  // Сохранить dob/pass в карточке клиента тоже
+  c.dob = dob; c.pass = pass; c.nipc = nipc; c.sec = sec;
+  if(API_BASE) apiPut('/clients/'+cid, {dob, pass, nipc, sec}).catch(()=>{});
+
+  var aimaEntry = {
+    num:     c.num || c.id,
+    name:    c.name,
+    nipc:    nipc,
+    dob:     dob,
+    pass:    pass,
+    status:  'Анализ',
+    date:    nowDMY(),
+    updated: nowDMY(),
+    sec:     sec,
+    comment: '',
+  };
+
+  // Проверить — нет ли уже записи для этого клиента
+  var existing = statuses.find(function(s){ return s.num === aimaEntry.num || s.name === c.name; });
+  if(existing) {
+    if(!confirm('Запись AIMA для «'+c.name+'» уже существует. Создать ещё одну?')) return;
+  }
+
+  statuses.push(aimaEntry);
+  renderAIMA();
+  toast('✅ Запись AIMA создана — статус «Анализ»');
+
+  if(API_BASE) {
+    var res = await apiPost('/statuses', aimaEntry).catch(()=>null);
+    if(res && res.ok) toast('Сохранено в таблице AIMA ✓');
+  }
+}
 async function createDriveFolderForClient(cid) {
   const c = clients.find(x => x.id === cid);
   if(!c) return;
@@ -5366,11 +5441,29 @@ function editCourt(idx,e){
   // Async-заполнение адвоката если usersData ещё не загружен
   fillLawyerSelect('ct-lawyer', c.lawyer||'');
 }
+
+// ── Создать папку услуги на Google Drive клиента ─────────────
+// clientNum — номер клиента (c.num), serviceType — название услуги
+async function _createServiceDriveFolder(clientNum, serviceType) {
+  if(!API_BASE || !clientNum) return null;
+  var c = clients.find(function(x){ return (x.num||x.id) === clientNum || x.num === clientNum; });
+  if(!c) { c = clients.find(function(x){ return x.name === clientNum; }); }
+  if(!c) return null;
+  try {
+    var res = await apiPost('/drive/createServiceFolder', { clientId: c.id, serviceType: serviceType });
+    if(res && res.folderUrl) {
+      toast('📁 Папка «' + serviceType + '» создана на Drive ✓');
+      return res.folderUrl;
+    }
+  } catch(e) {}
+  return null;
+}
 async function saveCourt(idx){
   const obj={num:g('ct-num').value,name:g('ct-name').value,lawyer:g('ct-lawyer').value,article:g('ct-art').value,date:g('ct-date').value,place:g('ct-place').value,stage:g('ct-stage').value,status:g('ct-status').value,updated:nowDMY(),comment:g('ct-comment').value};
   if(idx<0)courts.push(obj);else courts[idx]=obj;
   closeModal();renderCourts();renderDash();toast(idx<0?'Дело добавлено ✓':'Суд обновлён ✓');
   await (idx<0?apiPost('/courts',obj):apiPut('/courts/'+obj.num,obj));
+  if(idx<0) _createServiceDriveFolder(obj.num, 'Суд');
 }
 
 // ============================================================
@@ -5636,6 +5729,7 @@ async function saveCitizenship(idx){
   if(idx<0)citizenship.push(obj);else citizenship[idx]=obj;
   closeModal();renderCitizenship();renderDash();toast(idx<0?'Добавлено ✓':'Гражданство обновлено ✓');
   await (idx<0?apiPost('/citizenship',obj):apiPut('/citizenship/'+obj.num,obj));
+  if(idx<0) _createServiceDriveFolder(obj.num, 'Гражданство');
 }
 
 // ============================================================
@@ -5722,6 +5816,7 @@ async function saveRights(idx){
   if(idx<0)rights.push(obj);else rights[idx]=obj;
   closeModal();renderRights();renderDash();toast(idx<0?'Добавлено ✓':'Права обновлены ✓');
   await (idx<0?apiPost('/rights',obj):apiPut('/rights/'+obj.num,obj));
+  if(idx<0) _createServiceDriveFolder(obj.num, 'Водительские права');
 }
 
 // ============================================================
@@ -6685,6 +6780,12 @@ async function saveNewOrder(){
   toast(_t('ord_created'));
   await apiFetch('/orders',{method:'POST',body:JSON.stringify(ord)}).catch(()=>{});
 
+  // Создать папку услуги на Drive
+  if(ord.clientId) {
+    var _oc = clients.find(function(c){ return c.id === ord.clientId; });
+    if(_oc) _createServiceDriveFolder(_oc.num||_oc.id, ord.svcType);
+  }
+
   // Если тип услуги 'Права' — добавить запись в таблицу rights
   if(svcType === 'Права') {
     const c = clients.find(x=>x.id===clientId);
@@ -7491,6 +7592,11 @@ async function saveFiling() {
     document.getElementById('modal-filing').style.display = 'none';
     loadFilings();
     toast(editingId ? 'Подача обновлена' : 'Подача создана ✓');
+    // Создать папку 'Подача' на Drive при создании
+    if(!editingId && filing.clientId) {
+      var _fc = clients.find(function(c){ return c.id === filing.clientId; });
+      if(_fc) _createServiceDriveFolder(_fc.num||_fc.id, 'Подача');
+    }
   } else {
     toast('Ошибка: ' + (result && result.error || 'нет ответа'));
   }
@@ -7876,6 +7982,11 @@ async function saveSpecTask() {
     document.getElementById('modal-spec-task').style.display = 'none';
     toast((role==='lawyer'?'Дело':'Задание') + ' создано ✓');
     loadSpecTasks();
+    // Создать папку на Drive
+    if(task.clientId) {
+      var _stc = clients.find(function(c){ return c.id === task.clientId; });
+      if(_stc) _createServiceDriveFolder(_stc.num||_stc.id, task.type || (role==='lawyer'?'Дело':'Перевод'));
+    }
   } else {
     toast('Ошибка сохранения');
   }
