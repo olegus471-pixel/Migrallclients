@@ -375,6 +375,9 @@ button:active{transform:scale(.97)}
 .mcls{background:none;border:none;color:var(--t3);cursor:pointer;font-size:20px;padding:0 3px;line-height:1;transition:all .15s;border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center}
 .mcls:hover{color:var(--red);background:var(--red-d)}
 .msec{margin-bottom:16px}
+.msl{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-family:'IBM Plex Mono',monospace}
+.mfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;flex-wrap:wrap}
+.mfoot .btn-g{margin-right:auto}
 .mrow{display:flex;gap:10px;margin-bottom:12px;align-items:flex-end}
 .mf{flex:1;min-width:0}
 .mfl{font-size:11px;color:var(--t2);margin-bottom:5px;font-weight:600;display:block;letter-spacing:-.01em}
@@ -5212,20 +5215,20 @@ function renderCourts(data){
     const ri=courts.findIndex(x=>x.num===c.num&&x.name===c.name);
     const _cn=getClientSeqNum(c.num);
     const _ctg = getClientTg(c.num, c.name);
-    return '<tr>'
+    return '<tr style="cursor:pointer" onclick="openCourtDetailModal('+ri+')">'
       +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_cn+'</td>'
       +'<td class="mono" style="color:var(--pur)">'+c.num+'</td>'
-      +'<td class="mono" style="font-size:11px;color:var(--acc)">'+(_ctg!=='—'?'<a href="tg://resolve?domain='+_ctg.replace('@','')+'" style="color:var(--acc)">'+_ctg+'</a>':'—')+'</td>'
+      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+(_ctg!=='—'?'<a href="tg://resolve?domain='+_ctg.replace('@','')+'" style="color:var(--acc)">'+_ctg+'</a>':'—')+'</td>'
       +'<td style="font-weight:600">'+c.name+'</td>'
       +'<td>'+(c.lawyer?'<span style="font-size:11px;color:#db2777;font-weight:600">⚖ '+c.lawyer+'</span>':'<span style="color:var(--t3);font-size:11px">—</span>')+'</td>'
       +'<td><span class="bdg pur">'+c.article+'</span></td>'
       +'<td class="mono" style="font-size:12.5px">'+c.date+'</td>'
       +'<td style="font-size:12.5px">'+c.place+'</td>'
       +'<td style="font-size:12.5px;color:var(--pur)">'+c.stage+'</td>'
-      +'<td class="inline-edit-cell"><span class="inline-status" onclick="openStatusDropdown(event,\'courts\','+ri+',\''+c.status+'\',COURT_STATUSES,\'/courts\',\'num\')" title="'+_t('inline_status_tip')+'">'+bdg(c.status)+'</span></td>'
-      +'<td class="inline-edit-cell"><span class="inline-date" onclick="openDatePopup(event,\'courts\','+ri+',\''+(c.updated||'')+'\',\'/courts\',\'num\')" title="'+_t('inline_date_tip')+'">'+fmtDate(c.updated)+'</span></td>'
+      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-status" onclick="openStatusDropdown(event,\'courts\','+ri+',\''+c.status+'\',COURT_STATUSES,\'/courts\',\'num\')" title="'+_t('inline_status_tip')+'">'+bdg(c.status)+'</span></td>'
+      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-date" onclick="openDatePopup(event,\'courts\','+ri+',\''+(c.updated||'')+'\',\'/courts\',\'num\')" title="'+_t('inline_date_tip')+'">'+fmtDate(c.updated)+'</span></td>'
       +'<td style="font-size:12.5px;color:var(--t2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(c.comment||'—')+'</td>'
-      +'<td style="white-space:nowrap">'
+      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'
         +'<button class="edit-btn" onclick="editCourt('+ri+',event)">✏</button>'
         +'<button class="del-btn" data-mod="courts" data-idx="'+ri+'" data-lbl="'+encodeURIComponent(c.num+' '+c.name)+'" onclick="handleDelBtn(this,event)">🗑</button>'
       +'</td>'
@@ -5537,20 +5540,20 @@ function renderCitizenship(){
   });
   g('cit-tbody').innerHTML=_src.length?_src.map((c,i)=>{
     const _citsn=getClientSeqNum(c.num);
-    return '<tr>'
+    return '<tr style="cursor:pointer" onclick="openCitizenshipDetailModal('+i+')">'
       +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_citsn+'</td>'
       +'<td class="mono" style="color:var(--ora)">'+c.num+'</td>'
-      +'<td class="mono" style="font-size:11px;color:var(--acc)">'+(function(){var tg=getClientTg(c.num,c.name);return tg!=='—'?'<a href="tg://resolve?domain='+tg.replace('@','')+'">'+tg+'</a>':'—';})()+'</td>'
+      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+(function(){var tg=getClientTg(c.num,c.name);return tg!=='—'?'<a href="tg://resolve?domain='+tg.replace('@','')+'">'+tg+'</a>':'—';})()+'</td>'
       +'<td style="font-weight:600">'+c.name+'</td>'
       +'<td>'+(c.lawyer?'<span style="font-size:11px;color:#db2777;font-weight:600">⚖ '+c.lawyer+'</span>':'<span style="color:var(--t3);font-size:11px">—</span>')+'</td>'
       +'<td><span class="bdg ora">'+(c.type||'—')+'</span></td>'
       +'<td class="mono" style="font-size:12.5px">'+fmtDate(c.date)+'</td>'
       +'<td class="mono" style="font-size:12.5px">'+(c.track||'—')+'</td>'
       +'<td style="font-size:12.5px;color:var(--ora)">'+c.stage+'</td>'
-      +'<td class="inline-edit-cell"><span class="inline-status" onclick="openStatusDropdown(event,\'citizenship\','+i+',\''+c.status+'\',CIT_STATUSES,\'/citizenship\',\'num\')" title="'+_t('inline_status_tip')+'">'+bdg(c.status)+'</span></td>'
-      +'<td class="inline-edit-cell"><span class="inline-date" onclick="openDatePopup(event,\'citizenship\','+i+',\''+(c.updated||'')+'\',\'/citizenship\',\'num\')" title="'+_t('inline_date_tip')+'">'+fmtDate(c.updated)+'</span></td>'
+      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-status" onclick="openStatusDropdown(event,\'citizenship\','+i+',\''+c.status+'\',CIT_STATUSES,\'/citizenship\',\'num\')" title="'+_t('inline_status_tip')+'">'+bdg(c.status)+'</span></td>'
+      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-date" onclick="openDatePopup(event,\'citizenship\','+i+',\''+(c.updated||'')+'\',\'/citizenship\',\'num\')" title="'+_t('inline_date_tip')+'">'+fmtDate(c.updated)+'</span></td>'
       +'<td style="font-size:12.5px;color:var(--t2)">'+(c.comment||'—')+'</td>'
-      +'<td style="white-space:nowrap">'
+      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'
         +'<button class="edit-btn" onclick="editCitizenship('+i+',event)">✏</button>'
         +'<button class="del-btn" data-mod="citizenship" data-idx="'+i+'" data-lbl="'+encodeURIComponent(c.num+' '+c.name)+'" onclick="handleDelBtn(this,event)">🗑</button>'
       +'</td>'
@@ -5639,18 +5642,18 @@ function renderRights(){
   });
   g('rights-tbody').innerHTML=_rightsArr.length?_rightsArr.map((r,i)=>{
     const _rtssn=getClientSeqNum(r.num);
-    return '<tr>'
+    return '<tr style="cursor:pointer" onclick="openRightsDetailModal('+i+')">'
       +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_rtssn+'</td>'
       +'<td class="mono" style="color:var(--gre)">'+r.num+'</td>'
-      +'<td class="mono" style="font-size:11px;color:var(--acc)">'+(getClientTg(r.num,r.name)!='—'?'<a href="tg://resolve?domain='+getClientTg(r.num,r.name).replace('@','')+'">'+getClientTg(r.num,r.name)+'</a>':'—')+'</td>'
+      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+(getClientTg(r.num,r.name)!='—'?'<a href="tg://resolve?domain='+getClientTg(r.num,r.name).replace('@','')+'">'+getClientTg(r.num,r.name)+'</a>':'—')+'</td>'
       +'<td style="font-weight:600">'+r.name+'</td>'
       +'<td><span class="bdg gre">'+(r.country||'—')+'</span></td>'
       +'<td class="mono" style="font-size:12.5px">'+fmtDate(r.date)+'</td>'
       +'<td style="font-size:12.5px;color:var(--gre)">'+r.stage+'</td>'
-      +'<td class="inline-edit-cell"><span class="inline-status" onclick="openStatusDropdown(event,\'rights\','+i+',\''+r.status+'\',RIGHTS_STATUSES,\'/rights\',\'num\')" title="'+_t('inline_status_tip')+'">'+bdg(r.status)+'</span></td>'
-      +'<td class="inline-edit-cell"><span class="inline-date" onclick="openDatePopup(event,\'rights\','+i+',\''+(r.updated||'')+'\',\'/rights\',\'num\')" title="'+_t('inline_date_tip')+'">'+fmtDate(r.updated)+'</span></td>'
+      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-status" onclick="openStatusDropdown(event,\'rights\','+i+',\''+r.status+'\',RIGHTS_STATUSES,\'/rights\',\'num\')" title="'+_t('inline_status_tip')+'">'+bdg(r.status)+'</span></td>'
+      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-date" onclick="openDatePopup(event,\'rights\','+i+',\''+(r.updated||'')+'\',\'/rights\',\'num\')" title="'+_t('inline_date_tip')+'">'+fmtDate(r.updated)+'</span></td>'
       +'<td style="font-size:12.5px;color:var(--t2)">'+(r.comment||'—')+'</td>'
-      +'<td style="white-space:nowrap">'
+      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'
         +'<button class="edit-btn" onclick="editRights('+i+',event)">✏</button>'
         +'<button class="del-btn" data-mod="rights" data-idx="'+i+'" data-lbl="'+encodeURIComponent(r.num+' '+r.name)+'" onclick="handleDelBtn(this,event)">🗑</button>'
       +'</td>'
@@ -6408,7 +6411,13 @@ function openCourtDetailModal(idx){
       <div class="mf" style="margin-top:8px"><label class="mfl">Комментарий</label>
         <textarea class="mi" id="cd-comment" rows="3">${c.comment||''}</textarea></div>
     </div>
-    ${c.driveLink?`<div class="msec"><a href="${c.driveLink}" target="_blank" class="btn btn-p" style="width:100%;text-align:center;text-decoration:none">📁 Открыть папку Google Drive</a></div>`:''}
+    <div class="msec">
+      <div class="msl">📁 Папка Google Drive</div>
+      ${c.driveLink
+        ? `<a href="${c.driveLink}" target="_blank" class="btn btn-p" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px">📁 Открыть папку клиента на Drive</a>`
+        : `<div style="font-size:11px;color:var(--t3);margin-bottom:6px">Папка ещё не привязана. Вставьте ссылку:</div>`}
+      <input class="mi" id="cd-drive" value="${c.driveLink||''}" placeholder="https://drive.google.com/drive/folders/...">
+    </div>
     <div class="mfoot">
       <button class="btn" onclick="closeModal()">Отмена</button>
       <button class="btn btn-p" onclick="saveCourtFromDetail(${idx})">💾 Сохранить</button>
@@ -6422,6 +6431,7 @@ function saveCourtFromDetail(idx){
   c.date=(g('cd-date')||{}).value||c.date;
   c.place=(g('cd-place')||{}).value||c.place;
   c.comment=(g('cd-comment')||{}).value||'';
+  c.driveLink=(g('cd-drive')||{}).value||c.driveLink||'';
   c.updated=nowDMY();
   closeModal();
   renderCourts(); renderLawyerCourts(); renderDash();
@@ -6429,8 +6439,274 @@ function saveCourtFromDetail(idx){
   if(API_BASE) apiPut('/courts/'+c.num, c).catch(()=>{});
 }
 
-// ── Детальное модальное окно заказа (для переводчика) ──
+// ── Детальное модальное окно гражданства ──────────────────────
+function openCitizenshipDetailModal(idx){
+  const c = citizenship[idx]; if(!c) return;
+  const statusOpts = CIT_STATUSES.map(s=>`<option value="${s}"${s===c.status?' selected':''}>${s}</option>`).join('');
+  const stageOpts = CIT_STAGES.map(s=>`<option value="${s}"${s===c.stage?' selected':''}>${s}</option>`).join('');
+  openModal(`
+    <div class="mhdr">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)">${c.num} · Гражданство · ${c.type||'—'}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-top:2px">${c.name}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">${bdg(c.status)}</div>
+      </div>
+      <button class="mcls" onclick="closeModal()">✕</button>
+    </div>
+    <div class="msec">
+      <div class="msl">Статус дела</div>
+      <div class="mrow">
+        <div class="mf"><label class="mfl">Статус</label>
+          <select class="mi" id="citd-status">${statusOpts}</select></div>
+        <div class="mf"><label class="mfl">Этап</label>
+          <select class="mi" id="citd-stage">${stageOpts}</select></div>
+      </div>
+    </div>
+    <div class="msec">
+      <div class="msl">Информация</div>
+      <div class="mrow">
+        <div class="mf"><label class="mfl">Дата подачи</label>
+          <input class="mi" id="citd-date" value="${c.date||''}" placeholder="ДД.ММ.ГГГГ"></div>
+        <div class="mf"><label class="mfl">Трек-номер</label>
+          <input class="mi" id="citd-track" value="${c.track||''}"></div>
+      </div>
+      <div class="mf" style="margin-top:8px"><label class="mfl">Комментарий</label>
+        <textarea class="mi" id="citd-comment" rows="3">${c.comment||''}</textarea></div>
+    </div>
+    <div class="msec">
+      <div class="msl">📁 Папка Google Drive</div>
+      ${c.driveLink
+        ? `<a href="${c.driveLink}" target="_blank" class="btn btn-p" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px">📁 Открыть папку клиента на Drive</a>`
+        : `<div style="font-size:11px;color:var(--t3);margin-bottom:6px">Папка ещё не привязана. Вставьте ссылку:</div>`}
+      <input class="mi" id="citd-drive" value="${c.driveLink||''}" placeholder="https://drive.google.com/drive/folders/...">
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-g" onclick="editCitizenship(${idx},event)">✏ Полное редактирование</button>
+      <button class="btn" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-p" onclick="saveCitizenshipFromDetail(${idx})">💾 Сохранить</button>
+    </div>
+  `);
+}
+function saveCitizenshipFromDetail(idx){
+  const c = citizenship[idx]; if(!c) return;
+  c.status = (g('citd-status')||{}).value||c.status;
+  c.stage = (g('citd-stage')||{}).value||c.stage;
+  c.date = (g('citd-date')||{}).value||c.date;
+  c.track = (g('citd-track')||{}).value||c.track;
+  c.comment = (g('citd-comment')||{}).value||'';
+  c.driveLink = (g('citd-drive')||{}).value||c.driveLink||'';
+  c.updated = nowDMY();
+  closeModal();
+  renderCitizenship(); renderDash();
+  toast('Гражданство обновлено ✓');
+  if(API_BASE) apiPut('/citizenship/'+c.num, c).catch(()=>{});
+}
+
+// ── Детальное модальное окно прав ────────────────────────────
+function openRightsDetailModal(idx){
+  const r = rights[idx]; if(!r) return;
+  const statusOpts = RIGHTS_STATUSES.map(s=>`<option value="${s}"${s===r.status?' selected':''}>${s}</option>`).join('');
+  const stageOpts = RIGHTS_STAGES.map(s=>`<option value="${s}"${s===r.stage?' selected':''}>${s}</option>`).join('');
+  // find driveLink from matching order if any
+  const ord = orders.find(o=>o.svcType==='Права'&&(o.id===r.num||(clients.find(c=>c.id===o.clientId)&&clients.find(c=>c.id===o.clientId).name===r.name)));
+  const driveLink = r.driveLink || (ord&&ord.driveLink) || '';
+  openModal(`
+    <div class="mhdr">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)">${r.num} · Водительские права · ${r.country||'—'}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-top:2px">${r.name}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">${bdg(r.status)}</div>
+      </div>
+      <button class="mcls" onclick="closeModal()">✕</button>
+    </div>
+    <div class="msec">
+      <div class="msl">Статус</div>
+      <div class="mrow">
+        <div class="mf"><label class="mfl">Статус</label>
+          <select class="mi" id="rightsd-status">${statusOpts}</select></div>
+        <div class="mf"><label class="mfl">Этап</label>
+          <select class="mi" id="rightsd-stage">${stageOpts}</select></div>
+      </div>
+    </div>
+    <div class="msec">
+      <div class="msl">Информация</div>
+      <div class="mrow">
+        <div class="mf"><label class="mfl">Дата подачи</label>
+          <input class="mi" id="rightsd-date" value="${r.date||''}" placeholder="ДД.ММ.ГГГГ"></div>
+        <div class="mf"><label class="mfl">Страна прав</label>
+          <input class="mi" id="rightsd-country" value="${r.country||''}"></div>
+      </div>
+      <div class="mf" style="margin-top:8px"><label class="mfl">Комментарий</label>
+        <textarea class="mi" id="rightsd-comment" rows="3">${r.comment||''}</textarea></div>
+    </div>
+    <div class="msec">
+      <div class="msl">📁 Папка Google Drive</div>
+      ${driveLink
+        ? `<a href="${driveLink}" target="_blank" class="btn btn-p" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px">📁 Открыть папку клиента на Drive</a>`
+        : `<div style="font-size:11px;color:var(--t3);margin-bottom:6px">Папка ещё не привязана. Вставьте ссылку:</div>`}
+      <input class="mi" id="rightsd-drive" value="${driveLink}" placeholder="https://drive.google.com/drive/folders/...">
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-g" onclick="editRights(${idx},event)">✏ Полное редактирование</button>
+      <button class="btn" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-p" onclick="saveRightsFromDetail(${idx})">💾 Сохранить</button>
+    </div>
+  `);
+}
+function saveRightsFromDetail(idx){
+  const r = rights[idx]; if(!r) return;
+  r.status = (g('rightsd-status')||{}).value||r.status;
+  r.stage = (g('rightsd-stage')||{}).value||r.stage;
+  r.date = (g('rightsd-date')||{}).value||r.date;
+  r.country = (g('rightsd-country')||{}).value||r.country;
+  r.comment = (g('rightsd-comment')||{}).value||'';
+  const newDrive = (g('rightsd-drive')||{}).value||'';
+  r.driveLink = newDrive;
+  r.updated = nowDMY();
+  closeModal();
+  renderRights(); renderDash();
+  toast('Права обновлены ✓');
+  if(API_BASE) apiPut('/rights/'+r.num, r).catch(()=>{});
+}
+
+// ── Детальное модальное окно подачи ──────────────────────────
+function openFilingDetailModal(id){
+  const f = filingsData.find(x=>x.id===id); if(!f) return;
+  const SC = {'Планируется':'#3b6ff5','Готовится':'#f59e0b','Подано':'#8b5cf6','Одобрено':'#059669','Отказ':'#dc2626','Перенесено':'#6b7280'};
+  const statuses = ['Планируется','Готовится','Подано','Одобрено','Отказ','Перенесено'];
+  const statusOpts = statuses.map(s=>`<option value="${s}"${s===f.status?' selected':''}>${s}</option>`).join('');
+  // Find client drive link
+  const cl = clients.find(c=>(c.id===f.clientId||c.id===f.num||c.name===(f.client||f.name||'')));
+  const clientDrive = cl && cl.driveLink ? cl.driveLink : '';
+  const filingDrive = f.driveLink || '';
+  openModal(`
+    <div class="mhdr">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)">${f.date||'—'} ${f.time||''} · ${f.place||''}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-top:2px">${f.client||f.name||'—'}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">
+          <span style="font-size:11px;font-weight:700;color:${SC[f.status]||'#6b7280'};background:${SC[f.status]||'#6b7280'}18;padding:2px 8px;border-radius:20px">${f.status||'—'}</span>
+        </div>
+      </div>
+      <button class="mcls" onclick="closeModal()">✕</button>
+    </div>
+    <div class="msec">
+      <div class="msl">Статус подачи</div>
+      <div class="mrow">
+        <div class="mf"><label class="mfl">Статус</label>
+          <select class="mi" id="fd-status">${statusOpts}</select></div>
+        <div class="mf"><label class="mfl">Адвокат</label>
+          <select class="mi" id="fd-lawyer"><option value="">— Не назначен —</option></select></div>
+      </div>
+    </div>
+    <div class="msec">
+      <div class="msl">Информация</div>
+      <div class="mrow">
+        <div class="mf"><label class="mfl">Дата</label>
+          <input class="mi" id="fd-date" value="${f.date||''}" placeholder="ДД.ММ.ГГГГ"></div>
+        <div class="mf"><label class="mfl">Время</label>
+          <input class="mi" id="fd-time" value="${f.time||''}" placeholder="10:00"></div>
+        <div class="mf"><label class="mfl">Место</label>
+          <input class="mi" id="fd-place" value="${f.place||''}"></div>
+      </div>
+      <div class="mf" style="margin-top:8px"><label class="mfl">Комментарий</label>
+        <textarea class="mi" id="fd-comment" rows="2">${f.comment||''}</textarea></div>
+    </div>
+    <div class="msec">
+      <div class="msl">📁 Google Drive — папка клиента</div>
+      ${clientDrive
+        ? `<a href="${clientDrive}" target="_blank" class="btn btn-p" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px">📁 Открыть папку клиента на Drive</a>`
+        : ''}
+      ${filingDrive && filingDrive!==clientDrive
+        ? `<a href="${filingDrive}" target="_blank" class="btn btn-g" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px">📂 Папка подачи</a>`
+        : ''}
+      ${!clientDrive&&!filingDrive ? `<div style="font-size:11px;color:var(--t3);margin-bottom:6px">Папка не привязана. Вставьте ссылку:</div>` : ''}
+      <input class="mi" id="fd-drive" value="${filingDrive||clientDrive}" placeholder="https://drive.google.com/drive/folders/...">
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-g" onclick="openEditFilingModal('${id}')">✏ Полное редактирование</button>
+      <button class="btn" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-p" onclick="saveFilingFromDetail('${id}')">💾 Сохранить</button>
+    </div>
+  `);
+  // Fill lawyer select
+  fillLawyerSelect('fd-lawyer', f.lawyer||'');
+}
+async function saveFilingFromDetail(id){
+  const f = filingsData.find(x=>x.id===id); if(!f) return;
+  f.status = (g('fd-status')||{}).value||f.status;
+  f.lawyer = (g('fd-lawyer')||{}).value||f.lawyer||'';
+  f.date = (g('fd-date')||{}).value||f.date;
+  f.time = (g('fd-time')||{}).value||f.time||'';
+  f.place = (g('fd-place')||{}).value||f.place;
+  f.comment = (g('fd-comment')||{}).value||'';
+  f.driveLink = (g('fd-drive')||{}).value||f.driveLink||'';
+  closeModal();
+  renderFilingsList(); renderDash();
+  toast('Подача обновлена ✓');
+  if(API_BASE) {
+    const result = await apiPut('/filings', f).catch(()=>null);
+    if(result&&result.ok) toast('Синхронизировано ✓');
+  }
+}
+
+// ── Детальное модальное окно для ЛК адвоката — Подача ────────
+function openFilingDetailModalById(id){
+  openFilingDetailModal(id);
+}
+
+// ── Детальное модальное окно заказа в меню переводчика / адвоката ──
 function openOrderDetailModal(orderId){
+  const o=orders.find(x=>x.id===orderId); if(!o) return;
+  const client=clients.find(c=>c.id===o.clientId);
+  const cName=client?client.name:(o.clientId||'—');
+  const svcStatuses=ORD_STATUSES[o.svcType]||ORD_STATUSES['default']||['В работе','Готово'];
+  const statusOpts=svcStatuses.map(s=>`<option value="${s}"${s===o.status?' selected':''}>${s}</option>`).join('');
+  const driveLink = o.driveLink || (client&&client.driveLink) || '';
+  openModal(`
+    <div class="mhdr">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)">${o.svcType||'Заказ'} · ${o.id}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-top:2px">${cName}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">${bdg(o.status)}</div>
+      </div>
+      <button class="mcls" onclick="closeModal()">✕</button>
+    </div>
+    <div class="msec">
+      <div class="msl">Статус</div>
+      <select class="mi" id="odd-status">${statusOpts}</select>
+    </div>
+    <div class="msec">
+      <div class="msl">📁 Папка Google Drive</div>
+      ${driveLink
+        ? `<a href="${driveLink}" target="_blank" class="btn btn-p" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px">📁 Открыть папку клиента на Drive</a>`
+        : `<div style="font-size:11px;color:var(--t3);margin-bottom:6px">Папка ещё не привязана. Вставьте ссылку:</div>`}
+      <input class="mi" id="odd-drive" value="${driveLink}" placeholder="https://drive.google.com/drive/folders/...">
+    </div>
+    <div class="msec">
+      <div class="msl">Комментарий</div>
+      <textarea class="mi" id="odd-comment" rows="3">${o.comment||''}</textarea>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-g" onclick="editOrder('${o.id}',event)">✏ Полное редактирование</button>
+      <button class="btn" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-p" onclick="saveOrderDetailModal('${o.id}')">💾 Сохранить</button>
+    </div>
+  `);
+}
+async function saveOrderDetailModal(ordId){
+  const o=orders.find(x=>x.id===ordId); if(!o) return;
+  o.status=(g('odd-status')||{}).value||o.status;
+  o.driveLink=(g('odd-drive')||{}).value||o.driveLink||'';
+  o.comment=(g('odd-comment')||{}).value||'';
+  o.updated=nowDMY();
+  closeModal();
+  renderTranslations(); renderNocrims(); renderOrders(); renderDash();
+  toast('Заказ обновлён ✓');
+  if(API_BASE) await apiPut('/orders/'+ordId, o).catch(()=>{});
+}
+
+
   const o=orders.find(x=>x.id===orderId); if(!o) return;
   const client=clients.find(c=>c.id===o.clientId);
   const cName=client?client.name:(o.clientId||'—');
@@ -7432,17 +7708,17 @@ function renderFilingsList() {
     var fClientNum = f.clientId || f.num || '—';
     var fTg = getClientTg(f.clientId || f.num, f.client || f.name);
     var fTgHtml = fTg !== '—' ? '<a href="tg://resolve?domain='+fTg.replace('@','')+'">'+fTg+'</a>' : '—';
-    return '<tr>'
+    return '<tr style="cursor:pointer" onclick="openFilingDetailModal(\''+f.id+'\')">'
       + '<td class="mono" style="white-space:nowrap"><b>'+(f.date||'—')+'</b>'+(f.time?'<br><small style="color:var(--t3)">'+f.time+'</small>':'')+'</td>'
       + '<td class="mono" style="color:var(--acc);font-size:12px">'+fClientNum+'</td>'
-      + '<td class="mono" style="font-size:11px;color:var(--acc)">'+fTgHtml+'</td>'
+      + '<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+fTgHtml+'</td>'
       + '<td>'+displayClient+'</td>'
       + '<td style="font-size:12px">'+displayPlace+'</td>'
       + '<td style="font-size:11px;color:var(--t3)">'+(typeStr||'—')+'</td>'
       + '<td>'+lawyer+'</td>'
       + '<td>'+badge+'</td>'
       + '<td style="font-size:11px;color:var(--t3);max-width:160px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'+(f.comment||'')+'</td>'
-      + '<td style="white-space:nowrap">'
+      + '<td style="white-space:nowrap" onclick="event.stopPropagation()">'
       +   '<button class="btn-ghost" style="font-size:11px;padding:2px 6px;margin-right:2px" onclick="openChangeFilingStatus(\''+f.id+'\')">🔄</button>'
       +   '<button class="btn-ghost" style="font-size:11px;padding:2px 6px" onclick="openEditFilingModal(\''+f.id+'\')">✏</button>'
       + '</td>'
@@ -7760,23 +8036,23 @@ function renderLawyerTasks() {
   tbody.innerHTML = tasks.map(function(t) {
     var sc = STAGE_COLORS[t.stage] || '#6b7280';
     var badge = '<span style="font-size:11px;font-weight:700;color:'+sc+';background:'+sc+'18;padding:2px 8px;border-radius:20px;white-space:nowrap">'+(t.stage||'—')+'</span>';
-    var drive = t.driveUrl ? '<a href="'+t.driveUrl+'" target="_blank" style="font-size:11px;color:#3b6ff5;text-decoration:none">📁 Drive</a>' : '—';
+    var drive = t.driveUrl ? '<a href="'+t.driveUrl+'" target="_blank" style="font-size:11px;color:#3b6ff5;text-decoration:none" onclick="event.stopPropagation()">📁 Drive</a>' : '—';
     var overdue = t.due && t.stage !== 'Завершено' && new Date(t.due) < new Date();
     var cNum = t.clientId || t.num || '—';
     var tg = getClientTg(t.clientId, t.client);
-    var tgHtml = tg !== '—' ? '<a href="tg://resolve?domain='+tg.replace('@','')+'">'+tg+'</a>' : '—';
+    var tgHtml = tg !== '—' ? '<a href="tg://resolve?domain='+tg.replace('@','')+'" onclick="event.stopPropagation()">'+tg+'</a>' : '—';
     var _ltsn = t.clientId ? getClientSeqNum(t.clientId) : '—';
-    return '<tr>'
+    return '<tr style="cursor:pointer" onclick="openSpecDetail(\''+t.id+'\',\'lawyer\')">'
       + '<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_ltsn+'</td>'
       + '<td class="mono" style="color:var(--pur);font-size:12px">'+cNum+'</td>'
-      + '<td class="mono" style="font-size:11px;color:var(--acc)">'+tgHtml+'</td>'
+      + '<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgHtml+'</td>'
       + '<td style="font-weight:600">'+(t.client||'—')+'</td>'
       + '<td style="font-size:12px">'+(t.type||'—')+'</td>'
       + '<td style="font-size:12px;color:var(--acc)">'+(t.assignee ? '⚖ '+t.assignee : '<span style="color:var(--t3)">—</span>')+'</td>'
       + '<td style="font-size:12px'+(overdue?';color:#dc2626;font-weight:600':'')+'">📅 '+(t.due||'—')+'</td>'
       + '<td>'+badge+'</td>'
       + '<td>'+drive+'</td>'
-      + '<td><button class="btn-ghost" style="font-size:11px;padding:2px 6px" onclick="openSpecDetail(\''+t.id+'\',\'lawyer\')">Изменить</button></td>'
+      + '<td onclick="event.stopPropagation()"><button class="btn-ghost" style="font-size:11px;padding:2px 6px" onclick="openSpecDetail(\''+t.id+'\',\'lawyer\')">Изменить</button></td>'
       + '</tr>';
   }).join('');
 }
@@ -7818,23 +8094,23 @@ function renderTranslatorTasks() {
   tbody.innerHTML = tasks.map(function(t) {
     var sc = STAGE_COLORS[t.stage] || '#6b7280';
     var badge = '<span style="font-size:11px;font-weight:700;color:'+sc+';background:'+sc+'18;padding:2px 8px;border-radius:20px;white-space:nowrap">'+(t.stage||'—')+'</span>';
-    var drive = t.driveUrl ? '<a href="'+t.driveUrl+'" target="_blank" style="font-size:11px;color:#3b6ff5;text-decoration:none">📁 Drive</a>' : '—';
+    var drive = t.driveUrl ? '<a href="'+t.driveUrl+'" target="_blank" style="font-size:11px;color:#3b6ff5;text-decoration:none" onclick="event.stopPropagation()">📁 Drive</a>' : '—';
     var overdue = t.due && t.stage !== 'Завершено' && new Date(t.due) < new Date();
     var cNum = t.clientId || t.num || '—';
     var tg = getClientTg(t.clientId, t.client);
-    var tgHtml = tg !== '—' ? '<a href="tg://resolve?domain='+tg.replace('@','')+'">'+tg+'</a>' : '—';
+    var tgHtml = tg !== '—' ? '<a href="tg://resolve?domain='+tg.replace('@','')+'" onclick="event.stopPropagation()">'+tg+'</a>' : '—';
     var _ttsn = t.clientId ? getClientSeqNum(t.clientId) : '—';
-    return '<tr>'
+    return '<tr style="cursor:pointer" onclick="openSpecDetail(\''+t.id+'\',\'translator\')">'
       + '<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_ttsn+'</td>'
       + '<td class="mono" style="color:var(--gre);font-size:12px">'+cNum+'</td>'
-      + '<td class="mono" style="font-size:11px;color:var(--acc)">'+tgHtml+'</td>'
+      + '<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgHtml+'</td>'
       + '<td style="font-weight:600">'+(t.client||'—')+'</td>'
       + '<td style="font-size:12px">'+(t.type||'—')+'</td>'
       + '<td style="font-size:12px;color:#0d9488">'+(t.assignee ? '📝 '+t.assignee : '<span style="color:var(--t3)">—</span>')+'</td>'
       + '<td style="font-size:12px'+(overdue?';color:#dc2626;font-weight:600':'')+'">📅 '+(t.due||'—')+'</td>'
       + '<td>'+badge+'</td>'
       + '<td>'+drive+'</td>'
-      + '<td style="white-space:nowrap">'
+      + '<td style="white-space:nowrap" onclick="event.stopPropagation()">'
       + (t.stage === 'Новое'
           ? '<button class="btn btn-p btn-sm" onclick="transAcceptTask(\'' + t.id + '\')">✅ Принять</button>'
           : t.stage === 'В работе'
@@ -7862,6 +8138,10 @@ function openSpecDetail(id, role) {
   if (t.driveUrl) {
     body += '<div style="margin-bottom:14px"><a href="'+t.driveUrl+'" target="_blank" class="btn-primary" style="display:inline-block;padding:8px 16px;font-size:12px;text-decoration:none">📁 Открыть папку на Drive</a></div>';
   }
+  body += '<div style="margin-bottom:14px">';
+  body += '<div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:4px">📁 Ссылка на папку Drive</div>';
+  body += '<input class="mi" id="sd-drive" value="'+(t.driveUrl||'')+'" placeholder="https://drive.google.com/drive/folders/...">';
+  body += '</div>';
   body += '<div style="font-size:12px;font-weight:600;color:var(--t3);margin-bottom:8px">Текущий статус: <strong style="color:var(--t1)">' + (t.stage||'') + '</strong></div>';
   body += '<div style="font-size:12px;font-weight:600;margin-bottom:8px">Изменить статус:</div>';
 
@@ -7883,6 +8163,13 @@ function openSpecDetail(id, role) {
 }
 
 async function changeSpecStage(id, role, newStage) {
+  // Save driveUrl if edited
+  var driveEl = document.getElementById('sd-drive');
+  var t = specTasks.find(function(x){ return x.id === id; });
+  if(t && driveEl && driveEl.value && driveEl.value !== t.driveUrl) {
+    t.driveUrl = driveEl.value;
+    if(API_BASE) apiPut('/spec-tasks', {id:id, driveUrl:t.driveUrl, role:role}).catch(()=>{});
+  }
   var result = await apiPut('/spec-tasks', {id: id, stage: newStage, role: role}).catch(function(){ return null; });
   if (result && result.ok) {
     document.getElementById('modal-spec-detail').style.display = 'none';
