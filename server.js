@@ -1,26 +1,28 @@
+// ═══════════════════════════════════════════════════════════════
+// CRM MigrAll — Render.com Node.js сервер
+// • Раздаёт index.html и client.html с инжекцией window.__ENV
+// • Проксирует /api/* запросы к Google Apps Script
+//
+// Деплой на Render:
+// 1. Build command:  npm install
+// 2. Start command:  node server.js
+// 3. Environment variables:
+//    GAS_URL     = https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
+//    (остальные опционально — передаются в window.__ENV фронтенду)
+// ═══════════════════════════════════════════════════════════════
+
 const express = require('express');
+const https   = require('https');
+const url     = require('url');
 const path    = require('path');
 const fs      = require('fs');
 const app     = express();
 
-// ── Переменные окружения → window.__ENV ──────────────────────
-// Render.com: добавьте в Environment Variables:
-//   GAS_URL           — URL Google Apps Script
-//   SHEET_USERS       — ID таблицы Users
-//   SHEET_CLIENTS     — ID таблицы Clients
-//   SHEET_STATUSES    — ID таблицы Statuses
-//   SHEET_COURTS      — ID таблицы Courts
-//   SHEET_SCHEDULE    — ID таблицы Schedule
-//   SHEET_CITIZENSHIP — ID таблицы Citizenship
-//   SHEET_RIGHTS      — ID таблицы Rights
-//   SHEET_ORDERS      — ID таблицы Orders
-//   SHEET_TASKS       — ID таблицы Tasks
-//   SHEET_FILINGS     — ID таблицы Filings
-//   SHEET_SPEC_TASKS  — ID таблицы SpecTasks
-//   DRIVE_ROOT        — ID корневой папки Google Drive
-//   CALENDAR_ID       — ID командного календаря
+// ── Переменные окружения ──────────────────────────────────────
+const GAS_URL = process.env.GAS_URL || '';
+
 const ENV = {
-  GAS_URL:           process.env.GAS_URL           || '',
+  GAS_URL:           GAS_URL,
   SHEET_USERS:       process.env.SHEET_USERS        || '',
   SHEET_CLIENTS:     process.env.SHEET_CLIENTS      || '',
   SHEET_STATUSES:    process.env.SHEET_STATUSES     || '',
@@ -36,31 +38,114 @@ const ENV = {
   CALENDAR_ID:       process.env.CALENDAR_ID        || '',
 };
 
-// Скрипт с ENV — инжектируется в <head> любого HTML
+if (!GAS_URL) {
+  console.warn('WARNING: GAS_URL is not set! API calls will fail.');
+}
+
+// ── GAS прокси ────────────────────────────────────────────────
+function proxyToGAS(method, apiPath, body, callback) {
+  if (!GAS_URL) {
+    return callback({ error: 'GAS_URL not configured on server' });
+  }
+
+  const gasUrl    = GAS_URL + '?path=' + encodeURIComponent(apiPath.replace(/^\//, ''));
+  const parsedUrl = url.parse(gasUrl);
+
+  const options = {
+    hostname: parsedUrl.hostname,
+    path:     parsedUrl.path,
+    method:   method === 'GET' ? 'GET' : 'POST',
+    headers:  { 'Content-Type': 'text/plain' },
+  };
+
+  let requestBody = '';
+  if (method !== 'GET') {
+    const bodyObj = typeof body === 'string' ? JSON.parse(body || '{}') : (body || {});
+    if (method === 'PUT')    bodyObj._method = 'PUT';
+    if (method === 'DELETE') bodyObj._method = 'DELETE';
+    requestBody = JSON.stringify(bodyObj);
+    options.headers['Content-Length'] = Buffer.byteLength(requestBody);
+  }
+
+  console.log('[proxy]', method, apiPath, '->', gasUrl.slice(0, 80));
+
+  function doRequest(reqOpts, reqBody, cb) {
+    const req = https.request(reqOpts, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          const redir = url.parse(res.headers.location);
+          doRequest({
+            hostname: redir.hostname, path: redir.path,
+            method: 'GET', headers: {},
+          }, '', cb);
+          return;
+        }
+        try { cb(null, JSON.parse(data)); }
+        catch(e) { cb({ error: 'Invalid JSON: ' + data.slice(0, 200) }); }
+      });
+    });
+    req.on('error', e => cb({ error: e.message }));
+    if (reqBody) req.write(reqBody);
+    req.end();
+  }
+
+  doRequest(options, requestBody, (err, data) => {
+    callback(err || data);
+  });
+}
+
+// ── Middleware ────────────────────────────────────────────────
+app.use(express.json());
+app.use(express.text());
+
+// ── CORS ──────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') { res.sendStatus(200); return; }
+  next();
+});
+
+// ── API прокси: /api/* → GAS ──────────────────────────────────
+app.all('/api/*', (req, res) => {
+  const apiPath = req.path.replace('/api', '') || '/';
+  let body = req.body || '';
+  if (typeof body === 'object') body = JSON.stringify(body);
+  proxyToGAS(req.method, apiPath, body, (data) => {
+    res.json(data);
+  });
+});
+
+// ── HTML с инжекцией __ENV ────────────────────────────────────
 const envScript = `<script>\nwindow.__ENV = ${JSON.stringify(ENV)};\n</script>`;
 
-// Хелпер: читаем HTML-файл и вставляем __ENV
-function serveWithEnv(htmlFile, res) {
-  fs.readFile(path.join(__dirname, htmlFile), 'utf8', (err, html) => {
-    if (err) { res.status(404).send('Not found'); return; }
+function serveHtml(file, res) {
+  const filePath = path.join(__dirname, file);
+  fs.readFile(filePath, 'utf8', (err, html) => {
+    if (err) { res.status(404).send('Not found: ' + file); return; }
     const injected = html.replace('<head>', '<head>\n' + envScript);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
     res.send(injected);
   });
 }
 
-// Статика (css, js, изображения и т.д. — без HTML)
+// Статика (js, css, изображения — не HTML)
 app.use(express.static(__dirname, { index: false }));
 
-// ── Роуты для HTML-страниц ────────────────────────────────────
-app.get('/client.html', (req, res) => serveWithEnv('client.html', res));
-app.get('/client',      (req, res) => serveWithEnv('client.html', res));
+// Клиентский портал
+app.get('/client.html', (req, res) => serveHtml('client.html', res));
+app.get('/client',      (req, res) => serveHtml('client.html', res));
 
-// index.html — всё остальное
-app.get('*', (req, res) => serveWithEnv('index.html', res));
+// Всё остальное → index.html
+app.get('*', (req, res) => serveHtml('index.html', res));
 
-const port = process.env.PORT || 3000;
-app.listen(port, '0.0.0.0', () => {
-  console.log('MigrAll CRM on port ' + port);
-  console.log('ENV:', Object.entries(ENV).map(([k,v]) => k + '=' + (v?'✓':'✗')).join(' | '));
+// ── Старт ─────────────────────────────────────────────────────
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('MigrAll CRM running on port ' + PORT);
+  console.log('ENV:', Object.entries(ENV).map(([k,v]) => k + '=' + (v ? 'OK' : 'MISSING')).join(' | '));
 });
