@@ -280,9 +280,12 @@ button:active{transform:scale(.97)}
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-// CONFIG — подставьте URL вашего GAS деплоя
+// CONFIG — URL берётся из window.__ENV (инжектируется server.js)
+// Fallback: прямой GAS URL (используется при локальной разработке)
 // ═══════════════════════════════════════════════════════════════
-const API_BASE = 'https://script.google.com/macros/s/AKfycbwDvmzX8V2fy2Qojrf8k4vq-t0GctFPhXywdp-7SnRuwDAu3h2NdvAwOVXzr3mXgObB/exec';
+const API_BASE = (window.__ENV && window.__ENV.GAS_URL)
+  ? window.__ENV.GAS_URL
+  : 'https://script.google.com/macros/s/AKfycbwDvmzX8V2fy2Qojrf8k4vq-t0GctFPhXywdp-7SnRuwDAu3h2NdvAwOVXzr3mXgObB/exec';
 
 // ═══════════════════════════════════════════════════════════════
 // STATE
