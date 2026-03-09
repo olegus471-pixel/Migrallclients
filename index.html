@@ -2241,6 +2241,7 @@ var usersData = [];
 
 // Запасной список — только если сервер недоступен и нет данных
 const USERS_LOCAL = [];
+const DEMO_PASSWORDS = {};
 
 /** Получить пользователей по роли из usersData. Если пусто — загрузить. */
 function getUsersByRole(role) {
@@ -2533,9 +2534,24 @@ async function doLogin(){
   const email = (g('auth-email').value||'').trim().toLowerCase();
   const pass  = (g('auth-pass').value||'').trim();
   clearAuthMessages();
-  if(!email||!email.includes('@')){ showAuthErr('Введите корректный email'); return; }
+  if(!email){ showAuthErr('Введите email или логин'); return; }
   if(!pass){ showAuthErr('Введите пароль'); return; }
-  if(!API_BASE){ showAuthErr('API не настроен'); return; }
+
+  // --- Fallback: локальный вход через usersData (без API) ---
+  if(!API_BASE){
+    // Попробовать найти пользователя в usersData или USERS_LOCAL
+    var allUsers = usersData.length ? usersData : USERS_LOCAL;
+    var found = allUsers.find(function(u){
+      return (u.email||'').toLowerCase()===email || (u.login||'').toLowerCase()===email;
+    });
+    if(found && (found.password===pass || !found.password)){
+      loginAs(found); return;
+    } else if(found){
+      showAuthErr('Неверный пароль'); return;
+    }
+    showAuthErr('Пользователь не найден. Настройте API или добавьте пользователей.');
+    return;
+  }
   const btn = g('auth-btn-login');
   btn.disabled=true; btn.textContent='Проверка...';
   fetch(API_BASE + '?path=auth&action=login', {
