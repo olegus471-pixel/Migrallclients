@@ -19,7 +19,6 @@ const app     = express();
 //   SHEET_SPEC_TASKS  — ID таблицы SpecTasks
 //   DRIVE_ROOT        — ID корневой папки Google Drive
 //   CALENDAR_ID       — ID командного календаря
-
 const ENV = {
   GAS_URL:           process.env.GAS_URL           || '',
   SHEET_USERS:       process.env.SHEET_USERS        || '',
@@ -37,19 +36,28 @@ const ENV = {
   CALENDAR_ID:       process.env.CALENDAR_ID        || '',
 };
 
-// Статика (без index.html)
-app.use(express.static(__dirname, { index: false }));
+// Скрипт с ENV — инжектируется в <head> любого HTML
+const envScript = `<script>\nwindow.__ENV = ${JSON.stringify(ENV)};\n</script>`;
 
-// index.html — инжектируем window.__ENV сразу после <head>
-app.get('*', (req, res) => {
-  fs.readFile(path.join(__dirname, 'index.html'), 'utf8', (err, html) => {
-    if (err) { res.status(500).send('Server error'); return; }
-    const envScript = `<script>\nwindow.__ENV = ${JSON.stringify(ENV)};\n</script>`;
-    const injected  = html.replace('<head>', '<head>\n' + envScript);
+// Хелпер: читаем HTML-файл и вставляем __ENV
+function serveWithEnv(htmlFile, res) {
+  fs.readFile(path.join(__dirname, htmlFile), 'utf8', (err, html) => {
+    if (err) { res.status(404).send('Not found'); return; }
+    const injected = html.replace('<head>', '<head>\n' + envScript);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(injected);
   });
-});
+}
+
+// Статика (css, js, изображения и т.д. — без HTML)
+app.use(express.static(__dirname, { index: false }));
+
+// ── Роуты для HTML-страниц ────────────────────────────────────
+app.get('/client.html', (req, res) => serveWithEnv('client.html', res));
+app.get('/client',      (req, res) => serveWithEnv('client.html', res));
+
+// index.html — всё остальное
+app.get('*', (req, res) => serveWithEnv('index.html', res));
 
 const port = process.env.PORT || 3000;
 app.listen(port, '0.0.0.0', () => {
