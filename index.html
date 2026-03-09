@@ -506,6 +506,57 @@ button:active{transform:scale(.97)}
 @media(max-width:600px){.tb-logo span:last-of-type{display:none}}
 @media(max-width:400px){.tb-logo{padding:4px 5px}}
 
+/* ── CLIENT PORTAL ──────────────────────────────────── */
+.cp-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:12px;box-shadow:var(--sh);transition:.15s}
+.cp-card-hdr{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
+.cp-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--acc),#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:800;flex-shrink:0}
+.cp-name{font-weight:700;font-size:14px;color:var(--t1)}
+.cp-meta{font-size:11px;color:var(--t3);margin-top:2px}
+.cp-badge{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:var(--acc-d);color:var(--acc)}
+.cp-body{display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px}
+.cp-card.open .cp-body{display:block}
+.cp-drive-block{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px}
+.cp-drive-icon{font-size:22px}
+.cp-drive-info{flex:1}
+.cp-drive-title{font-size:12px;font-weight:700;color:var(--t1)}
+.cp-drive-link{font-size:11px;color:var(--acc);text-decoration:none;word-break:break-all}
+.cp-drive-link:hover{text-decoration:underline}
+.cp-drive-empty{font-size:11px;color:var(--t3);font-style:italic}
+.cp-section-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t4);margin:12px 0 6px}
+.cp-edit-drive{background:none;border:1px solid var(--border);color:var(--t2);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;transition:.15s}
+.cp-edit-drive:hover{background:var(--s2);color:var(--t1)}
+/* ── CHECKLISTS ─────────────────────────────────────── */
+.cl-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:0;margin-bottom:14px;box-shadow:var(--sh);overflow:hidden}
+.cl-card-hdr{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none;background:var(--bg2);border-bottom:1px solid var(--border)}
+.cl-card-hdr:hover{background:var(--s3)}
+.cl-card-title{font-weight:700;font-size:14px;color:var(--t1);flex:1}
+.cl-card-meta{font-size:11px;color:var(--t3)}
+.cl-progress-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;width:100px;flex-shrink:0}
+.cl-progress-fill{height:100%;background:var(--gre);border-radius:3px;transition:.3s}
+.cl-card-body{padding:14px 16px}
+.cl-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:6px;border:1px solid var(--border);background:var(--bg2);transition:.15s}
+.cl-item:hover{background:var(--s3)}
+.cl-item-num{font-size:11px;font-weight:800;color:var(--t4);min-width:20px;padding-top:2px}
+.cl-item-main{flex:1}
+.cl-item-title{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:4px}
+.cl-item-cmts{font-size:11px;color:var(--t3);margin-top:3px}
+.cl-status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;border:none;white-space:nowrap}
+.cl-status-todo{background:#f1f5f9;color:#64748b}
+.cl-status-inprogress{background:#fef3c7;color:#d97706}
+.cl-status-done{background:#dcfce7;color:#16a34a}
+.cl-status-blocked{background:#fee2e2;color:#dc2626}
+.cl-status-waiting{background:#ede9fe;color:#7c3aed}
+.cl-status-custom{background:var(--acc-d);color:var(--acc)}
+.cl-item-actions{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.cl-btn-sm{background:none;border:1px solid var(--border);color:var(--t3);font-size:11px;padding:3px 8px;border-radius:6px;cursor:pointer;transition:.15s}
+.cl-btn-sm:hover{background:var(--s2);color:var(--t1)}
+.cl-add-item{display:flex;gap:8px;align-items:center;margin-top:10px;padding:8px 0 0;border-top:1px solid var(--border)}
+.cl-add-input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--t1);outline:none}
+.cl-add-input:focus{border-color:var(--acc)}
+.cl-cmt-item{font-size:11px;color:var(--t2);padding:4px 0;border-bottom:1px solid var(--border);display:flex;gap:6px}
+.cl-cmt-author{font-weight:700;color:var(--acc);flex-shrink:0}
+.cl-cmt-date{color:var(--t4);flex-shrink:0}
+.cl-cmt-text{flex:1;word-break:break-word}
 </style>
 </head>
 <body>
@@ -547,6 +598,8 @@ button:active{transform:scale(.97)}
     <div class="ni manager-only" id="sb-translator-tasks-mgr" onclick="showView('translator-tasks',this)"><span class="ni-ic">📝</span>Задания переводчиков<span class="ni-bdg" id="bdg-trans-mgr"></span></div>
     <div class="ni admin-only" onclick="showView('integration',this)"><span class="ni-ic">⚡</span>API / Интеграции</div>
     <div class="ni manager-only" onclick="showView('orders',this)"><span class="ni-ic">📦</span><span data-i18n="ni_orders">Заказы</span><span class="ni-bdg y" id="bdg-orders">0</span></div>
+    <div class="ni manager-only" onclick="showView('checklists',this)"><span class="ni-ic">☑</span>Чеклисты</div>
+    <div class="ni manager-only" onclick="showView('client-portal',this)"><span class="ni-ic">🗂</span>Кабинет клиента</div>
     <div class="ni admin-only" onclick="showView('users',this)"><span class="ni-ic">👥</span>Пользователи</div>
     <div class="ni admin-only" onclick="showView('stats-lawyers',this)"><span class="ni-ic">📊</span>Статистика адвокатов</div>
     <div class="ni admin-only" onclick="showView('stats-activity',this)"><span class="ni-ic">📈</span>Активность команды</div>
@@ -1293,6 +1346,7 @@ function doGet(e) {
     if (path === 'tasks')      return jsonResponse(getLocalSheet('Tasks'));
     if (path === 'filings')    return jsonResponse(getLocalSheet('Filings'));
     if (path === 'spec-tasks') return jsonResponse(getLocalSheet('SpecTasks'));
+    if (path === 'checklists') return jsonResponse(getLocalSheet('Checklists'));
     if (path === 'auth')       return handleAuth(e);
     
     return jsonResponse({ error: 'Unknown: ' + path });
@@ -1323,6 +1377,7 @@ function doPost(e) {
       if (path.startsWith('tasks/'))      return jsonResponse(putLocalRow('Tasks', path.split('/')[1], body));
       if (path.startsWith('filings/'))    return jsonResponse(putLocalRow('Filings', path.split('/')[1], body));
       if (path === 'filings')             return jsonResponse(putLocalRow('Filings', body.id, body));
+      if (path.startsWith('checklists/')) return jsonResponse(putLocalRow('Checklists', path.split('/')[1], body));
     }
     
     // POST (создать)
@@ -1334,12 +1389,14 @@ function doPost(e) {
     if (path === 'tasks')       return jsonResponse(addLocalRow('Tasks', body));
     if (path === 'filings')     return jsonResponse(addLocalRow('Filings', body));
     if (path === 'spec-tasks')  return jsonResponse(addLocalRow('SpecTasks', body));
+    if (path === 'checklists')  return jsonResponse(addLocalRow('Checklists', body));
     if (path === 'schedule')    return jsonResponse(addRow('Sheet1', SHEET_IDS.schedule, body));
     
     // Users CRUD
     if (path === 'users')                return jsonResponse(addLocalRow('Users', body));
     if (method === 'PUT' && path.startsWith('users/')) return jsonResponse(putLocalRow('Users', path.split('/')[1], body));
     if (method === 'DELETE' && path.startsWith('users/')) return jsonResponse(deleteLocalRow('Users', path.split('/')[1]));
+    if (method === 'DELETE' && path.startsWith('checklists/')) return jsonResponse(deleteLocalRow('Checklists', path.split('/')[1]));
     
     return jsonResponse({ error: 'Unknown POST: ' + path });
   } catch(err) {
@@ -1628,6 +1685,7 @@ function doGet(e) {
     if (path === 'tasks')      return jsonResponse(getLocalSheet('Tasks'));
     if (path === 'filings')    return jsonResponse(getLocalSheet('Filings'));
     if (path === 'spec-tasks') return jsonResponse(getLocalSheet('SpecTasks'));
+    if (path === 'checklists') return jsonResponse(getLocalSheet('Checklists'));
     if (path === 'auth')       return handleAuth(e);
     
     return jsonResponse({ error: 'Unknown: ' + path });
@@ -1658,6 +1716,7 @@ function doPost(e) {
       if (path.startsWith('tasks/'))      return jsonResponse(putLocalRow('Tasks', path.split('/')[1], body));
       if (path.startsWith('filings/'))    return jsonResponse(putLocalRow('Filings', path.split('/')[1], body));
       if (path === 'filings')             return jsonResponse(putLocalRow('Filings', body.id, body));
+      if (path.startsWith('checklists/')) return jsonResponse(putLocalRow('Checklists', path.split('/')[1], body));
     }
     
     // POST (создать)
@@ -1669,12 +1728,14 @@ function doPost(e) {
     if (path === 'tasks')       return jsonResponse(addLocalRow('Tasks', body));
     if (path === 'filings')     return jsonResponse(addLocalRow('Filings', body));
     if (path === 'spec-tasks')  return jsonResponse(addLocalRow('SpecTasks', body));
+    if (path === 'checklists')  return jsonResponse(addLocalRow('Checklists', body));
     if (path === 'schedule')    return jsonResponse(addRow('Sheet1', SHEET_IDS.schedule, body));
     
     // Users CRUD
     if (path === 'users')                return jsonResponse(addLocalRow('Users', body));
     if (method === 'PUT' && path.startsWith('users/')) return jsonResponse(putLocalRow('Users', path.split('/')[1], body));
     if (method === 'DELETE' && path.startsWith('users/')) return jsonResponse(deleteLocalRow('Users', path.split('/')[1]));
+    if (method === 'DELETE' && path.startsWith('checklists/')) return jsonResponse(deleteLocalRow('Checklists', path.split('/')[1]));
     
     return jsonResponse({ error: 'Unknown POST: ' + path });
   } catch(err) {
@@ -2145,6 +2206,36 @@ CRM ↔ Backend (Render) ↔ Google Sheets
         <tbody id="sa-tbody"></tbody>
       </table>
     </div>
+  </div>
+
+  <!-- =================== CLIENT PORTAL =================== -->
+  <div class="view" id="view-client-portal">
+    <div class="sec-h">
+      <div class="sec-t">🗂 Личный кабинет клиента</div>
+      <div class="sec-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input class="inp" id="cp-search" placeholder="🔍 Поиск клиента..." style="width:220px;font-size:12px" oninput="renderClientPortal()">
+      </div>
+    </div>
+    <div id="cp-list"></div>
+  </div>
+
+  <!-- =================== CHECKLISTS =================== -->
+  <div class="view" id="view-checklists">
+    <div class="sec-h">
+      <div class="sec-t">☑ Чеклисты</div>
+      <div class="sec-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select class="inp" id="cl-filter-client" style="width:180px;font-size:12px" onchange="renderChecklists()">
+          <option value="">Все клиенты</option>
+        </select>
+        <select class="inp" id="cl-filter-status" style="width:150px;font-size:12px" onchange="renderChecklists()">
+          <option value="">Все статусы</option>
+          <option value="active">В работе</option>
+          <option value="done">Завершён</option>
+        </select>
+        <button class="btn btn-p btn-sm" onclick="openNewChecklistModal()">＋ Новый чеклист</button>
+      </div>
+    </div>
+    <div id="cl-list"></div>
   </div>
 
 </main>
@@ -3089,7 +3180,7 @@ function restoreSidebarState(){
 // ============================================================
 // NAVIGATION
 // ============================================================
-const VIEW_TITLES = {dashboard:'Дашборд',clients:'Клиенты',kanban:'Kanban Pipeline',aima:'Проверки AIMA',courts:'Суды',citizenship:'Гражданство',rights:'Водительские права',schedule:'Расписание встреч',calendar:'Командный календарь',tasks:'Задачи',integration:'API / Интеграции',users:'Пользователи',filings:'Планируемые подачи','lawyer-tasks':'Дела адвоката','translator-tasks':'Задания переводчика',translations:'Переводы',nocrims:'Справки о несудимости',orders:'Заказы'};
+const VIEW_TITLES = {dashboard:'Дашборд',clients:'Клиенты',kanban:'Kanban Pipeline',aima:'Проверки AIMA',courts:'Суды',citizenship:'Гражданство',rights:'Водительские права',schedule:'Расписание встреч',calendar:'Командный календарь',tasks:'Задачи',integration:'API / Интеграции',users:'Пользователи',filings:'Планируемые подачи','lawyer-tasks':'Дела адвоката','translator-tasks':'Задания переводчика',translations:'Переводы',nocrims:'Справки о несудимости',orders:'Заказы',checklists:'Чеклисты','client-portal':'Кабинет клиента'};
 function showView(id,el){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
@@ -3098,6 +3189,8 @@ function showView(id,el){
   if(id==='lawyer') renderLawyerCabinet();
   if(id==='orders') renderOrders();
   if(id==='clients') applyClientsFilter();
+  if(id==='checklists'){ populateChecklistClientFilter(); renderChecklists(); loadChecklists().then(()=>{ populateChecklistClientFilter(); renderChecklists(); }); }
+  if(id==='client-portal') { renderClientPortal(); loadChecklists().then(()=>renderClientPortal()); }
   if(id==='aima') filterAIMA(_aimaCurrentFilter||'all', document.querySelector('#aima-filter-chips .chip.active'));
   if(id==='courts') filterCourts(_courtsCurrentFilter||'all', document.querySelector('#courts-chips .chip.active'));
   if(id==='translator') { renderTranslatorCabinet(); loadSpecTasks(); }
@@ -8766,6 +8859,491 @@ function _initAllDateInputs(){
   };
 })();
 document.addEventListener('DOMContentLoaded',_initAllDateInputs);
+
+// ════════════════════════════════════════════════════════════
+// CLIENT PORTAL — Личный кабинет клиента
+// ════════════════════════════════════════════════════════════
+function renderClientPortal(){
+  const wrap = document.getElementById('cp-list');
+  if(!wrap) return;
+  const q = (document.getElementById('cp-search')||{}).value||'';
+  const filtered = clients.filter(c=>{
+    if(!q) return true;
+    return ((c.name||'')+(c.id||'')+(c.tg||'')).toLowerCase().includes(q.toLowerCase());
+  });
+  if(!filtered.length){
+    wrap.innerHTML='<div style="text-align:center;color:var(--t3);padding:40px 0;font-size:13px">Клиенты не найдены</div>';
+    return;
+  }
+  wrap.innerHTML = filtered.map(c=>{
+    const initials = (c.name||'?').split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase();
+    const service = c.service||c.stage||'—';
+    const driveLink = c.driveLink;
+    const driveBlock = driveLink
+      ? `<a class="cp-drive-link" href="${driveLink}" target="_blank">📁 Открыть папку Google Drive</a>`
+      : `<span class="cp-drive-empty">Папка не назначена менеджером</span>`;
+    // Get checklists for this client
+    const myCls = (window.checklistsData||[]).filter(cl=>cl.clientId===c.id);
+    const clBlock = myCls.length
+      ? myCls.map(cl=>{
+          const done = cl.items.filter(i=>i.status==='done').length;
+          const total = cl.items.length;
+          const pct = total?Math.round(done/total*100):0;
+          return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <div style="font-size:12px;font-weight:700;color:var(--t1)">${cl.title}</div>
+              <div style="font-size:11px;color:var(--t3)">${done}/${total} выполнено</div>
+            </div>
+            <div class="cl-progress-bar" style="width:100%"><div class="cl-progress-fill" style="width:${pct}%"></div></div>
+            ${cl.items.map(item=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+              <span style="font-size:13px">${item.status==='done'?'✅':item.status==='blocked'?'🔴':item.status==='inprogress'?'🟡':'⬜'}</span>
+              <span style="flex:1;font-size:12px;color:var(--t1)">${item.title}</span>
+              <button class="cl-btn-sm" onclick="openItemCommentModal('${cl.id}','${item.id}',true)">💬 ${item.comments?item.comments.length:0}</button>
+            </div>`).join('')}
+          </div>`;
+        }).join('')
+      : `<div style="font-size:11px;color:var(--t3);font-style:italic">Чеклисты ещё не назначены</div>`;
+    return `<div class="cp-card" id="cp-card-${c.id}">
+      <div class="cp-card-hdr" onclick="toggleCpCard('${c.id}')">
+        <div class="cp-avatar">${initials}</div>
+        <div style="flex:1">
+          <div class="cp-name">${c.name||'Без имени'}</div>
+          <div class="cp-meta">#${c.id} · ${service}${c.lawyer?' · '+c.lawyer:''}</div>
+        </div>
+        <span class="cp-badge">${c.stage||'—'}</span>
+        <span style="font-size:16px;color:var(--t3);margin-left:6px" id="cp-arr-${c.id}">▸</span>
+      </div>
+      <div class="cp-body" id="cp-body-${c.id}">
+        <div class="cp-section-lbl">📁 Google Drive — папка кейса</div>
+        <div class="cp-drive-block">
+          <div class="cp-drive-icon">📁</div>
+          <div class="cp-drive-info">
+            <div class="cp-drive-title">Папка документов</div>
+            <div>${driveBlock}</div>
+          </div>
+          <button class="cp-edit-drive" onclick="openEditDriveModal('${c.id}')">✏ Изменить</button>
+        </div>
+        <div class="cp-section-lbl">☑ Чеклисты по делу</div>
+        ${clBlock}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCpCard(cid){
+  const card = document.getElementById('cp-card-'+cid);
+  const arr = document.getElementById('cp-arr-'+cid);
+  if(!card) return;
+  card.classList.toggle('open');
+  if(arr) arr.textContent = card.classList.contains('open')?'▾':'▸';
+}
+
+function openEditDriveModal(cid){
+  const c = clients.find(x=>x.id===cid);
+  if(!c) return;
+  openModal(`<div class="mhdr">
+    <div><div style="font-size:15px;font-weight:700">📁 Google Drive — папка кейса</div>
+    <div style="font-size:11px;color:var(--t3);margin-top:2px">${c.name} · #${c.id}</div></div>
+    <button class="mcls" onclick="closeModal()">✕</button>
+  </div>
+  <div class="mf" style="margin-bottom:14px">
+    <label class="mfl">Ссылка на папку Google Drive</label>
+    <input class="mi" id="cp-drive-input" value="${c.driveLink||''}" placeholder="https://drive.google.com/drive/folders/...">
+    <div style="font-size:11px;color:var(--t3);margin-top:4px">Клиент увидит эту ссылку в своём кабинете и сможет загружать документы</div>
+  </div>
+  <div class="mft">
+    <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+    <button class="btn btn-p" onclick="saveDriveLink('${c.id}')">Сохранить</button>
+  </div>`);
+}
+
+async function saveDriveLink(cid){
+  const c = clients.find(x=>x.id===cid);
+  if(!c) return;
+  c.driveLink = (document.getElementById('cp-drive-input').value||'').trim();
+  closeModal();
+  renderClientPortal();
+  toast('Ссылка на Drive сохранена ✓');
+  await apiPut('/clients/'+cid,{driveLink:c.driveLink}).catch(()=>{});
+}
+
+// ════════════════════════════════════════════════════════════
+// CHECKLISTS — Чеклисты
+// ════════════════════════════════════════════════════════════
+window.checklistsData = window.checklistsData||[];
+
+const CL_STATUS_PRESETS = [
+  {key:'todo',     label:'⬜ Ожидает',    cls:'cl-status-todo'},
+  {key:'inprogress',label:'🟡 В работе',  cls:'cl-status-inprogress'},
+  {key:'done',     label:'✅ Выполнен',    cls:'cl-status-done'},
+  {key:'blocked',  label:'🔴 Заблокирован',cls:'cl-status-blocked'},
+  {key:'waiting',  label:'🟣 Ожидание',   cls:'cl-status-waiting'},
+];
+
+const CL_TEMPLATES = {
+  'Гражданство':['Заявление на гражданство','Подтверждение места жительства','Справка об отсутствии судимостей','Перевод документов','Финансовые документы','Биометрия','Языковой тест','Запись на подачу','Подача документов','Получение решения'],
+  'ВНЖ / Residência':['Регистрация по месту жительства','Трудовой договор или доказательство средств','Медицинская страховка','Справка об отсутствии судимостей','Перевод документов','Заявление ARSEep/SEF','Запись на приём','Подача документов','Решение'],
+  'Переводы':['Получение оригинальных документов','Перевод','Нотариальное заверение','Апостиль (если нужен)','Передача клиенту'],
+  'Суд / Адвокат':['Анализ дела','Сбор доказательств','Составление жалобы/иска','Подача в суд','Дата заседания','Результат заседания','Исполнение решения'],
+  'Водительские права':['Документы от клиента','Обмен/перевод прав','Запись в орган','Подача','Получение прав'],
+  'Кастомный':[]
+};
+
+function clUid(){ return 'cl_'+(Date.now().toString(36)+Math.random().toString(36).slice(2,6)); }
+function nowDMYtime(){ const d=new Date(); return [String(d.getDate()).padStart(2,'0'),String(d.getMonth()+1).padStart(2,'0'),d.getFullYear()].join('.')+' '+[String(d.getHours()).padStart(2,'0'),String(d.getMinutes()).padStart(2,'0')].join(':'); }
+
+function populateChecklistClientFilter(){
+  const sel = document.getElementById('cl-filter-client');
+  if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML='<option value="">Все клиенты</option>'
+    + clients.map(c=>`<option value="${c.id}"${c.id===cur?' selected':''}>${c.name||c.id}</option>`).join('');
+}
+
+function getClStatusLabel(key){
+  const p = CL_STATUS_PRESETS.find(x=>x.key===key);
+  if(p) return p.label;
+  return '🔷 '+key; // custom
+}
+function getClStatusCls(key){
+  const p = CL_STATUS_PRESETS.find(x=>x.key===key);
+  return p?p.cls:'cl-status-custom';
+}
+
+function renderChecklists(){
+  const wrap = document.getElementById('cl-list');
+  if(!wrap) return;
+  const fclient = (document.getElementById('cl-filter-client')||{}).value||'';
+  const fstatus = (document.getElementById('cl-filter-status')||{}).value||'';
+  let data = window.checklistsData||[];
+  if(fclient) data=data.filter(cl=>cl.clientId===fclient);
+  if(fstatus==='active') data=data.filter(cl=>cl.status!=='done');
+  else if(fstatus==='done') data=data.filter(cl=>cl.status==='done');
+  if(!data.length){
+    wrap.innerHTML='<div style="text-align:center;color:var(--t3);padding:40px 0;font-size:13px">Чеклисты не найдены. Нажмите «＋ Новый чеклист» чтобы создать.</div>';
+    return;
+  }
+  wrap.innerHTML = data.map(cl=>{
+    const client = clients.find(c=>c.id===cl.clientId);
+    const clientName = client?client.name:'—';
+    const done = cl.items.filter(i=>i.status==='done').length;
+    const total = cl.items.length;
+    const pct = total?Math.round(done/total*100):0;
+    const canEdit = currentUser&&(currentUser.role==='manager'||currentUser.role==='admin');
+    return `<div class="cl-card" id="cl-card-${cl.id}">
+      <div class="cl-card-hdr" onclick="toggleClCard('${cl.id}')">
+        <div style="flex:1">
+          <div class="cl-card-title">${cl.title}</div>
+          <div class="cl-card-meta">👤 ${clientName} · 📋 ${cl.template||'—'} · ${done}/${total} выполнено · Создан: ${cl.created||'—'}</div>
+        </div>
+        <div class="cl-progress-bar"><div class="cl-progress-fill" style="width:${pct}%"></div></div>
+        <span style="font-size:11px;font-weight:700;color:var(--t3);margin-left:8px">${pct}%</span>
+        ${canEdit?`<button class="cl-btn-sm" style="margin-left:8px" onclick="event.stopPropagation();openAddClItemModal('${cl.id}')">＋ Пункт</button>`:''}
+        ${canEdit?`<button class="cl-btn-sm" style="margin-left:4px;color:var(--red)" onclick="event.stopPropagation();deleteChecklist('${cl.id}')">🗑</button>`:''}
+        <span style="font-size:16px;color:var(--t3);margin-left:6px" id="cl-arr-${cl.id}">▸</span>
+      </div>
+      <div class="cl-card-body" id="cl-body-${cl.id}" style="display:none">
+        ${cl.items.length?cl.items.map((item,idx)=>renderClItem(cl,item,idx,canEdit)).join('')
+          :'<div style="color:var(--t3);font-size:12px;text-align:center;padding:16px 0">Нет пунктов. Добавьте первый!</div>'}
+        ${canEdit?`<div class="cl-add-item">
+          <input class="cl-add-input" id="cl-quick-${cl.id}" placeholder="Добавить пункт..." onkeydown="if(event.key==='Enter')quickAddClItem('${cl.id}')">
+          <button class="btn btn-p btn-sm" onclick="quickAddClItem('${cl.id}')">Добавить</button>
+        </div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderClItem(cl,item,idx,canEdit){
+  const cmtCount = (item.comments||[]).length;
+  return `<div class="cl-item" id="cl-item-${item.id}">
+    <div class="cl-item-num">${idx+1}</div>
+    <div class="cl-item-main">
+      <div class="cl-item-title">${item.title}</div>
+      <div style="margin-top:4px">
+        <button class="cl-status-badge ${getClStatusCls(item.status)}" onclick="event.stopPropagation();openStatusModal('${cl.id}','${item.id}')">${getClStatusLabel(item.status)}</button>
+      </div>
+      ${(item.comments||[]).length?`<div class="cl-item-cmts">💬 Последний: ${item.comments[item.comments.length-1].text.slice(0,60)}${item.comments[item.comments.length-1].text.length>60?'…':''}</div>`:''}
+    </div>
+    <div class="cl-item-actions">
+      <button class="cl-btn-sm" onclick="openItemCommentModal('${cl.id}','${item.id}',${!canEdit})">💬 ${cmtCount}</button>
+      ${canEdit?`<button class="cl-btn-sm" onclick="deleteClItem('${cl.id}','${item.id}')">🗑</button>`:''}
+    </div>
+  </div>`;
+}
+
+function toggleClCard(clId){
+  const body = document.getElementById('cl-body-'+clId);
+  const arr = document.getElementById('cl-arr-'+clId);
+  if(!body) return;
+  const open = body.style.display==='block';
+  body.style.display=open?'none':'block';
+  if(arr) arr.textContent = open?'▸':'▾';
+}
+
+function quickAddClItem(clId){
+  const inp = document.getElementById('cl-quick-'+clId);
+  if(!inp||!inp.value.trim()) return;
+  const cl = (window.checklistsData||[]).find(x=>x.id===clId);
+  if(!cl) return;
+  cl.items.push({id:clUid(),title:inp.value.trim(),status:'todo',comments:[]});
+  inp.value='';
+  renderChecklists();
+  saveChecklists(); saveChecklistToSheet(cl);
+}
+
+function openNewChecklistModal(){
+  const isManager = currentUser&&(currentUser.role==='manager'||currentUser.role==='admin');
+  if(!isManager){ toast('Только менеджер может создавать чеклисты'); return; }
+  const templateKeys = Object.keys(CL_TEMPLATES);
+  openModal(`<div class="mhdr">
+    <div><div style="font-size:15px;font-weight:700">☑ Новый чеклист</div></div>
+    <button class="mcls" onclick="closeModal()">✕</button>
+  </div>
+  <div class="mf" style="margin-bottom:12px">
+    <label class="mfl">Клиент</label>
+    <select class="ms" id="ncl-client">
+      <option value="">— Выберите клиента —</option>
+      ${clients.map(c=>`<option value="${c.id}">${c.name||c.id}</option>`).join('')}
+    </select>
+  </div>
+  <div class="mf" style="margin-bottom:12px">
+    <label class="mfl">Шаблон / Тип услуги</label>
+    <select class="ms" id="ncl-template" onchange="previewClTemplate()">
+      ${templateKeys.map(k=>`<option value="${k}">${k}</option>`).join('')}
+    </select>
+  </div>
+  <div class="mf" style="margin-bottom:12px">
+    <label class="mfl">Название чеклиста</label>
+    <input class="mi" id="ncl-title" placeholder="Например: Гражданство — Иванова А.">
+  </div>
+  <div class="mf" style="margin-bottom:12px">
+    <label class="mfl">Пункты (можно редактировать)</label>
+    <div id="ncl-items-wrap" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px;max-height:240px;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input class="mi" id="ncl-add-item" placeholder="Добавить пункт...">
+      <button class="btn btn-g btn-sm" onclick="ncl_addItem()">＋</button>
+    </div>
+  </div>
+  <div class="mft">
+    <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+    <button class="btn btn-p" onclick="saveNewChecklist()">Создать</button>
+  </div>`);
+  previewClTemplate();
+}
+
+window._nclItems = [];
+function previewClTemplate(){
+  const tpl = (document.getElementById('ncl-template')||{}).value||'';
+  window._nclItems = (CL_TEMPLATES[tpl]||[]).slice();
+  renderNclItems();
+  // Auto-fill title if empty
+  const titleEl = document.getElementById('ncl-title');
+  const clientEl = document.getElementById('ncl-client');
+  if(titleEl&&!titleEl.value&&clientEl&&clientEl.value){
+    const c = clients.find(x=>x.id===clientEl.value);
+    if(c) titleEl.value = tpl + (tpl!=='Кастомный'?' — ':'') + (c.name||'');
+  }
+}
+function renderNclItems(){
+  const wrap = document.getElementById('ncl-items-wrap');
+  if(!wrap) return;
+  wrap.innerHTML = (window._nclItems||[]).map((item,i)=>`<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border)">
+    <span style="font-size:11px;color:var(--t4);min-width:18px">${i+1}.</span>
+    <input class="mi" style="flex:1;font-size:12px;padding:4px 8px" value="${item}" oninput="window._nclItems[${i}]=this.value">
+    <button onclick="window._nclItems.splice(${i},1);renderNclItems()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px">✕</button>
+  </div>`).join('')||'<div style="font-size:11px;color:var(--t3);text-align:center;padding:8px">Нет пунктов</div>';
+}
+function ncl_addItem(){
+  const inp = document.getElementById('ncl-add-item');
+  if(!inp||!inp.value.trim()) return;
+  (window._nclItems=window._nclItems||[]).push(inp.value.trim());
+  inp.value='';
+  renderNclItems();
+}
+function saveNewChecklist(){
+  const cid = (document.getElementById('ncl-client')||{}).value||'';
+  const title = (document.getElementById('ncl-title')||{}).value.trim()||'Чеклист';
+  const tpl = (document.getElementById('ncl-template')||{}).value||'';
+  if(!cid){ toast('Выберите клиента'); return; }
+  const items = (window._nclItems||[]).filter(x=>x.trim()).map(t=>({id:clUid(),title:t,status:'todo',comments:[]}));
+  const cl = {id:clUid(),clientId:cid,title,template:tpl,status:'active',created:nowDMYtime(),items};
+  (window.checklistsData=window.checklistsData||[]).push(cl);
+  closeModal();
+  populateChecklistClientFilter();
+  renderChecklists();
+  renderClientPortal();
+  saveChecklists(); saveChecklistToSheet(cl);
+  toast('Чеклист создан ✓');
+}
+
+function openAddClItemModal(clId){
+  openModal(`<div class="mhdr">
+    <div style="font-size:15px;font-weight:700">＋ Добавить пункт</div>
+    <button class="mcls" onclick="closeModal()">✕</button>
+  </div>
+  <div class="mf" style="margin-bottom:12px">
+    <label class="mfl">Текст пункта</label>
+    <input class="mi" id="aclitem-text" placeholder="Описание задачи..." onkeydown="if(event.key==='Enter')saveAddClItem('${clId}')">
+  </div>
+  <div class="mft">
+    <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+    <button class="btn btn-p" onclick="saveAddClItem('${clId}')">Добавить</button>
+  </div>`);
+  setTimeout(()=>{ const el=document.getElementById('aclitem-text'); if(el) el.focus(); },80);
+}
+function saveAddClItem(clId){
+  const t = (document.getElementById('aclitem-text')||{}).value||'';
+  if(!t.trim()){ toast('Введите текст пункта'); return; }
+  const cl = (window.checklistsData||[]).find(x=>x.id===clId);
+  if(!cl) return;
+  cl.items.push({id:clUid(),title:t.trim(),status:'todo',comments:[]});
+  closeModal(); renderChecklists(); saveChecklists(); saveChecklistToSheet(cl); toast('Пункт добавлен ✓');
+}
+
+function deleteClItem(clId, itemId){
+  const cl = (window.checklistsData||[]).find(x=>x.id===clId);
+  if(!cl) return;
+  cl.items = cl.items.filter(i=>i.id!==itemId);
+  renderChecklists(); saveChecklists(); saveChecklistToSheet(cl);
+}
+
+function deleteChecklist(clId){
+  if(!confirm('Удалить этот чеклист?')) return;
+  window.checklistsData = (window.checklistsData||[]).filter(x=>x.id!==clId);
+  saveChecklists();
+  deleteChecklistFromSheet(clId);
+  renderChecklists(); renderClientPortal();
+  toast('Чеклист удалён');
+}
+
+function openStatusModal(clId, itemId){
+  const cl = (window.checklistsData||[]).find(x=>x.id===clId);
+  const item = cl&&cl.items.find(i=>i.id===itemId);
+  if(!item) return;
+  openModal(`<div class="mhdr">
+    <div><div style="font-size:15px;font-weight:700">Изменить статус</div>
+    <div style="font-size:11px;color:var(--t3);margin-top:2px">${item.title}</div></div>
+    <button class="mcls" onclick="closeModal()">✕</button>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px;padding:4px 0 14px">
+    ${CL_STATUS_PRESETS.map(p=>`<button class="cl-status-badge ${p.cls}" style="font-size:13px;padding:8px 16px;border-radius:8px;width:100%;text-align:left" onclick="setClItemStatus('${clId}','${itemId}','${p.key}')">${p.label}</button>`).join('')}
+    <div style="border-top:1px solid var(--border);padding-top:8px;display:flex;gap:8px;align-items:center">
+      <input class="mi" id="st-custom" placeholder="Кастомный статус..." style="flex:1">
+      <button class="btn btn-p btn-sm" onclick="setClItemStatus('${clId}','${itemId}',document.getElementById('st-custom').value||'custom')">ОК</button>
+    </div>
+  </div>`);
+}
+function setClItemStatus(clId, itemId, status){
+  if(!status||!status.trim()) return;
+  const cl = (window.checklistsData||[]).find(x=>x.id===clId);
+  const item = cl&&cl.items.find(i=>i.id===itemId);
+  if(!item) return;
+  item.status=status.trim();
+  closeModal(); renderChecklists(); renderClientPortal(); saveChecklists(); saveChecklistToSheet(cl);
+}
+
+function openItemCommentModal(clId, itemId, clientView){
+  const cl = (window.checklistsData||[]).find(x=>x.id===clId);
+  const item = cl&&cl.items.find(i=>i.id===itemId);
+  if(!item) return;
+  const cmts = item.comments||[];
+  const role = currentUser?(currentUser.role||'manager'):'client';
+  openModal(`<div class="mhdr">
+    <div><div style="font-size:15px;font-weight:700">💬 Комментарии к пункту</div>
+    <div style="font-size:11px;color:var(--t3);margin-top:2px">${item.title}</div></div>
+    <button class="mcls" onclick="closeModal()">✕</button>
+  </div>
+  <div id="cl-cmts-list" style="max-height:280px;overflow-y:auto;margin-bottom:12px;padding-right:2px">
+    ${cmts.length?cmts.map(cm=>`<div class="cl-cmt-item">
+      <span class="cl-cmt-author">${cm.author||'?'}</span>
+      <span class="cl-cmt-text">${cm.text}</span>
+      <span class="cl-cmt-date">${cm.date||''}</span>
+    </div>`).join(''):'<div style="color:var(--t3);font-size:12px;text-align:center;padding:12px 0">Комментариев пока нет</div>'}
+  </div>
+  <div style="display:flex;gap:8px;align-items:flex-end">
+    <textarea class="mi" id="cl-cmt-input" rows="2" placeholder="Напишите комментарий..." style="flex:1;resize:vertical;min-height:52px"></textarea>
+    <button class="btn btn-p btn-sm" onclick="saveClComment('${clId}','${itemId}')">Отправить</button>
+  </div>`);
+  setTimeout(()=>{ const el=document.getElementById('cl-cmt-input'); if(el) el.focus(); },80);
+}
+
+function saveClComment(clId, itemId){
+  const text = (document.getElementById('cl-cmt-input')||{}).value||'';
+  if(!text.trim()){ toast('Введите комментарий'); return; }
+  const cl = (window.checklistsData||[]).find(x=>x.id===clId);
+  const item = cl&&cl.items.find(i=>i.id===itemId);
+  if(!item) return;
+  (item.comments=item.comments||[]).push({
+    id:clUid(),
+    author:(currentUser&&currentUser.name)||'Клиент',
+    role:(currentUser&&currentUser.role)||'client',
+    text:text.trim(),
+    date:nowDMYtime()
+  });
+  closeModal(); renderChecklists(); renderClientPortal(); saveChecklists(); saveChecklistToSheet(cl);
+  toast('Комментарий добавлен ✓');
+}
+
+function saveChecklists(){
+  // Сохраняем в localStorage как кэш на случай офлайн
+  try{ localStorage.setItem('crm_checklists', JSON.stringify(window.checklistsData||[])); }catch(e){}
+}
+
+// Сохранить один чеклист в Google Sheets (upsert)
+async function saveChecklistToSheet(cl){
+  if(!API_BASE) return;
+  // Сериализуем items как JSON-строку в колонку
+  const row = {
+    id: cl.id,
+    clientId: cl.clientId,
+    title: cl.title,
+    template: cl.template||'',
+    status: cl.status||'active',
+    created: cl.created||'',
+    items: JSON.stringify(cl.items||[])
+  };
+  // Попробуем PUT (обновить), если нет — POST (создать)
+  const res = await apiPut('/checklists/'+cl.id, row).catch(()=>null);
+  if(!res||!res.ok){
+    await apiPost('/checklists', row).catch(()=>{});
+  }
+}
+
+// Удалить чеклист из Google Sheets
+async function deleteChecklistFromSheet(clId){
+  if(!API_BASE) return;
+  await apiFetch('/checklists/'+clId, {method:'DELETE', body:JSON.stringify({})}).catch(()=>{});
+}
+
+async function loadChecklists(){
+  // Сначала читаем кэш из localStorage (быстрый старт)
+  try{
+    const raw = localStorage.getItem('crm_checklists');
+    if(raw) window.checklistsData = JSON.parse(raw);
+  }catch(e){}
+
+  // Затем загружаем свежие данные с сервера
+  if(!API_BASE){ return; }
+  try{
+    const data = await apiFetch('/checklists');
+    if(data && Array.isArray(data)){
+      // Парсим items из JSON-строки обратно в массив
+      window.checklistsData = data.map(function(cl){
+        var items = cl.items;
+        if(typeof items === 'string'){
+          try{ items = JSON.parse(items); }catch(e){ items = []; }
+        }
+        return Object.assign({}, cl, {items: items||[]});
+      });
+      // Обновляем кэш
+      try{ localStorage.setItem('crm_checklists', JSON.stringify(window.checklistsData)); }catch(e){}
+    }
+  }catch(e){ console.warn('loadChecklists error:', e); }
+}
+// Load on startup
+loadChecklists();
+
 
 </script>
 
