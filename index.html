@@ -8923,6 +8923,16 @@ function renderClientPortal(){
           </div>
           <button class="cp-edit-drive" onclick="openEditDriveModal('${c.id}')">✏ Изменить</button>
         </div>
+        <div class="cp-section-lbl">🔗 Ссылка для клиента</div>
+        <div class="cp-drive-block" style="gap:10px">
+          <div class="cp-drive-icon">🔗</div>
+          <div class="cp-drive-info">
+            <div class="cp-drive-title">Личный кабинет клиента</div>
+            <div style="font-size:11px;color:var(--t3)" id="cp-token-hint-${c.id}">${c.clientToken ? 'Ссылка создана · токен: '+c.clientToken.slice(0,8)+'...' : 'Ссылка не создана'}</div>
+          </div>
+          <button class="cp-edit-drive" onclick="copyClientLink('${c.id}')">📋 Скопировать</button>
+          <button class="cp-edit-drive" style="margin-left:2px" onclick="genClientToken('${c.id}')">🔄 ${c.clientToken?'Обновить':'Создать'}</button>
+        </div>
         <div class="cp-section-lbl">☑ Чеклисты по делу</div>
         ${clBlock}
       </div>
@@ -8965,6 +8975,44 @@ async function saveDriveLink(cid){
   renderClientPortal();
   toast('Ссылка на Drive сохранена ✓');
   await apiPut('/clients/'+cid,{driveLink:c.driveLink}).catch(()=>{});
+}
+
+// ── Генерация токена для клиентской ссылки ──────────────────
+function makeToken(len=24){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let t='';
+  for(let i=0;i<len;i++) t+=chars[Math.floor(Math.random()*chars.length)];
+  return t;
+}
+
+// URL страницы клиента — поменяйте на ваш реальный URL при деплое
+function getClientPageBase(){
+  // Если client.html лежит рядом с index.html
+  return location.origin + location.pathname.replace('index.html','').replace(/\/$/,'') + '/client.html';
+}
+
+async function genClientToken(cid){
+  const c = clients.find(x=>x.id===cid);
+  if(!c) return;
+  if(c.clientToken && !confirm('Создать новую ссылку? Старая перестанет работать.')) return;
+  const token = makeToken(28);
+  c.clientToken = token;
+  const hint = document.getElementById('cp-token-hint-'+cid);
+  if(hint) hint.textContent = 'Ссылка создана · токен: '+token.slice(0,8)+'...';
+  renderClientPortal();
+  await apiPut('/clients/'+cid, {clientToken: token}).catch(()=>{});
+  toast('🔗 Токен создан — нажмите «Скопировать»');
+}
+
+function copyClientLink(cid){
+  const c = clients.find(x=>x.id===cid);
+  if(!c||!c.clientToken){ toast('⚠ Сначала создайте ссылку (кнопка «Создать»)'); return; }
+  const link = getClientPageBase() + '?t=' + c.clientToken;
+  navigator.clipboard.writeText(link).then(()=>{
+    toast('✅ Ссылка скопирована в буфер:\n'+link);
+  }).catch(()=>{
+    prompt('Скопируйте ссылку вручную:', link);
+  });
 }
 
 // ════════════════════════════════════════════════════════════
