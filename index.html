@@ -6722,47 +6722,6 @@ async function saveOrderDetailModal(ordId){
   if(API_BASE) await apiPut('/orders/'+ordId, o).catch(()=>{});
 }
 
-
-  const o=orders.find(x=>x.id===orderId); if(!o) return;
-  const client=clients.find(c=>c.id===o.clientId);
-  const cName=client?client.name:(o.clientId||'—');
-  const svcStatuses=ORD_STATUSES[o.svcType]||ORD_STATUSES['default']||['В работе','Готово'];
-  const statusOpts=svcStatuses.map(s=>`<option value="${s}"${s===o.status?' selected':''}>${s}</option>`).join('');
-  openModal(`
-    <div class="mhdr">
-      <div>
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)">${o.svcType||'Заказ'} · ${o.id}</div>
-        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-top:2px">${cName}</div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">${bdg(o.status)}</div>
-      </div>
-      <button class="mcls" onclick="closeModal()">✕</button>
-    </div>
-    <div class="msec">
-      <div class="msl">Статус</div>
-      <select class="mi" id="od-status">${statusOpts}</select>
-    </div>
-    <div class="msec">
-      <div class="msl">Комментарий</div>
-      <textarea class="mi" id="od-comment" rows="3">${o.comment||''}</textarea>
-    </div>
-    ${o.driveLink?`<div class="msec"><a href="${o.driveLink}" target="_blank" class="btn btn-p" style="width:100%;text-align:center;text-decoration:none">📁 Открыть папку Google Drive</a></div>`:''}
-    <div class="mfoot">
-      <button class="btn" onclick="closeModal()">Отмена</button>
-      <button class="btn btn-p" onclick="saveOrderFromDetail('${o.id}')">💾 Сохранить</button>
-    </div>
-  `);
-}
-function saveOrderFromDetail(orderId){
-  const o=orders.find(x=>x.id===orderId); if(!o) return;
-  o.status=(g('od-status')||{}).value||o.status;
-  o.comment=(g('od-comment')||{}).value||'';
-  o.updated=nowDMY();
-  closeModal();
-  renderTranslations(); renderNocrims(); renderOrders(); renderDash();
-  toast('Заказ обновлён ✓');
-  if(API_BASE) apiPut('/orders/'+o.id, o).catch(()=>{});
-}
-
 // ── Карточка клиента для адвоката ──
 function openLawyerClientCard(cid){
   const c=clients.find(x=>x.id===cid); if(!c) return;
