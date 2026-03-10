@@ -1296,333 +1296,1163 @@ button:active{transform:scale(.97)}
         <br><b>Важно:</b> укажите ID вашей таблицы Users в константе <code>SHEET_IDS.users</code>.
         <br>Лист Users должен быть в <b>той же таблице что и скрипт</b> — тогда ID не нужен.
       </div>
-      <textarea id="gas-code-block" readonly style="width:100%;height:180px;font-family:monospace;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--t2);resize:vertical">// ============================================================
-// MIGRALL CRM — Google Apps Script Backend
-// Вставить в Apps Script → заменить весь код → Deploy → New deployment
-// ============================================================
+      <textarea id="gas-code-block" readonly style="width:100%;height:180px;font-family:monospace;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--t2);resize:vertical">// ═══════════════════════════════════════════════════════════════
+// CRM MigrAll — Google Apps Script Backend v4
+// ═══════════════════════════════════════════════════════════════
 
-// ── ID таблиц ────────────────────────────────────────────────
-const SHEET_IDS = {
-  users:      'ВСТАВЬТЕ_ID_ТАБЛИЦЫ_USERS',       // таблица с листом Users
-  clients:    '1BfnepFsBX5tR7gKw659SwxSsR8FFGGVCZrp6jN_YSSM',
-  statuses:   '1tMtXZlSmruW1t1b3iDWcBJWjJxwFDyopNvqoAp6niCo',
-  courts:     '1u8OPwmGq4YQ3VRekeVGt7TMj2l8dgpxWOri9fb89Gik',
-  schedule:   '1PFdrMsmuXcsFaZ66b2RlWNlequPMCJW5mcDB4lvRaXc',
+const TASKS_SHEET_ID = '1o0FUerO6SESOywdmFAcB4elTpOBTLUsXA5pWjouO2Rg';
+const USERS_SHEET_ID = '1upfUEfIKn5Q0FJuWLpBniYXk3iuYpPZpQrSBTf8-ma8';
+
+const SHEETS = {
+  clients:     '1BfnepFsBX5tR7gKw659SwxSsR8FFGGVCZrp6jN_YSSM',
+  statuses:    '1tMtXZlSmruW1t1b3iDWcBJWjJxwFDyopNvqoAp6niCo',
+  courts:      '18g8F3AnPwYzIda2LKTUM_RJ2OxH5JEh8TZA3MHlBPtU',
+  schedule:    '1PFdrMsmuXcsFaZ66b2RlWNlequPMCJW5mcDB4lvRaXc',
+  citizenship: '1M3u3HGa-f5YP4trNG4Lj961IBxJ-CMd2AOpeSVg5LRA',
+  rights:      '1pVzfj1Rj3EnYRCVVQYTD-ydSMTM_0JkA8k8s_R715gk',
+  orders:      '1HWzAB0RVRidCdRvqQtNLNkeJFcLjl757b8zTREau1lU',
+  users:       '1upfUEfIKn5Q0FJuWLpBniYXk3iuYpPZpQrSBTf8-ma8',
+  filings:     '14F-ZhRyHfDG-U_5F2iO-4COetgHsxb5mZzRwoVpkrVE',
+  specTasks:   '1mj0p-1Xrv1PufdKM9LGaM8z86o2LayBVOWh8Q-O4asY',
+  checklists:  '1BfnepFsBX5tR7gKw659SwxSsR8FFGGVCZrp6jN_YSSM', // лист "Checklists" в таблице клиентов
+  visad:       'ВСТАВЬТЕ_ID_ТАБЛИЦЫ_VISAD',                     // ← укажите ID таблицы "Виза D"
 };
 
-// Если Users хранятся в той же таблице что и Clients — используйте тот же ID:
-// const USERS_SHEET_ID = '1BfnepFsBX5tR7gKw659SwxSsR8FFGGVCZrp6jN_YSSM';
-// Название листа внутри таблицы:
-const USERS_SHEET_NAME = 'Users';
+const DRIVE_ROOT_FOLDER_ID = '1ELsDMXMcdj3k8_aeWGN1vNW6Za4qM28b';
 
-// ── CORS заголовки ───────────────────────────────────────────
-function setCorsHeaders(output) {
-  return output
-    .setHeader('Access-Control-Allow-Origin', '*')
-    .setHeader('Access-Control-Allow-Methods', 'GET, POST')
-    .setHeader('Access-Control-Allow-Headers', 'Content-Type');
-}
-
-function jsonResponse(data) {
-  var output = ContentService
+// ─── RESPONSE ─────────────────────────────────────────────────
+function makeResponse(data) {
+  return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
-  return setCorsHeaders(output);
 }
 
-// ── Главная точка входа ──────────────────────────────────────
+// ─── RESOURCE ROUTER ──────────────────────────────────────────
+function getResource(e) {
+  let path = e.parameter.path || e.parameter.resource || '';
+  if (!path &amp;&amp; e.pathInfo) path = e.pathInfo;
+  if (!path) {
+    for (const key of ['clients','statuses','courts','schedule','citizenship','rights','orders','translations','nocrims','ping','drive','auth','tasks','users','calendar','filings','spec-tasks','checklists','visad']) {
+      if (e.parameter[key] !== undefined) { path = key; break; }
+    }
+  }
+  path = path.replace(/^\/+/, '').trim();
+  const parts    = path.split('/');
+  const resource = parts[0] || '';
+  const id       = parts[1] || '';
+  return { resource, id };
+}
+
+// ─── GET ──────────────────────────────────────────────────────
 function doGet(e) {
-  var path = (e.parameter.path || '').replace(/^\//, '');
-  
   try {
-    if (path === 'users')      return jsonResponse(getUsers());
-    if (path === 'clients')    return jsonResponse(getSheet(SHEET_IDS.clients, 'CRM_Clients'));
-    if (path === 'statuses')   return jsonResponse(getSheet(SHEET_IDS.statuses, 'Sheet1'));
-    if (path === 'courts')     return jsonResponse(getSheet(SHEET_IDS.courts, 'Sheet1'));
-    if (path === 'schedule')   return jsonResponse(getSheet(SHEET_IDS.schedule, 'Sheet1'));
-    if (path === 'citizenship') return jsonResponse(getLocalSheet('Citizenship'));
-    if (path === 'rights')     return jsonResponse(getLocalSheet('Rights'));
-    if (path === 'orders')     return jsonResponse(getLocalSheet('Orders'));
-    if (path === 'tasks')      return jsonResponse(getLocalSheet('Tasks'));
-    if (path === 'filings')    return jsonResponse(getLocalSheet('Filings'));
-    if (path === 'spec-tasks') return jsonResponse(getLocalSheet('SpecTasks'));
-    if (path === 'checklists') return jsonResponse(getLocalSheet('Checklists'));
-    if (path === 'auth')       return handleAuth(e);
-    
-    return jsonResponse({ error: 'Unknown: ' + path });
+    const { resource } = getResource(e);
+    switch (resource) {
+      case 'clients':     return makeResponse(getClients());
+      case 'statuses':    return makeResponse(getStatuses());
+      case 'courts':      return makeResponse(getCourts());
+      case 'schedule':    return makeResponse(getSchedule());
+      case 'citizenship': return makeResponse(getCitizenship());
+      case 'rights':      return makeResponse(getRights());
+      case 'orders':      return makeResponse(getOrders());
+      case 'tasks':       return makeResponse(getTasks());
+      case 'users':       return makeResponse(getUsers(e.parameter.role));
+      case 'filings':     return makeResponse(getFilings());
+      case 'spec-tasks':  return makeResponse(getSpecTasks(e.parameter.role));
+      case 'checklists':  return makeResponse(getChecklists());
+      case 'visad':       return makeResponse(getVisaD());
+      case 'auth':        return makeResponse(handleAuth(e.parameter, {}));
+      case 'calendar':    return makeResponse(getCalendarEvents(
+                            parseInt(e.parameter.back)||30,
+                            parseInt(e.parameter.fwd)||90
+                          ));
+      case 'ping':        return makeResponse({ ok: true, ts: Date.now() });
+      case '':            return makeResponse({ ok: true, message: 'CRM MigrAll API v4', sheets: Object.keys(SHEETS) });
+      default:            return makeResponse({ error: 'Unknown: ' + resource });
+    }
   } catch(err) {
-    return jsonResponse({ error: err.message, stack: err.stack });
+    return makeResponse({ error: err.toString() });
   }
 }
 
+// ─── POST ─────────────────────────────────────────────────────
 function doPost(e) {
-  var path = (e.parameter.path || '').replace(/^\//, '');
-  var body = {};
-  try { body = JSON.parse(e.postData.contents); } catch(x) {}
-  
-  var method = body._method || 'POST';
-  delete body._method;
-  
   try {
-    if (path === 'auth') return handleAuth(e, body);
-    
-    // PUT запросы
-    if (method === 'PUT') {
-      if (path.startsWith('clients/'))    return jsonResponse(putRow('CRM_Clients', SHEET_IDS.clients, path.split('/')[1], body));
-      if (path.startsWith('courts/'))     return jsonResponse(putRow('Sheet1', SHEET_IDS.courts, path.split('/')[1], body));
-      if (path.startsWith('statuses/'))   return jsonResponse(putRow('Sheet1', SHEET_IDS.statuses, path.split('/')[1], body));
-      if (path.startsWith('citizenship/')) return jsonResponse(putLocalRow('Citizenship', path.split('/')[1], body));
-      if (path.startsWith('rights/'))     return jsonResponse(putLocalRow('Rights', path.split('/')[1], body));
-      if (path.startsWith('orders/'))     return jsonResponse(putLocalRow('Orders', path.split('/')[1], body));
-      if (path.startsWith('tasks/'))      return jsonResponse(putLocalRow('Tasks', path.split('/')[1], body));
-      if (path.startsWith('filings/'))    return jsonResponse(putLocalRow('Filings', path.split('/')[1], body));
-      if (path === 'filings')             return jsonResponse(putLocalRow('Filings', body.id, body));
-      if (path.startsWith('checklists/')) return jsonResponse(putLocalRow('Checklists', path.split('/')[1], body));
+    const { resource, id } = getResource(e);
+    const rawBody = e.postData ? e.postData.contents : '{}';
+    let body = {};
+    try { body = JSON.parse(rawBody); } catch(err) { body = {}; }
+    const method = body._method || 'POST';
+    delete body._method;
+
+    if (resource === 'auth')  return makeResponse(handleAuth(e.parameter, body));
+    if (resource === 'drive') return makeResponse(handleDrive(id, body));
+
+    if (method === 'DELETE' || body._delete === true) {
+      const key = id || body.id || body.num || '';
+      switch (resource) {
+        case 'clients':     return makeResponse(deleteRow('clients', key));
+        case 'statuses':    return makeResponse(deleteRow('statuses', key));
+        case 'courts':      return makeResponse(deleteRow('courts', key));
+        case 'citizenship': return makeResponse(deleteRow('citizenship', key));
+        case 'rights':      return makeResponse(deleteRow('rights', key));
+        case 'orders':      return makeResponse(deleteRow('orders', key));
+        case 'filings':     return makeResponse(deleteRow('filings', key));
+        case 'checklists':  return makeResponse(deleteChecklist(key));
+        case 'visad':       return makeResponse(deleteRow('visad', key));
+        default:            return makeResponse({ error: 'Unknown DELETE: ' + resource });
+      }
     }
-    
-    // POST (создать)
-    if (path === 'courts')      return jsonResponse(addRow('Sheet1', SHEET_IDS.courts, body));
-    if (path === 'clients')     return jsonResponse(addRow('CRM_Clients', SHEET_IDS.clients, body));
-    if (path === 'citizenship') return jsonResponse(addLocalRow('Citizenship', body));
-    if (path === 'rights')      return jsonResponse(addLocalRow('Rights', body));
-    if (path === 'orders')      return jsonResponse(addLocalRow('Orders', body));
-    if (path === 'tasks')       return jsonResponse(addLocalRow('Tasks', body));
-    if (path === 'filings')     return jsonResponse(addLocalRow('Filings', body));
-    if (path === 'spec-tasks')  return jsonResponse(addLocalRow('SpecTasks', body));
-    if (path === 'checklists')  return jsonResponse(addLocalRow('Checklists', body));
-    if (path === 'schedule')    return jsonResponse(addRow('Sheet1', SHEET_IDS.schedule, body));
-    
-    // Users CRUD
-    if (path === 'users')                return jsonResponse(addLocalRow('Users', body));
-    if (method === 'PUT' && path.startsWith('users/')) return jsonResponse(putLocalRow('Users', path.split('/')[1], body));
-    if (method === 'DELETE' && path.startsWith('users/')) return jsonResponse(deleteLocalRow('Users', path.split('/')[1]));
-    if (method === 'DELETE' && path.startsWith('checklists/')) return jsonResponse(deleteLocalRow('Checklists', path.split('/')[1]));
-    
-    return jsonResponse({ error: 'Unknown POST: ' + path });
+
+    if (method === 'PUT' || id) {
+      const key = id || body.id || body.num || '';
+      switch (resource) {
+        case 'clients':     return makeResponse(updateRow('clients', key, body));
+        case 'statuses':    return makeResponse(updateRow('statuses', key, body));
+        case 'courts':      return makeResponse(updateRow('courts', key, body));
+        case 'schedule':    return makeResponse(updateRow('schedule', key, body));
+        case 'citizenship': return makeResponse(updateRow('citizenship', key, body));
+        case 'rights':      return makeResponse(updateRow('rights', key, body));
+        case 'orders':      return makeResponse(updateRow('orders', key, body));
+        case 'tasks':       return makeResponse(updateTask(body.id || id, body));
+        case 'users':       return makeResponse(updateUser(body));
+        case 'filings':     return makeResponse(addOrUpdateFiling(body, true));
+        case 'spec-tasks':  return makeResponse(addOrUpdateSpecTask(body, true));
+        case 'checklists':  return makeResponse(addOrUpdateChecklist(body, true));
+        case 'visad':       return makeResponse(updateRow('visad', key, body));
+        default:            return makeResponse({ error: 'Unknown PUT: ' + resource });
+      }
+    }
+
+    switch (resource) {
+      case 'clients':     return makeResponse(addRow('clients', body));
+      case 'statuses':    return makeResponse(addRow('statuses', body));
+      case 'courts':      return makeResponse(addRow('courts', body));
+      case 'schedule':    return makeResponse(addRow('schedule', body));
+      case 'citizenship': return makeResponse(addRow('citizenship', body));
+      case 'rights':      return makeResponse(addRow('rights', body));
+      case 'orders':      return makeResponse(addRow('orders', body));
+      case 'tasks':       return makeResponse(createTask(body));
+      case 'users':       return makeResponse(createUser(body));
+      case 'filings':     return makeResponse(addOrUpdateFiling(body, false));
+      case 'spec-tasks':  return makeResponse(addOrUpdateSpecTask(body, false));
+      case 'checklists':  return makeResponse(addOrUpdateChecklist(body, false));
+      case 'visad':       return makeResponse(addRow('visad', body));
+      default:            return makeResponse({ error: 'Unknown: ' + resource });
+    }
   } catch(err) {
-    return jsonResponse({ error: err.message });
+    return makeResponse({ error: err.toString() });
   }
 }
 
-// ── Чтение пользователей ─────────────────────────────────────
-function getUsers() {
-  // Попробуем несколько мест где могут быть пользователи
-  
-  // 1. Локальный лист 'Users' в этой же таблице (самый вероятный)
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName(USERS_SHEET_NAME);
-    if (sheet) {
-      var data = sheetToObjects(sheet);
-      if (data.length > 0) {
-        Logger.log('getUsers: found ' + data.length + ' users in local sheet');
-        return data;
-      }
-    }
-  } catch(e) { Logger.log('getUsers local error: ' + e); }
-  
-  // 2. Внешняя таблица Users (если задан отдельный ID)
-  if (SHEET_IDS.users && SHEET_IDS.users !== 'ВСТАВЬТЕ_ID_ТАБЛИЦЫ_USERS') {
-    try {
-      var ss2 = SpreadsheetApp.openById(SHEET_IDS.users);
-      var sheet2 = ss2.getSheetByName(USERS_SHEET_NAME) || ss2.getSheets()[0];
-      var data2 = sheetToObjects(sheet2);
-      if (data2.length > 0) {
-        Logger.log('getUsers: found ' + data2.length + ' users in external sheet');
-        return data2;
-      }
-    } catch(e) { Logger.log('getUsers external error: ' + e); }
-  }
-  
-  Logger.log('getUsers: no users found, returning []');
-  return [];
-}
+// ═══════════════════════════════════════════════════════════════
+// CRUD — универсальные функции
+// ═══════════════════════════════════════════════════════════════
 
-// ── Универсальное чтение листа из ВНЕШНЕЙ таблицы ────────────
-function getSheet(spreadsheetId, sheetName) {
-  var ss = SpreadsheetApp.openById(spreadsheetId);
-  var sheet = ss.getSheetByName(sheetName) || ss.getSheets()[0];
-  return sheetToObjects(sheet);
-}
-
-// ── Чтение листа из ЭТОЙ же таблицы ─────────────────────────
-function getLocalSheet(sheetName) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(sheetName);
+function sheetToJson(sheetId, sheetName) {
+  const ss    = SpreadsheetApp.openById(sheetId);
+  const sheet = sheetName ? ss.getSheetByName(sheetName) : ss.getSheets()[0];
   if (!sheet) return [];
-  return sheetToObjects(sheet);
-}
-
-// ── Конвертация Sheet → массив объектов ──────────────────────
-function sheetToObjects(sheet) {
-  var values = sheet.getDataRange().getValues();
-  if (values.length < 2) return [];
-  
-  var headers = values[0].map(function(h) { return String(h).trim(); });
-  var result = [];
-  
-  for (var i = 1; i < values.length; i++) {
-    var row = values[i];
-    // Пропустить полностью пустые строки
-    if (row.every(function(c) { return c === '' || c === null || c === undefined; })) continue;
-    
-    var obj = {};
-    headers.forEach(function(h, j) {
-      if (h) obj[h] = row[j] !== undefined && row[j] !== null ? String(row[j]).trim() : '';
+  const data = sheet.getDataRange().getValues();
+  if (data.length &lt; 2) return [];
+  const headers = data[0].map(h =&gt; String(h).trim());
+  return data.slice(1)
+    .filter(row =&gt; row.some(cell =&gt; cell !== '' &amp;&amp; cell !== null))
+    .map(row =&gt; {
+      const obj = {};
+      headers.forEach((h, i) =&gt; {
+        if (!h) return;
+        const val = row[i];
+        obj[h] = val instanceof Date ? fmtDate(val) : (val !== null &amp;&amp; val !== undefined ? String(val) : '');
+      });
+      return obj;
     });
-    obj._row = i + 1; // номер строки для PUT
-    result.push(obj);
-  }
-  
-  return result;
 }
 
-// ── PUT: обновить строку по ключевому полю ────────────────────
-function putRow(sheetName, spreadsheetId, keyValue, data) {
-  var ss = SpreadsheetApp.openById(spreadsheetId);
-  var sheet = ss.getSheetByName(sheetName) || ss.getSheets()[0];
-  return _updateRow(sheet, keyValue, data);
-}
+// ─── ИСПРАВЛЕНО: ищет по ЛЮБОЙ колонке, добавляет новые колонки ───
+function updateRow(resource, keyValue, data) {
+  if (!SHEETS[resource]) return { error: 'No sheet: ' + resource };
+  const ss      = SpreadsheetApp.openById(SHEETS[resource]);
+  const sheet   = ss.getSheets()[0];
+  const all     = sheet.getDataRange().getValues();
+  const headers = all[0].map(h =&gt; String(h).trim());
 
-function putLocalRow(sheetName, keyValue, data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return { ok: false, error: 'Sheet not found: ' + sheetName };
-  return _updateRow(sheet, keyValue, data);
-}
-
-function _updateRow(sheet, keyValue, data) {
-  var values = sheet.getDataRange().getValues();
-  var headers = values[0].map(function(h) { return String(h).trim(); });
-
-  // Найти строку: сначала по _row, затем по любой колонке совпадающей с keyValue
-  var rowIdx = -1;
-  if (data._row) {
-    rowIdx = parseInt(data._row) - 1;
-  } else {
-    for (var i = 1; i < values.length; i++) {
-      for (var k = 0; k < values[i].length; k++) {
-        if (String(values[i][k]).trim() === String(keyValue).trim()) {
-          rowIdx = i; break;
-        }
+  // Поиск строки по любой колонке (не только первой)
+  let rowIdx = -1;
+  for (let i = 1; i &lt; all.length; i++) {
+    for (let k = 0; k &lt; all[i].length; k++) {
+      if (String(all[i][k]).trim() === String(keyValue).trim()) {
+        rowIdx = i; break;
       }
-      if (rowIdx >= 0) break;
     }
+    if (rowIdx &gt;= 0) break;
   }
 
-  if (rowIdx < 1) return { ok: false, error: 'Row not found: ' + keyValue };
+  if (rowIdx &lt; 0) return { error: 'Row not found: ' + keyValue };
 
-  // Обновить существующие колонки; новые — добавить в конец заголовков
-  var dataKeys = Object.keys(data).filter(function(k) { return k !== '_row'; });
-  dataKeys.forEach(function(h) {
-    if (!h || data[h] === undefined) return;
-    var colIdx = headers.indexOf(h);
-    if (colIdx >= 0) {
-      // Колонка уже есть — обновляем
-      sheet.getRange(rowIdx + 1, colIdx + 1).setValue(data[h]);
+  // Обновляем существующие колонки; новые — добавляем в конец
+  const updates = {};
+  Object.keys(data).forEach(field =&gt; {
+    if (!field || field === '_dirty') return;
+    let col = headers.indexOf(field);
+    if (col &gt;= 0) {
+      sheet.getRange(rowIdx + 1, col + 1).setValue(data[field]);
+      updates[field] = data[field];
     } else {
-      // Колонки нет — добавляем заголовок и значение
-      var newCol = headers.length + 1;
-      sheet.getRange(1, newCol).setValue(h);
-      sheet.getRange(rowIdx + 1, newCol).setValue(data[h]);
-      headers.push(h); // чтобы следующие поля считали правильный индекс
+      // Колонки нет — создаём
+      const newCol = headers.length + 1;
+      sheet.getRange(1, newCol).setValue(field);
+      sheet.getRange(rowIdx + 1, newCol).setValue(data[field]);
+      headers.push(field);
+      updates[field] = data[field];
     }
   });
 
-  return { ok: true };
+  SpreadsheetApp.flush();
+  return { ok: true, updated: updates };
 }
 
-// ── POST: добавить новую строку ───────────────────────────────
-function addRow(sheetName, spreadsheetId, data) {
-  var ss = SpreadsheetApp.openById(spreadsheetId);
-  var sheet = ss.getSheetByName(sheetName) || ss.getSheets()[0];
-  return _addRow(sheet, data);
-}
+// ─── УДАЛИТЬ СТРОКУ ФИЗИЧЕСКИ + УБРАТЬ ПУСТЫЕ СТРОКИ ────────
+function deleteRow(resource, keyValue) {
+  if (!SHEETS[resource]) return { error: 'No sheet: ' + resource };
+  const ss    = SpreadsheetApp.openById(SHEETS[resource]);
+  const sheet = ss.getSheets()[0];
+  const all   = sheet.getDataRange().getValues();
+  if (all.length &lt; 2) return { error: 'Empty sheet' };
 
-function addLocalRow(sheetName, data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(sheetName);
-  if (!sheet) {
-    // Создать лист если не существует
-    sheet = ss.insertSheet(sheetName);
+  const headers = all[0].map(h =&gt; String(h).trim());
+
+  // Найти строку: сравниваем строково И числово (ID в Sheets хранится как число)
+  let rowIdx = -1;
+  const kv = String(keyValue).trim();
+  for (let i = 1; i &lt; all.length; i++) {
+    for (let k = 0; k &lt; all[i].length; k++) {
+      const cell = all[i][k];
+      const cellStr = (cell instanceof Date) ? '' : String(cell === null || cell === undefined ? '' : cell).trim();
+      if (cellStr === kv) { rowIdx = i; break; }
+    }
+    if (rowIdx &gt;= 0) break;
   }
-  return _addRow(sheet, data);
-}
 
-function _addRow(sheet, data) {
-  var values = sheet.getDataRange().getValues();
-  var headers = values[0].map(function(h) { return String(h).trim(); });
-  
-  // Если заголовков нет — создать из ключей объекта
-  if (!headers.length || headers[0] === '') {
-    headers = Object.keys(data).filter(function(k) { return k !== '_row'; });
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  if (rowIdx &lt; 0) {
+    // Запасной вариант: пометить deleted='1' если строку не нашли
+    Logger.log('deleteRow: row not found for key=' + keyValue + ' in ' + resource);
+    return { error: 'Row not found: ' + keyValue };
   }
-  
-  var newRow = headers.map(function(h) { return data[h] !== undefined ? data[h] : ''; });
-  sheet.appendRow(newRow);
-  return { ok: true };
-}
 
-// ── DELETE: удалить строку ────────────────────────────────────
-function deleteLocalRow(sheetName, keyValue) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return { ok: false };
-  var values = sheet.getDataRange().getValues();
-  for (var i = 1; i < values.length; i++) {
-    if (String(values[i][0]).trim() === String(keyValue).trim()) {
+  // Физически удалить строку
+  sheet.deleteRow(rowIdx + 1);
+  SpreadsheetApp.flush();
+
+  // Убрать оставшиеся пустые строки снизу вверх
+  const data2 = sheet.getDataRange().getValues();
+  for (let i = data2.length - 1; i &gt;= 1; i--) {
+    if (data2[i].every(function(c){ return String(c === null ? '' : c).trim() === ''; })) {
       sheet.deleteRow(i + 1);
-      return { ok: true };
     }
   }
-  return { ok: false, error: 'Not found' };
+
+  SpreadsheetApp.flush();
+  return { ok: true, deleted: keyValue };
 }
 
-// ── AUTH ─────────────────────────────────────────────────────
-function handleAuth(e, body) {
-  body = body || {};
-  var action = e.parameter.action || body.action || '';
-  
-  if (action === 'login') {
-    var users = getUsers();
-    var email = (body.email || '').toLowerCase().trim();
-    var pass  = body.password || '';
-    
-    var user = users.find(function(u) {
-      return (u.email || u.login || '').toLowerCase() === email
-          && (u.password || '') === pass
-          && (u.status || 'active') === 'active';
+// ─── ИСПРАВЛЕНО: создаёт заголовки если их нет, добавляет новые колонки ───
+function addRow(resource, data) {
+  if (!SHEETS[resource]) return { error: 'No sheet: ' + resource };
+  const ss      = SpreadsheetApp.openById(SHEETS[resource]);
+  const sheet   = ss.getSheets()[0];
+  const lastCol = sheet.getLastColumn();
+  const lastRow = sheet.getLastRow();
+
+  // Если лист пустой — создать заголовки из ключей объекта
+  if (lastRow === 0 || lastCol === 0) {
+    const keys = Object.keys(data).filter(k =&gt; k !== '_dirty');
+    sheet.appendRow(keys);
+    sheet.appendRow(keys.map(k =&gt; data[k] !== undefined ? data[k] : ''));
+    SpreadsheetApp.flush();
+    return { ok: true };
+  }
+
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h =&gt; String(h).trim());
+
+  // Добавить недостающие колонки
+  const dataKeys = Object.keys(data).filter(k =&gt; k !== '_dirty');
+  dataKeys.forEach(key =&gt; {
+    if (key &amp;&amp; !headers.includes(key)) {
+      const newCol = headers.length + 1;
+      sheet.getRange(1, newCol).setValue(key);
+      headers.push(key);
+    }
+  });
+
+  sheet.appendRow(headers.map(h =&gt; data[h] !== undefined ? data[h] : ''));
+  SpreadsheetApp.flush();
+  return { ok: true };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ГЕТТЕРЫ
+// ═══════════════════════════════════════════════════════════════
+
+function getClients() {
+  return sheetToJson(SHEETS.clients).map(r =&gt; ({
+    id:          r['id'] || r['ID'] || '',
+    num:         r['num'] || '',           // ← номер клиента от менеджера
+    name:        r['name'] || '',
+    tg:          r['tg'] || '',
+    phone:       r['phone'] || '',
+    serviceType: r['serviceType'] || '',
+    stage:       r['stage'] || '',
+    substage:    r['substage'] || '',
+    last:        r['last'] || '',
+    consulate:   r['consulate'] || '',
+    city:        r['Город подачи'] || r['city'] || '',
+    lawyer:      r['lawyer'] || '',
+    driveLink:   r['driveLink'] || '',
+    clientToken: r['clientToken'] || '',
+    submitDate:  r['submitDate'] || '',
+    docsReady:   r['docsReady'] || '',
+    onboard:     parseOnboard(r['onboard']),
+    comment:     r['comment'] || '',
+    aimaDate:    r['Подача в AIMA'] || '',
+    bankDate:    r['Подача в БАНК'] || '',
+    caseNum:     r['Номер дела'] || '',
+    submitStatus:r['Статус подачи'] || '',
+    deleted:     r['deleted'] || '',
+  })).filter(r =&gt; r.deleted !== '1' &amp;&amp; r.stage !== 'Удалён');
+}
+
+function getStatuses() {
+  return sheetToJson(SHEETS.statuses)
+    .filter(r =&gt; r['deleted'] !== '1')
+    .map(r =&gt; ({
+    num:     r['num']||'',
+    name:    r['name']||'',
+    nipc:    r['nipc']||'',
+    dob:     r['dob']||'',
+    pass:    r['pass']||'',
+    status:  r['status']||'',
+    date:    r['date']||'',
+    updated: r['updated']||'',
+    sec:     r['sec']||r['section']||'',
+    type:    r['type']||'',
+    comment: r['comment']||'',
+  }));
+}
+
+function getCourts() {
+  return sheetToJson(SHEETS.courts)
+    .filter(r =&gt; r['deleted'] !== '1')
+    .map(r =&gt; ({
+    num:     r['num']||'',
+    name:    r['name']||'',
+    lawyer:  r['lawyer']||'',
+    article: r['article']||'',
+    date:    r['date']||'',
+    place:   r['place']||'',
+    stage:   r['stage']||'',
+    status:  r['status']||'',
+    updated: r['updated']||'',
+    comment: r['comment']||'',
+  }));
+}
+
+function getSchedule() {
+  const ss = SpreadsheetApp.openById(SHEETS.schedule);
+  const sheet = ss.getSheets()[0];
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow &lt; 2) return [];
+
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h =&gt; String(h).trim());
+  const values  = sheet.getRange(2, 1, lastRow-1, lastCol).getValues();
+  const display = sheet.getRange(2, 1, lastRow-1, lastCol).getDisplayValues();
+  const slotCol = headers.indexOf('Слот');
+
+  const result = [];
+  for (let i = 0; i &lt; values.length; i++) {
+    const status = String(values[i][headers.indexOf('Статус')]||'').trim().toLowerCase();
+    if (status !== 'подтверждено' &amp;&amp; status !== 'занято') continue;
+    const slot = slotCol &gt;= 0 ? String(display[i][slotCol]||'').trim() : '';
+    if (!slot) continue;
+    const comma = slot.lastIndexOf(',');
+    const date  = comma &gt; 0 ? slot.slice(0, comma).trim() : slot;
+    const time  = comma &gt; 0 ? slot.slice(comma+1).trim() : '';
+    const row = {};
+    headers.forEach((h, j) =&gt; {
+      if (!h) return;
+      row[h] = j === slotCol ? slot : (values[i][j] instanceof Date ? fmtDate(values[i][j]) : String(values[i][j]||''));
     });
-    
-    if (user) {
-      return jsonResponse({
-        ok: true,
-        user: {
-          name:  user.name,
-          role:  (user.role || '').toLowerCase(),
-          email: user.email || user.login || '',
-          login: user.login || user.email || ''
-        }
-      });
-    }
-    return jsonResponse({ ok: false, error: 'Invalid credentials' });
+    result.push({
+      date, time, slot,
+      dow:      row['День']||'',
+      status:   row['Статус']||'',
+      name:     row['Имя']||'',
+      tg:       row['Username']||'',
+      userId:   row['User_ID']||'',
+      email:    row['Email']||'',
+      service:  row['Услуга']||'',
+      moved:    row['Переносы']||'',
+      reminded: row['Напомнено']||'',
+      meet:     row['ссылка для встречи']||'',
+    });
   }
-  
-  if (action === 'check') {
-    return jsonResponse({ ok: true });
-  }
-  
-  return jsonResponse({ ok: false, error: 'Unknown auth action: ' + action });
+  return result;
 }
 
-// ── Тест ─────────────────────────────────────────────────────
-function testGetUsers() {
-  var users = getUsers();
-  Logger.log('Users count: ' + users.length);
-  Logger.log(JSON.stringify(users));
+function getCitizenship() {
+  return sheetToJson(SHEETS.citizenship)
+    .filter(r =&gt; r['deleted'] !== '1')
+    .map(r =&gt; ({
+    num:     r['num']||'',
+    name:    r['name']||'',
+    lawyer:  r['lawyer']||'',
+    type:    r['type']||'',
+    nipc:    r['nipc']||'',
+    dob:     r['dob']||'',
+    pass:    r['pass']||'',
+    date:    r['date']||'',
+    track:   r['track']||'',
+    stage:   r['stage']||'',
+    status:  r['status']||'',
+    updated: r['updated']||'',
+    comment: r['comment']||'',
+  }));
 }
-</textarea>
+
+function getRights() {
+  return sheetToJson(SHEETS.rights)
+    .filter(r =&gt; r['deleted'] !== '1')
+    .map(r =&gt; ({
+    num:        r['num']||'',
+    name:       r['name']||'',
+    dob:        r['dob']||'',
+    pass:       r['pass']||'',
+    country:    r['country']||'',
+    date:       r['date']||'',
+    stage:      r['stage']||'',
+    status:     r['status']||'',
+    translator: r['translator']||'',
+    updated:    r['updated']||'',
+    driveLink:  r['driveLink']||'',
+    comment:    r['comment']||'',
+  }));
+}
+
+function getOrders() {
+  return sheetToJson(SHEETS.orders)
+    .filter(r =&gt; r['deleted'] !== '1' &amp;&amp; r['status'] !== 'deleted')
+    .map(r =&gt; ({
+    id:         r['id']||'',
+    clientId:   r['clientId']||'',
+    svcType:    r['svcType']||'',
+    status:     r['status']||'',
+    translator: r['translator']||'',
+    driveLink:  r['driveLink']||'',
+    created:    r['created']||'',
+    updated:    r['updated']||'',
+    comment:    r['comment']||'',
+  }));
+}
+
+function getVisaD() {
+  if (!SHEETS.visad || SHEETS.visad === 'ВСТАВЬТЕ_ID_ТАБЛИЦЫ_VISAD') return [];
+  return sheetToJson(SHEETS.visad)
+    .filter(r =&gt; r['deleted'] !== '1')
+    .map(r =&gt; ({
+    num:     r['num']||'',
+    name:    r['name']||'',
+    type:    r['type']||'',
+    dob:     r['dob']||'',
+    pass:    r['pass']||'',
+    city:    r['city']||'',
+    status:  r['status']||'',
+    date:    r['date']||'',
+    updated: r['updated']||'',
+    comment: r['comment']||'',
+  }));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TASKS — отдельная таблица
+// ═══════════════════════════════════════════════════════════════
+
+function getTasksSheet() {
+  return SpreadsheetApp.openById(TASKS_SHEET_ID).getSheets()[0];
+}
+
+function initTasksSheet(sheet) {
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(['id','text','title','client','assignee','prio','stage','due','created','cmts','deleted']);
+  }
+}
+
+function getTasks() {
+  try {
+    const sheet = getTasksSheet();
+    initTasksSheet(sheet);
+    if (sheet.getLastRow() &lt; 2) return [];
+    const data    = sheet.getDataRange().getValues();
+    const headers = data[0].map(h =&gt; String(h).trim());
+    return data.slice(1).map(row =&gt; {
+      const obj = {};
+      headers.forEach((h, i) =&gt; { obj[h] = String(row[i]||''); });
+      return obj;
+    }).filter(t =&gt; t.id &amp;&amp; t.stage !== 'deleted' &amp;&amp; t.deleted !== '1');
+  } catch(e) {
+    return { error: e.toString() };
+  }
+}
+
+function createTask(body) {
+  try {
+    const sheet = getTasksSheet();
+    initTasksSheet(sheet);
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h =&gt; String(h).trim());
+
+    // Добавить недостающие колонки
+    const bodyKeys = Object.keys(body).filter(k =&gt; k !== '_dirty');
+    bodyKeys.forEach(key =&gt; {
+      if (key &amp;&amp; !headers.includes(key)) {
+        const newCol = headers.length + 1;
+        sheet.getRange(1, newCol).setValue(key);
+        headers.push(key);
+      }
+    });
+
+    const id = body.id || 'task_' + Date.now();
+    body.id = id;
+    sheet.appendRow(headers.map(h =&gt; body[h] !== undefined ? body[h] : ''));
+    SpreadsheetApp.flush();
+    return { ok: true, id };
+  } catch(e) {
+    return { error: e.toString() };
+  }
+}
+
+// ─── ИСПРАВЛЕНО: принимает id как отдельный аргумент ───
+function updateTask(taskId, body) {
+  try {
+    const sheet   = getTasksSheet();
+    const data    = sheet.getDataRange().getValues();
+    const headers = data[0].map(h =&gt; String(h).trim());
+    const idCol   = headers.indexOf('id');
+
+    // Поиск задачи по id
+    for (let i = 1; i &lt; data.length; i++) {
+      if (String(data[i][idCol]).trim() === String(taskId).trim()) {
+
+        // Добавить недостающие колонки
+        Object.keys(body).forEach(key =&gt; {
+          if (!key || key === 'id' || key === '_dirty') return;
+          let col = headers.indexOf(key);
+          if (col &lt; 0) {
+            const newCol = headers.length + 1;
+            sheet.getRange(1, newCol).setValue(key);
+            headers.push(key);
+            col = newCol - 1;
+          }
+          sheet.getRange(i + 1, col + 1).setValue(body[key]);
+        });
+
+        SpreadsheetApp.flush();
+        return { ok: true };
+      }
+    }
+    return { error: 'Task not found: ' + taskId };
+  } catch(e) {
+    return { error: e.toString() };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// USERS &amp; AUTH
+// ═══════════════════════════════════════════════════════════════
+
+function getUsersSheet() {
+  return SpreadsheetApp.openById(USERS_SHEET_ID).getSheets()[0];
+}
+
+function getUsers(roleFilter) {
+  try {
+    const sheet = getUsersSheet();
+    if (sheet.getLastRow() &lt; 2) return [];
+    const data    = sheet.getDataRange().getValues();
+    const headers = data[0].map(h =&gt; String(h).trim());
+    let rows = data.slice(1)
+      .filter(row =&gt; row.some(c =&gt; c !== '' &amp;&amp; c !== null))
+      .map(row =&gt; {
+        const obj = {};
+        headers.forEach((h, i) =&gt; { if(h) obj[h] = String(row[i]||'').trim(); });
+        return obj;
+      })
+      .filter(u =&gt; u.name &amp;&amp; u.role &amp;&amp; u.status !== 'deleted')
+      .map(u =&gt; { delete u.otp; delete u.otpExpiry; delete u.password; return u; });
+    if (roleFilter) rows = rows.filter(u =&gt; u.role === roleFilter);
+    return rows;
+  } catch(e) {
+    return { error: e.toString() };
+  }
+}
+
+function createUser(body) {
+  // Убедиться что все обязательные поля присутствуют
+  const now = new Date().toISOString();
+  const userData = {
+    id:            body.id || 'user_' + Date.now(),
+    name:          body.name || '',
+    email:         body.email || '',
+    role:          body.role || 'manager',
+    status:        body.status || 'active',
+    password:      body.password || '',
+    otp:           '',
+    otpExpiry:     '',
+    loginAttempts: '0',
+    lockUntil:     '',
+    lastLogin:     '',
+    createdAt:     body.createdAt || now,
+  };
+  return addRow('users', userData);
+}
+
+function updateUser(body) {
+  const key = body.id || body.email || '';
+  if (!key) return { error: 'No id or email' };
+  return updateRow('users', key, body);
+}
+
+function findUserByEmail(email) {
+  const sheet   = getUsersSheet();
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0].map(h =&gt; String(h).trim());
+  const emailCol = headers.indexOf('email');
+  for (let i = 1; i &lt; data.length; i++) {
+    if (String(data[i][emailCol]).toLowerCase() === email.toLowerCase()) {
+      const obj = {};
+      headers.forEach((h, j) =&gt; { obj[h] = String(data[i][j]||''); });
+      obj._row = i + 1;
+      return obj;
+    }
+  }
+  return null;
+}
+
+function updateUserRow(row, fields) {
+  const sheet   = getUsersSheet();
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h =&gt; String(h).trim());
+  headers.forEach((h, j) =&gt; {
+    if (fields[h] !== undefined) sheet.getRange(row, j + 1).setValue(fields[h]);
+  });
+}
+
+function handleAuth(params, body) {
+  params = params || {};
+  if (!body || typeof body === 'string') { try { body = JSON.parse(body||'{}'); } catch(e) { body = {}; } }
+  const action = (params.action || body.action || '').toString().trim();
+
+  if (action === 'login') {
+    const email    = (body.email||'').toLowerCase().trim();
+    const password = (body.password||'').trim();
+    if (!email || !password) return { error: 'Email и пароль обязательны' };
+    const user = findUserByEmail(email);
+    if (!user) return { error: 'Неверный email или пароль' };
+    if (user.status === 'blocked') return { error: 'Аккаунт заблокирован', blocked: true };
+    if (user.lockUntil) {
+      const lockUntil = new Date(user.lockUntil);
+      if (!isNaN(lockUntil.getTime()) &amp;&amp; Date.now() &lt; lockUntil.getTime()) {
+        const mins = Math.ceil((lockUntil.getTime() - Date.now()) / 60000);
+        return { error: 'Слишком много попыток. Попробуйте через ' + mins + ' мин.', blocked: true };
+      } else {
+        updateUserRow(user._row, { loginAttempts: '0', lockUntil: '' });
+      }
+    }
+    if (!user.password) return { error: 'Пароль не установлен — используйте сброс пароля' };
+    if (user.password !== password) {
+      const attempts = parseInt(user.loginAttempts||'0') + 1;
+      const MAX = 5;
+      const fields = { loginAttempts: String(attempts) };
+      if (attempts &gt;= MAX) {
+        fields.lockUntil = new Date(Date.now() + 2*60*60*1000).toISOString();
+        updateUserRow(user._row, fields);
+        return { error: 'Превышено число попыток. Вход заблокирован на 2 часа.', blocked: true };
+      }
+      updateUserRow(user._row, fields);
+      return { error: 'Неверный email или пароль', attemptsLeft: MAX - attempts };
+    }
+    updateUserRow(user._row, { loginAttempts: '0', lockUntil: '', lastLogin: new Date().toISOString() });
+    return { ok: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
+  }
+
+  if (action === 'request_otp') {
+    const email = (body.email||'').toLowerCase().trim();
+    if (!email) return { error: 'Email обязателен' };
+    const user = findUserByEmail(email);
+    if (!user) return { error: 'Пользователь не найден' };
+    if (user.status === 'blocked') return { error: 'Аккаунт заблокирован' };
+    const otp    = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 5*60*1000).toISOString();
+    updateUserRow(user._row, { otp, otpExpiry: expiry });
+    try {
+      MailApp.sendEmail({
+        to: email,
+        subject: 'Сброс пароля — MigrAll CRM',
+        body: 'Ваш код: ' + otp + '\n\nКод действителен 5 минут.'
+      });
+    } catch(e) { return { error: 'Ошибка отправки: ' + e.toString() }; }
+    return { ok: true, message: 'Код отправлен' };
+  }
+
+  if (action === 'reset_password') {
+    const email       = (body.email||'').toLowerCase().trim();
+    const otp         = (body.otp||'').trim();
+    const newPassword = (body.newPassword||'').trim();
+    if (!email || !otp || !newPassword) return { error: 'Все поля обязательны' };
+    if (newPassword.length &lt; 6) return { error: 'Пароль минимум 6 символов' };
+    const user = findUserByEmail(email);
+    if (!user) return { error: 'Пользователь не найден' };
+    if (user.otp !== otp) return { error: 'Неверный код' };
+    const expiry = new Date(user.otpExpiry);
+    if (isNaN(expiry.getTime()) || Date.now() &gt; expiry.getTime()) return { error: 'Код истёк' };
+    updateUserRow(user._row, { password: newPassword, otp: '', otpExpiry: '', loginAttempts: '0', lockUntil: '' });
+    return { ok: true };
+  }
+
+  return { error: 'Неизвестное действие: ' + action };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ХЕЛПЕРЫ
+// ═══════════════════════════════════════════════════════════════
+
+function parseOnboard(val) {
+  if (!val) return [false, false, false];
+  try { const p = JSON.parse(val); if (Array.isArray(p)) return p; } catch(e) {}
+  return String(val).split(',').map(v =&gt; v.trim() === 'true');
+}
+
+function fmtDate(val, includeTime) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return '';
+    const d = val.getDate().toString().padStart(2,'0');
+    const m = (val.getMonth()+1).toString().padStart(2,'0');
+    const y = val.getFullYear();
+    const base = d+'.'+m+'.'+y;
+    if (includeTime) {
+      const hh = val.getHours().toString().padStart(2,'0');
+      const mm = val.getMinutes().toString().padStart(2,'0');
+      return base+', '+hh+':'+mm;
+    }
+    return base;
+  }
+  const s = String(val);
+  if (s.includes('GMT')||s.includes('T')||/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const dt = new Date(s);
+    if (!isNaN(dt.getTime())) {
+      const d = dt.getDate().toString().padStart(2,'0');
+      const m = (dt.getMonth()+1).toString().padStart(2,'0');
+      const y = dt.getFullYear();
+      return d+'.'+m+'.'+y;
+    }
+  }
+  return s;
+}
+
+function fmtDateTime(dt) { return dt ? fmtDate(dt)+' '+fmtTime(dt) : ''; }
+function fmtTime(dt) {
+  if (!dt) return '';
+  return dt.getHours().toString().padStart(2,'0')+':'+dt.getMinutes().toString().padStart(2,'0');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GOOGLE DRIVE
+// ═══════════════════════════════════════════════════════════════
+
+function handleDrive(action, body) {
+  switch(action) {
+    case 'createClientFolder':  return createClientFolder(body.clientId, body.clientName, body.serviceType);
+    case 'createServiceFolder': return createServiceFolder(body.clientId, body.serviceType);
+    case 'createDocsFolder':    return createDocsFolder(body.clientId, body.serviceType, body.role);
+    default:                    return { error: 'Unknown drive action: ' + action };
+  }
+}
+
+function createClientFolder(clientId, clientName, serviceType) {
+  try {
+    const root       = DriveApp.getFolderById(DRIVE_ROOT_FOLDER_ID);
+    const folderName = clientId + ' - ' + clientName;
+    const existing   = root.getFoldersByName(folderName);
+    const folder     = existing.hasNext() ? existing.next() : root.createFolder(folderName);
+    const url        = folder.getUrl();
+    updateRow('clients', clientId, { driveLink: url });
+    let svcUrl = '';
+    if (serviceType) svcUrl = createServiceFolderInClient(folder, serviceType).folderUrl || '';
+    return { ok: true, folderUrl: url, serviceFolderUrl: svcUrl, folderName };
+  } catch(e) { return { error: e.toString() }; }
+}
+
+function createServiceFolder(clientId, serviceType) {
+  try {
+    const root = DriveApp.getFolderById(DRIVE_ROOT_FOLDER_ID);
+    const iter = root.getFolders();
+    let clientFolder = null;
+    while(iter.hasNext()) {
+      const f = iter.next();
+      if(f.getName().startsWith(clientId + ' - ')) { clientFolder = f; break; }
+    }
+    if(!clientFolder) return { error: 'Папка клиента не найдена: ' + clientId };
+    return createServiceFolderInClient(clientFolder, serviceType);
+  } catch(e) { return { error: e.toString() }; }
+}
+
+function createServiceFolderInClient(clientFolder, serviceType) {
+  const ex  = clientFolder.getFoldersByName(serviceType);
+  const svc = ex.hasNext() ? ex.next() : clientFolder.createFolder(serviceType);
+  if (!ex.hasNext()) {
+    svc.createFolder('📄 Документы клиента');
+    svc.createFolder('✅ Готовые документы');
+  }
+  return { ok: true, folderUrl: svc.getUrl(), folderName: serviceType };
+}
+
+function createDocsFolder(clientId, serviceType, role) {
+  try {
+    const root = DriveApp.getFolderById(DRIVE_ROOT_FOLDER_ID);
+    const iter = root.getFolders();
+    let clientFolder = null;
+    while(iter.hasNext()) {
+      const f = iter.next();
+      if(f.getName().startsWith(clientId + ' - ')) { clientFolder = f; break; }
+    }
+    if(!clientFolder) return { error: 'Папка клиента не найдена' };
+    const svcEx = clientFolder.getFoldersByName(serviceType);
+    const svc   = svcEx.hasNext() ? svcEx.next() : clientFolder.createFolder(serviceType);
+    const rName = '✅ Готовые документы' + (role ? ' (' + role + ')' : '');
+    const rEx   = svc.getFoldersByName(rName);
+    const ready = rEx.hasNext() ? rEx.next() : svc.createFolder(rName);
+    return { ok: true, folderUrl: ready.getUrl(), folderName: rName };
+  } catch(e) { return { error: e.toString() }; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GOOGLE CALENDAR
+// ═══════════════════════════════════════════════════════════════
+
+const TEAM_CALENDAR_ID = 'c_0205528e1356d27d5ec074f6bff04781d24e00136cb110e0c6a07c0f52c33395@group.calendar.google.com';
+
+function getCalendarEvents(daysBack, daysForward) {
+  try {
+    daysBack    = daysBack    || 30;
+    daysForward = daysForward || 60;
+    const now   = new Date();
+    const start = new Date(now); start.setDate(start.getDate() - daysBack);
+    const end   = new Date(now); end.setDate(end.getDate() + daysForward);
+    const cal   = CalendarApp.getCalendarById(TEAM_CALENDAR_ID);
+    if (!cal) return { error: 'Календарь не найден' };
+    return cal.getEvents(start, end).map(ev =&gt; ({
+      id:          ev.getId(),
+      title:       ev.getTitle(),
+      start:       fmtDateTime(ev.getStartTime()),
+      end:         fmtDateTime(ev.getEndTime()),
+      startDate:   fmtDate(ev.getStartTime()),
+      endDate:     fmtDate(ev.getEndTime()),
+      startTime:   fmtTime(ev.getStartTime()),
+      endTime:     fmtTime(ev.getEndTime()),
+      allDay:      ev.isAllDayEvent(),
+      location:    ev.getLocation()||'',
+      description: ev.getDescription()||'',
+      color:       ev.getColor()||'',
+      guests:      ev.getGuestList().map(g =&gt; ({ name: g.getName(), email: g.getEmail(), status: g.getGuestStatus() })),
+    }));
+  } catch(err) { return { error: err.toString() }; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FILINGS
+// ═══════════════════════════════════════════════════════════════
+
+function getFilingsSheet() {
+  const ss = SpreadsheetApp.openById(SHEETS.filings);
+  return ss.getSheetByName('Подачи') || ss.getSheetByName('Filings') || ss.getSheets()[0];
+}
+
+function getFilings() {
+  const sheet = getFilingsSheet();
+  const data  = sheet.getDataRange().getValues();
+  if (data.length &lt; 2) return [];
+  const headers = data[0].map(h =&gt; String(h).trim());
+
+  function col(row, ...names) {
+    for (const name of names) {
+      const idx = headers.findIndex(h =&gt; h.toLowerCase() === name.toLowerCase());
+      if (idx &gt;= 0) {
+        const val = row[idx];
+        if (val instanceof Date) {
+          if (isNaN(val.getTime())) return '';
+          return val.getDate().toString().padStart(2,'0')+'.'+
+                 (val.getMonth()+1).toString().padStart(2,'0')+'.'+
+                 val.getFullYear();
+        }
+        return String(val||'').trim();
+      }
+    }
+    return '';
+  }
+
+  function colTime(row, name) {
+    const idx = headers.findIndex(h =&gt; h.toLowerCase() === name.toLowerCase());
+    if (idx &lt; 0) return '';
+    const val = row[idx];
+    if (val instanceof Date) return val.getHours().toString().padStart(2,'0')+':'+val.getMinutes().toString().padStart(2,'0');
+    return String(val||'').replace(/^(\d{1,2}:\d{2}):\d{2}$/, '$1');
+  }
+
+  return data.slice(1)
+    .filter(row =&gt; row.some(c =&gt; String(c).trim() !== ''))
+    .map((row, idx) =&gt; ({
+      id:      col(row,'id','num') || String(idx+1),
+      client:  col(row,'client','name'),
+      date:    col(row,'date','AppointmentDate'),
+      time:    colTime(row,'time'),
+      place:   col(row,'place'),
+      lawyer:  col(row,'lawyer'),
+      status:  col(row,'status','Status') || 'Планируется',
+      comment: col(row,'comment','Comments'),
+      type:    col(row,'type'),
+      _row:    idx+2,
+    }));
+}
+
+function addOrUpdateFiling(body, isUpdate) {
+  const sheet   = getFilingsSheet();
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0].map(h =&gt; String(h).trim());
+
+  function hIdx(...names) {
+    for (const name of names) {
+      const i = headers.findIndex(h =&gt; h.toLowerCase() === name.toLowerCase());
+      if (i &gt;= 0) return i;
+    }
+    return -1;
+  }
+
+  if (isUpdate &amp;&amp; body.id) {
+    const keyCol = hIdx('num','id');
+    for (let i = 1; i &lt; data.length; i++) {
+      if (String(data[i][Math.max(keyCol,0)]) === String(body.id)) {
+        [['client','name'],['date','AppointmentDate'],['time'],['place'],['lawyer'],['status','Status'],['comment','Comments']].forEach(([field,...alts]) =&gt; {
+          if (body[field] === undefined) return;
+          const col = hIdx(field, ...alts);
+          if (col &gt;= 0) sheet.getRange(i+1, col+1).setValue(body[field]);
+        });
+        SpreadsheetApp.flush();
+        return { ok: true };
+      }
+    }
+    return { error: 'Запись не найдена: ' + body.id };
+  }
+
+  const newId  = String(Date.now());
+  const newRow = headers.map(h =&gt; {
+    const hl = h.toLowerCase();
+    if (hl === 'num' || hl === 'id')                   return newId;
+    if (hl === 'name' || hl === 'client')               return body.client  || '';
+    if (hl === 'appointmentdate' || hl === 'date')       return body.date    || '';
+    if (hl === 'time')                                   return body.time    || '';
+    if (hl === 'place')                                  return body.place   || '';
+    if (hl === 'lawyer')                                 return body.lawyer  || '';
+    if (hl === 'status' || hl === 'статус')             return body.status  || 'Планируется';
+    if (hl === 'comments' || hl === 'comment')          return body.comment || '';
+    return '';
+  });
+  sheet.appendRow(newRow);
+  SpreadsheetApp.flush();
+  return { ok: true, id: newId };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SPEC TASKS
+// ═══════════════════════════════════════════════════════════════
+
+function getSpecTasksSheet() {
+  const ss = SpreadsheetApp.openById(SHEETS.specTasks);
+  let sheet = ss.getSheetByName('Дела');
+  if (!sheet) {
+    sheet = ss.insertSheet('Дела');
+    sheet.appendRow(['id','client','clientId','type','role','assignee','stage','due','description','driveUrl','createdAt','createdBy']);
+  }
+  return sheet;
+}
+
+function getSpecTasks(roleFilter) {
+  const sheet   = getSpecTasksSheet();
+  const data    = sheet.getDataRange().getValues();
+  if (data.length &lt; 2) return [];
+  const headers = data[0].map(String);
+  const rows    = data.slice(1).map(row =&gt; {
+    const obj = {};
+    headers.forEach((h, i) =&gt; { obj[h] = row[i] !== undefined ? String(row[i]) : ''; });
+    return obj;
+  });
+  if (roleFilter) return rows.filter(r =&gt; r.role === roleFilter);
+  return rows;
+}
+
+function addOrUpdateSpecTask(body, isUpdate) {
+  const sheet   = getSpecTasksSheet();
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0].map(String);
+  const idCol   = headers.indexOf('id');
+
+  if (isUpdate &amp;&amp; body.id) {
+    for (let i = 1; i &lt; data.length; i++) {
+      if (String(data[i][idCol]) === String(body.id)) {
+        Object.keys(body).forEach(key =&gt; {
+          const col = headers.indexOf(key);
+          if (col &gt;= 0 &amp;&amp; key !== 'id') sheet.getRange(i+1, col+1).setValue(body[key]);
+        });
+        SpreadsheetApp.flush();
+        return { ok: true };
+      }
+    }
+    return { error: 'Задача не найдена: ' + body.id };
+  }
+
+  const row = headers.map(h =&gt; body[h] !== undefined ? body[h] : '');
+  if (!row[idCol]) row[idCol] = 'st_' + Date.now();
+  const caIdx = headers.indexOf('createdAt');
+  if (caIdx &gt;= 0 &amp;&amp; !body.createdAt) row[caIdx] = new Date().toISOString();
+  sheet.appendRow(row);
+  SpreadsheetApp.flush();
+  return { ok: true, id: row[idCol] };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHECKLISTS
+// ═══════════════════════════════════════════════════════════════
+
+function getChecklistsSheet() {
+  const ss = SpreadsheetApp.openById(SHEETS.checklists);
+  let sheet = ss.getSheetByName('Checklists');
+  if (!sheet) {
+    sheet = ss.insertSheet('Checklists');
+    sheet.appendRow(['id','clientId','title','template','status','created','items']);
+  }
+  return sheet;
+}
+
+function getChecklists() {
+  const sheet = getChecklistsSheet();
+  const data  = sheet.getDataRange().getValues();
+  if (data.length &lt; 2) return [];
+  const headers = data[0].map(h =&gt; String(h).trim());
+  return data.slice(1)
+    .filter(row =&gt; row.some(c =&gt; String(c).trim() !== ''))
+    .map(row =&gt; {
+      const obj = {};
+      headers.forEach((h, i) =&gt; { obj[h] = row[i] !== undefined ? String(row[i]) : ''; });
+      // items хранится как JSON-строка — парсим обратно
+      try { if (obj.items) obj.items = JSON.parse(obj.items); } catch(e) { obj.items = []; }
+      if (!Array.isArray(obj.items)) obj.items = [];
+      return obj;
+    });
+}
+
+function addOrUpdateChecklist(body, isUpdate) {
+  const sheet   = getChecklistsSheet();
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0].map(h =&gt; String(h).trim());
+  const idCol   = headers.indexOf('id');
+
+  // items сериализуем в JSON-строку для хранения в ячейке
+  const bodyToSave = Object.assign({}, body);
+  if (bodyToSave.items &amp;&amp; typeof bodyToSave.items !== 'string') {
+    bodyToSave.items = JSON.stringify(bodyToSave.items);
+  }
+
+  if (isUpdate &amp;&amp; body.id) {
+    for (let i = 1; i &lt; data.length; i++) {
+      if (String(data[i][idCol]).trim() === String(body.id).trim()) {
+        Object.keys(bodyToSave).forEach(key =&gt; {
+          const col = headers.indexOf(key);
+          if (col &gt;= 0 &amp;&amp; key !== 'id') sheet.getRange(i + 1, col + 1).setValue(bodyToSave[key]);
+        });
+        SpreadsheetApp.flush();
+        return { ok: true };
+      }
+    }
+    // Строки нет — создаём новую (upsert)
+  }
+
+  // POST: добавить новую строку
+  const newId = body.id || ('cl_' + Date.now());
+  const row = headers.map(h =&gt; {
+    if (h === 'id') return newId;
+    return bodyToSave[h] !== undefined ? bodyToSave[h] : '';
+  });
+  sheet.appendRow(row);
+  SpreadsheetApp.flush();
+  return { ok: true, id: newId };
+}
+
+function deleteChecklist(keyValue) {
+  const sheet = getChecklistsSheet();
+  const data  = sheet.getDataRange().getValues();
+  if (data.length &lt; 2) return { error: 'Empty sheet' };
+  const headers = data[0].map(h =&gt; String(h).trim());
+  const idCol   = headers.indexOf('id');
+  const kv      = String(keyValue).trim();
+  for (let i = 1; i &lt; data.length; i++) {
+    if (String(data[i][idCol]).trim() === kv) {
+      sheet.deleteRow(i + 1);
+      SpreadsheetApp.flush();
+      return { ok: true, deleted: kv };
+    }
+  }
+  return { error: 'Checklist not found: ' + keyValue };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ТЕСТЫ
+// ═══════════════════════════════════════════════════════════════
+
+function testAccess() {
+  Object.entries(SHEETS).forEach(([name, id]) =&gt; {
+    try {
+      Logger.log('OK: ' + name + ' → ' + SpreadsheetApp.openById(id).getName());
+    } catch(e) {
+      Logger.log('ERR: ' + name + ' → ' + e.toString());
+    }
+  });
+}
+
+function testClients() {
+  const data = getClients();
+  Logger.log('Clients: ' + data.length);
+  Logger.log('First: ' + JSON.stringify(data[0]));
+}
+
+function setupAdminUser() {
+  const sheet = getUsersSheet();
+  const data  = sheet.getDataRange().getValues();
+  const headers = data[0].map(h =&gt; String(h).trim());
+  const emailCol = headers.indexOf('email');
+  for (let i = 1; i &lt; data.length; i++) {
+    if (String(data[i][emailCol]).toLowerCase() === 'ops@migrall.com') {
+      Logger.log('Admin already exists'); return;
+    }
+  }
+  sheet.appendRow(['user_admin','Администратор','ops@migrall.com','admin','active','admin2024','','','0','','',new Date().toISOString(),'system']);
+  Logger.log('Admin created: ops@migrall.com / admin2024');
+}
+
+function debugUsers() {
+  const sheet = getUsersSheet();
+  const data  = sheet.getDataRange().getValues();
+  Logger.log('Rows: ' + data.length);
+  Logger.log('Headers: ' + JSON.stringify(data[0]));
+  if (data.length &gt; 1) Logger.log('Row 1: ' + JSON.stringify(data[1]));
+}</textarea>
     </div>
 
     <div class="api-info" style="margin-bottom:12px">
@@ -1635,333 +2465,1163 @@ function testGetUsers() {
         <b>Если лист Users в той же таблице что и скрипт</b> — всё сразу заработает.<br>
         Если в отдельной таблице — укажите её ID в <code>SHEET_IDS.users</code>.
       </div>
-      <textarea id="gas-code-block" readonly style="width:100%;height:200px;font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--t2);resize:vertical">// ============================================================
-// MIGRALL CRM — Google Apps Script Backend
-// Вставить в Apps Script → заменить весь код → Deploy → New deployment
-// ============================================================
+      <textarea id="gas-code-block" readonly style="width:100%;height:200px;font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--t2);resize:vertical">// ═══════════════════════════════════════════════════════════════
+// CRM MigrAll — Google Apps Script Backend v4
+// ═══════════════════════════════════════════════════════════════
 
-// ── ID таблиц ────────────────────────────────────────────────
-const SHEET_IDS = {
-  users:      'ВСТАВЬТЕ_ID_ТАБЛИЦЫ_USERS',       // таблица с листом Users
-  clients:    '1BfnepFsBX5tR7gKw659SwxSsR8FFGGVCZrp6jN_YSSM',
-  statuses:   '1tMtXZlSmruW1t1b3iDWcBJWjJxwFDyopNvqoAp6niCo',
-  courts:     '1u8OPwmGq4YQ3VRekeVGt7TMj2l8dgpxWOri9fb89Gik',
-  schedule:   '1PFdrMsmuXcsFaZ66b2RlWNlequPMCJW5mcDB4lvRaXc',
+const TASKS_SHEET_ID = '1o0FUerO6SESOywdmFAcB4elTpOBTLUsXA5pWjouO2Rg';
+const USERS_SHEET_ID = '1upfUEfIKn5Q0FJuWLpBniYXk3iuYpPZpQrSBTf8-ma8';
+
+const SHEETS = {
+  clients:     '1BfnepFsBX5tR7gKw659SwxSsR8FFGGVCZrp6jN_YSSM',
+  statuses:    '1tMtXZlSmruW1t1b3iDWcBJWjJxwFDyopNvqoAp6niCo',
+  courts:      '18g8F3AnPwYzIda2LKTUM_RJ2OxH5JEh8TZA3MHlBPtU',
+  schedule:    '1PFdrMsmuXcsFaZ66b2RlWNlequPMCJW5mcDB4lvRaXc',
+  citizenship: '1M3u3HGa-f5YP4trNG4Lj961IBxJ-CMd2AOpeSVg5LRA',
+  rights:      '1pVzfj1Rj3EnYRCVVQYTD-ydSMTM_0JkA8k8s_R715gk',
+  orders:      '1HWzAB0RVRidCdRvqQtNLNkeJFcLjl757b8zTREau1lU',
+  users:       '1upfUEfIKn5Q0FJuWLpBniYXk3iuYpPZpQrSBTf8-ma8',
+  filings:     '14F-ZhRyHfDG-U_5F2iO-4COetgHsxb5mZzRwoVpkrVE',
+  specTasks:   '1mj0p-1Xrv1PufdKM9LGaM8z86o2LayBVOWh8Q-O4asY',
+  checklists:  '1BfnepFsBX5tR7gKw659SwxSsR8FFGGVCZrp6jN_YSSM', // лист "Checklists" в таблице клиентов
+  visad:       'ВСТАВЬТЕ_ID_ТАБЛИЦЫ_VISAD',                     // ← укажите ID таблицы "Виза D"
 };
 
-// Если Users хранятся в той же таблице что и Clients — используйте тот же ID:
-// const USERS_SHEET_ID = '1BfnepFsBX5tR7gKw659SwxSsR8FFGGVCZrp6jN_YSSM';
-// Название листа внутри таблицы:
-const USERS_SHEET_NAME = 'Users';
+const DRIVE_ROOT_FOLDER_ID = '1ELsDMXMcdj3k8_aeWGN1vNW6Za4qM28b';
 
-// ── CORS заголовки ───────────────────────────────────────────
-function setCorsHeaders(output) {
-  return output
-    .setHeader('Access-Control-Allow-Origin', '*')
-    .setHeader('Access-Control-Allow-Methods', 'GET, POST')
-    .setHeader('Access-Control-Allow-Headers', 'Content-Type');
-}
-
-function jsonResponse(data) {
-  var output = ContentService
+// ─── RESPONSE ─────────────────────────────────────────────────
+function makeResponse(data) {
+  return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
-  return setCorsHeaders(output);
 }
 
-// ── Главная точка входа ──────────────────────────────────────
+// ─── RESOURCE ROUTER ──────────────────────────────────────────
+function getResource(e) {
+  let path = e.parameter.path || e.parameter.resource || '';
+  if (!path &amp;&amp; e.pathInfo) path = e.pathInfo;
+  if (!path) {
+    for (const key of ['clients','statuses','courts','schedule','citizenship','rights','orders','translations','nocrims','ping','drive','auth','tasks','users','calendar','filings','spec-tasks','checklists','visad']) {
+      if (e.parameter[key] !== undefined) { path = key; break; }
+    }
+  }
+  path = path.replace(/^\/+/, '').trim();
+  const parts    = path.split('/');
+  const resource = parts[0] || '';
+  const id       = parts[1] || '';
+  return { resource, id };
+}
+
+// ─── GET ──────────────────────────────────────────────────────
 function doGet(e) {
-  var path = (e.parameter.path || '').replace(/^\//, '');
-  
   try {
-    if (path === 'users')      return jsonResponse(getUsers());
-    if (path === 'clients')    return jsonResponse(getSheet(SHEET_IDS.clients, 'CRM_Clients'));
-    if (path === 'statuses')   return jsonResponse(getSheet(SHEET_IDS.statuses, 'Sheet1'));
-    if (path === 'courts')     return jsonResponse(getSheet(SHEET_IDS.courts, 'Sheet1'));
-    if (path === 'schedule')   return jsonResponse(getSheet(SHEET_IDS.schedule, 'Sheet1'));
-    if (path === 'citizenship') return jsonResponse(getLocalSheet('Citizenship'));
-    if (path === 'rights')     return jsonResponse(getLocalSheet('Rights'));
-    if (path === 'orders')     return jsonResponse(getLocalSheet('Orders'));
-    if (path === 'tasks')      return jsonResponse(getLocalSheet('Tasks'));
-    if (path === 'filings')    return jsonResponse(getLocalSheet('Filings'));
-    if (path === 'spec-tasks') return jsonResponse(getLocalSheet('SpecTasks'));
-    if (path === 'checklists') return jsonResponse(getLocalSheet('Checklists'));
-    if (path === 'auth')       return handleAuth(e);
-    
-    return jsonResponse({ error: 'Unknown: ' + path });
+    const { resource } = getResource(e);
+    switch (resource) {
+      case 'clients':     return makeResponse(getClients());
+      case 'statuses':    return makeResponse(getStatuses());
+      case 'courts':      return makeResponse(getCourts());
+      case 'schedule':    return makeResponse(getSchedule());
+      case 'citizenship': return makeResponse(getCitizenship());
+      case 'rights':      return makeResponse(getRights());
+      case 'orders':      return makeResponse(getOrders());
+      case 'tasks':       return makeResponse(getTasks());
+      case 'users':       return makeResponse(getUsers(e.parameter.role));
+      case 'filings':     return makeResponse(getFilings());
+      case 'spec-tasks':  return makeResponse(getSpecTasks(e.parameter.role));
+      case 'checklists':  return makeResponse(getChecklists());
+      case 'visad':       return makeResponse(getVisaD());
+      case 'auth':        return makeResponse(handleAuth(e.parameter, {}));
+      case 'calendar':    return makeResponse(getCalendarEvents(
+                            parseInt(e.parameter.back)||30,
+                            parseInt(e.parameter.fwd)||90
+                          ));
+      case 'ping':        return makeResponse({ ok: true, ts: Date.now() });
+      case '':            return makeResponse({ ok: true, message: 'CRM MigrAll API v4', sheets: Object.keys(SHEETS) });
+      default:            return makeResponse({ error: 'Unknown: ' + resource });
+    }
   } catch(err) {
-    return jsonResponse({ error: err.message, stack: err.stack });
+    return makeResponse({ error: err.toString() });
   }
 }
 
+// ─── POST ─────────────────────────────────────────────────────
 function doPost(e) {
-  var path = (e.parameter.path || '').replace(/^\//, '');
-  var body = {};
-  try { body = JSON.parse(e.postData.contents); } catch(x) {}
-  
-  var method = body._method || 'POST';
-  delete body._method;
-  
   try {
-    if (path === 'auth') return handleAuth(e, body);
-    
-    // PUT запросы
-    if (method === 'PUT') {
-      if (path.startsWith('clients/'))    return jsonResponse(putRow('CRM_Clients', SHEET_IDS.clients, path.split('/')[1], body));
-      if (path.startsWith('courts/'))     return jsonResponse(putRow('Sheet1', SHEET_IDS.courts, path.split('/')[1], body));
-      if (path.startsWith('statuses/'))   return jsonResponse(putRow('Sheet1', SHEET_IDS.statuses, path.split('/')[1], body));
-      if (path.startsWith('citizenship/')) return jsonResponse(putLocalRow('Citizenship', path.split('/')[1], body));
-      if (path.startsWith('rights/'))     return jsonResponse(putLocalRow('Rights', path.split('/')[1], body));
-      if (path.startsWith('orders/'))     return jsonResponse(putLocalRow('Orders', path.split('/')[1], body));
-      if (path.startsWith('tasks/'))      return jsonResponse(putLocalRow('Tasks', path.split('/')[1], body));
-      if (path.startsWith('filings/'))    return jsonResponse(putLocalRow('Filings', path.split('/')[1], body));
-      if (path === 'filings')             return jsonResponse(putLocalRow('Filings', body.id, body));
-      if (path.startsWith('checklists/')) return jsonResponse(putLocalRow('Checklists', path.split('/')[1], body));
+    const { resource, id } = getResource(e);
+    const rawBody = e.postData ? e.postData.contents : '{}';
+    let body = {};
+    try { body = JSON.parse(rawBody); } catch(err) { body = {}; }
+    const method = body._method || 'POST';
+    delete body._method;
+
+    if (resource === 'auth')  return makeResponse(handleAuth(e.parameter, body));
+    if (resource === 'drive') return makeResponse(handleDrive(id, body));
+
+    if (method === 'DELETE' || body._delete === true) {
+      const key = id || body.id || body.num || '';
+      switch (resource) {
+        case 'clients':     return makeResponse(deleteRow('clients', key));
+        case 'statuses':    return makeResponse(deleteRow('statuses', key));
+        case 'courts':      return makeResponse(deleteRow('courts', key));
+        case 'citizenship': return makeResponse(deleteRow('citizenship', key));
+        case 'rights':      return makeResponse(deleteRow('rights', key));
+        case 'orders':      return makeResponse(deleteRow('orders', key));
+        case 'filings':     return makeResponse(deleteRow('filings', key));
+        case 'checklists':  return makeResponse(deleteChecklist(key));
+        case 'visad':       return makeResponse(deleteRow('visad', key));
+        default:            return makeResponse({ error: 'Unknown DELETE: ' + resource });
+      }
     }
-    
-    // POST (создать)
-    if (path === 'courts')      return jsonResponse(addRow('Sheet1', SHEET_IDS.courts, body));
-    if (path === 'clients')     return jsonResponse(addRow('CRM_Clients', SHEET_IDS.clients, body));
-    if (path === 'citizenship') return jsonResponse(addLocalRow('Citizenship', body));
-    if (path === 'rights')      return jsonResponse(addLocalRow('Rights', body));
-    if (path === 'orders')      return jsonResponse(addLocalRow('Orders', body));
-    if (path === 'tasks')       return jsonResponse(addLocalRow('Tasks', body));
-    if (path === 'filings')     return jsonResponse(addLocalRow('Filings', body));
-    if (path === 'spec-tasks')  return jsonResponse(addLocalRow('SpecTasks', body));
-    if (path === 'checklists')  return jsonResponse(addLocalRow('Checklists', body));
-    if (path === 'schedule')    return jsonResponse(addRow('Sheet1', SHEET_IDS.schedule, body));
-    
-    // Users CRUD
-    if (path === 'users')                return jsonResponse(addLocalRow('Users', body));
-    if (method === 'PUT' && path.startsWith('users/')) return jsonResponse(putLocalRow('Users', path.split('/')[1], body));
-    if (method === 'DELETE' && path.startsWith('users/')) return jsonResponse(deleteLocalRow('Users', path.split('/')[1]));
-    if (method === 'DELETE' && path.startsWith('checklists/')) return jsonResponse(deleteLocalRow('Checklists', path.split('/')[1]));
-    
-    return jsonResponse({ error: 'Unknown POST: ' + path });
+
+    if (method === 'PUT' || id) {
+      const key = id || body.id || body.num || '';
+      switch (resource) {
+        case 'clients':     return makeResponse(updateRow('clients', key, body));
+        case 'statuses':    return makeResponse(updateRow('statuses', key, body));
+        case 'courts':      return makeResponse(updateRow('courts', key, body));
+        case 'schedule':    return makeResponse(updateRow('schedule', key, body));
+        case 'citizenship': return makeResponse(updateRow('citizenship', key, body));
+        case 'rights':      return makeResponse(updateRow('rights', key, body));
+        case 'orders':      return makeResponse(updateRow('orders', key, body));
+        case 'tasks':       return makeResponse(updateTask(body.id || id, body));
+        case 'users':       return makeResponse(updateUser(body));
+        case 'filings':     return makeResponse(addOrUpdateFiling(body, true));
+        case 'spec-tasks':  return makeResponse(addOrUpdateSpecTask(body, true));
+        case 'checklists':  return makeResponse(addOrUpdateChecklist(body, true));
+        case 'visad':       return makeResponse(updateRow('visad', key, body));
+        default:            return makeResponse({ error: 'Unknown PUT: ' + resource });
+      }
+    }
+
+    switch (resource) {
+      case 'clients':     return makeResponse(addRow('clients', body));
+      case 'statuses':    return makeResponse(addRow('statuses', body));
+      case 'courts':      return makeResponse(addRow('courts', body));
+      case 'schedule':    return makeResponse(addRow('schedule', body));
+      case 'citizenship': return makeResponse(addRow('citizenship', body));
+      case 'rights':      return makeResponse(addRow('rights', body));
+      case 'orders':      return makeResponse(addRow('orders', body));
+      case 'tasks':       return makeResponse(createTask(body));
+      case 'users':       return makeResponse(createUser(body));
+      case 'filings':     return makeResponse(addOrUpdateFiling(body, false));
+      case 'spec-tasks':  return makeResponse(addOrUpdateSpecTask(body, false));
+      case 'checklists':  return makeResponse(addOrUpdateChecklist(body, false));
+      case 'visad':       return makeResponse(addRow('visad', body));
+      default:            return makeResponse({ error: 'Unknown: ' + resource });
+    }
   } catch(err) {
-    return jsonResponse({ error: err.message });
+    return makeResponse({ error: err.toString() });
   }
 }
 
-// ── Чтение пользователей ─────────────────────────────────────
-function getUsers() {
-  // Попробуем несколько мест где могут быть пользователи
-  
-  // 1. Локальный лист 'Users' в этой же таблице (самый вероятный)
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName(USERS_SHEET_NAME);
-    if (sheet) {
-      var data = sheetToObjects(sheet);
-      if (data.length > 0) {
-        Logger.log('getUsers: found ' + data.length + ' users in local sheet');
-        return data;
-      }
-    }
-  } catch(e) { Logger.log('getUsers local error: ' + e); }
-  
-  // 2. Внешняя таблица Users (если задан отдельный ID)
-  if (SHEET_IDS.users && SHEET_IDS.users !== 'ВСТАВЬТЕ_ID_ТАБЛИЦЫ_USERS') {
-    try {
-      var ss2 = SpreadsheetApp.openById(SHEET_IDS.users);
-      var sheet2 = ss2.getSheetByName(USERS_SHEET_NAME) || ss2.getSheets()[0];
-      var data2 = sheetToObjects(sheet2);
-      if (data2.length > 0) {
-        Logger.log('getUsers: found ' + data2.length + ' users in external sheet');
-        return data2;
-      }
-    } catch(e) { Logger.log('getUsers external error: ' + e); }
-  }
-  
-  Logger.log('getUsers: no users found, returning []');
-  return [];
-}
+// ═══════════════════════════════════════════════════════════════
+// CRUD — универсальные функции
+// ═══════════════════════════════════════════════════════════════
 
-// ── Универсальное чтение листа из ВНЕШНЕЙ таблицы ────────────
-function getSheet(spreadsheetId, sheetName) {
-  var ss = SpreadsheetApp.openById(spreadsheetId);
-  var sheet = ss.getSheetByName(sheetName) || ss.getSheets()[0];
-  return sheetToObjects(sheet);
-}
-
-// ── Чтение листа из ЭТОЙ же таблицы ─────────────────────────
-function getLocalSheet(sheetName) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(sheetName);
+function sheetToJson(sheetId, sheetName) {
+  const ss    = SpreadsheetApp.openById(sheetId);
+  const sheet = sheetName ? ss.getSheetByName(sheetName) : ss.getSheets()[0];
   if (!sheet) return [];
-  return sheetToObjects(sheet);
-}
-
-// ── Конвертация Sheet → массив объектов ──────────────────────
-function sheetToObjects(sheet) {
-  var values = sheet.getDataRange().getValues();
-  if (values.length < 2) return [];
-  
-  var headers = values[0].map(function(h) { return String(h).trim(); });
-  var result = [];
-  
-  for (var i = 1; i < values.length; i++) {
-    var row = values[i];
-    // Пропустить полностью пустые строки
-    if (row.every(function(c) { return c === '' || c === null || c === undefined; })) continue;
-    
-    var obj = {};
-    headers.forEach(function(h, j) {
-      if (h) obj[h] = row[j] !== undefined && row[j] !== null ? String(row[j]).trim() : '';
+  const data = sheet.getDataRange().getValues();
+  if (data.length &lt; 2) return [];
+  const headers = data[0].map(h =&gt; String(h).trim());
+  return data.slice(1)
+    .filter(row =&gt; row.some(cell =&gt; cell !== '' &amp;&amp; cell !== null))
+    .map(row =&gt; {
+      const obj = {};
+      headers.forEach((h, i) =&gt; {
+        if (!h) return;
+        const val = row[i];
+        obj[h] = val instanceof Date ? fmtDate(val) : (val !== null &amp;&amp; val !== undefined ? String(val) : '');
+      });
+      return obj;
     });
-    obj._row = i + 1; // номер строки для PUT
-    result.push(obj);
-  }
-  
-  return result;
 }
 
-// ── PUT: обновить строку по ключевому полю ────────────────────
-function putRow(sheetName, spreadsheetId, keyValue, data) {
-  var ss = SpreadsheetApp.openById(spreadsheetId);
-  var sheet = ss.getSheetByName(sheetName) || ss.getSheets()[0];
-  return _updateRow(sheet, keyValue, data);
-}
+// ─── ИСПРАВЛЕНО: ищет по ЛЮБОЙ колонке, добавляет новые колонки ───
+function updateRow(resource, keyValue, data) {
+  if (!SHEETS[resource]) return { error: 'No sheet: ' + resource };
+  const ss      = SpreadsheetApp.openById(SHEETS[resource]);
+  const sheet   = ss.getSheets()[0];
+  const all     = sheet.getDataRange().getValues();
+  const headers = all[0].map(h =&gt; String(h).trim());
 
-function putLocalRow(sheetName, keyValue, data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return { ok: false, error: 'Sheet not found: ' + sheetName };
-  return _updateRow(sheet, keyValue, data);
-}
-
-function _updateRow(sheet, keyValue, data) {
-  var values = sheet.getDataRange().getValues();
-  var headers = values[0].map(function(h) { return String(h).trim(); });
-
-  // Найти строку: сначала по _row, затем по любой колонке совпадающей с keyValue
-  var rowIdx = -1;
-  if (data._row) {
-    rowIdx = parseInt(data._row) - 1;
-  } else {
-    for (var i = 1; i < values.length; i++) {
-      for (var k = 0; k < values[i].length; k++) {
-        if (String(values[i][k]).trim() === String(keyValue).trim()) {
-          rowIdx = i; break;
-        }
+  // Поиск строки по любой колонке (не только первой)
+  let rowIdx = -1;
+  for (let i = 1; i &lt; all.length; i++) {
+    for (let k = 0; k &lt; all[i].length; k++) {
+      if (String(all[i][k]).trim() === String(keyValue).trim()) {
+        rowIdx = i; break;
       }
-      if (rowIdx >= 0) break;
     }
+    if (rowIdx &gt;= 0) break;
   }
 
-  if (rowIdx < 1) return { ok: false, error: 'Row not found: ' + keyValue };
+  if (rowIdx &lt; 0) return { error: 'Row not found: ' + keyValue };
 
-  // Обновить существующие колонки; новые — добавить в конец заголовков
-  var dataKeys = Object.keys(data).filter(function(k) { return k !== '_row'; });
-  dataKeys.forEach(function(h) {
-    if (!h || data[h] === undefined) return;
-    var colIdx = headers.indexOf(h);
-    if (colIdx >= 0) {
-      // Колонка уже есть — обновляем
-      sheet.getRange(rowIdx + 1, colIdx + 1).setValue(data[h]);
+  // Обновляем существующие колонки; новые — добавляем в конец
+  const updates = {};
+  Object.keys(data).forEach(field =&gt; {
+    if (!field || field === '_dirty') return;
+    let col = headers.indexOf(field);
+    if (col &gt;= 0) {
+      sheet.getRange(rowIdx + 1, col + 1).setValue(data[field]);
+      updates[field] = data[field];
     } else {
-      // Колонки нет — добавляем заголовок и значение
-      var newCol = headers.length + 1;
-      sheet.getRange(1, newCol).setValue(h);
-      sheet.getRange(rowIdx + 1, newCol).setValue(data[h]);
-      headers.push(h); // чтобы следующие поля считали правильный индекс
+      // Колонки нет — создаём
+      const newCol = headers.length + 1;
+      sheet.getRange(1, newCol).setValue(field);
+      sheet.getRange(rowIdx + 1, newCol).setValue(data[field]);
+      headers.push(field);
+      updates[field] = data[field];
     }
   });
 
-  return { ok: true };
+  SpreadsheetApp.flush();
+  return { ok: true, updated: updates };
 }
 
-// ── POST: добавить новую строку ───────────────────────────────
-function addRow(sheetName, spreadsheetId, data) {
-  var ss = SpreadsheetApp.openById(spreadsheetId);
-  var sheet = ss.getSheetByName(sheetName) || ss.getSheets()[0];
-  return _addRow(sheet, data);
-}
+// ─── УДАЛИТЬ СТРОКУ ФИЗИЧЕСКИ + УБРАТЬ ПУСТЫЕ СТРОКИ ────────
+function deleteRow(resource, keyValue) {
+  if (!SHEETS[resource]) return { error: 'No sheet: ' + resource };
+  const ss    = SpreadsheetApp.openById(SHEETS[resource]);
+  const sheet = ss.getSheets()[0];
+  const all   = sheet.getDataRange().getValues();
+  if (all.length &lt; 2) return { error: 'Empty sheet' };
 
-function addLocalRow(sheetName, data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(sheetName);
-  if (!sheet) {
-    // Создать лист если не существует
-    sheet = ss.insertSheet(sheetName);
+  const headers = all[0].map(h =&gt; String(h).trim());
+
+  // Найти строку: сравниваем строково И числово (ID в Sheets хранится как число)
+  let rowIdx = -1;
+  const kv = String(keyValue).trim();
+  for (let i = 1; i &lt; all.length; i++) {
+    for (let k = 0; k &lt; all[i].length; k++) {
+      const cell = all[i][k];
+      const cellStr = (cell instanceof Date) ? '' : String(cell === null || cell === undefined ? '' : cell).trim();
+      if (cellStr === kv) { rowIdx = i; break; }
+    }
+    if (rowIdx &gt;= 0) break;
   }
-  return _addRow(sheet, data);
-}
 
-function _addRow(sheet, data) {
-  var values = sheet.getDataRange().getValues();
-  var headers = values[0].map(function(h) { return String(h).trim(); });
-  
-  // Если заголовков нет — создать из ключей объекта
-  if (!headers.length || headers[0] === '') {
-    headers = Object.keys(data).filter(function(k) { return k !== '_row'; });
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  if (rowIdx &lt; 0) {
+    // Запасной вариант: пометить deleted='1' если строку не нашли
+    Logger.log('deleteRow: row not found for key=' + keyValue + ' in ' + resource);
+    return { error: 'Row not found: ' + keyValue };
   }
-  
-  var newRow = headers.map(function(h) { return data[h] !== undefined ? data[h] : ''; });
-  sheet.appendRow(newRow);
-  return { ok: true };
-}
 
-// ── DELETE: удалить строку ────────────────────────────────────
-function deleteLocalRow(sheetName, keyValue) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return { ok: false };
-  var values = sheet.getDataRange().getValues();
-  for (var i = 1; i < values.length; i++) {
-    if (String(values[i][0]).trim() === String(keyValue).trim()) {
+  // Физически удалить строку
+  sheet.deleteRow(rowIdx + 1);
+  SpreadsheetApp.flush();
+
+  // Убрать оставшиеся пустые строки снизу вверх
+  const data2 = sheet.getDataRange().getValues();
+  for (let i = data2.length - 1; i &gt;= 1; i--) {
+    if (data2[i].every(function(c){ return String(c === null ? '' : c).trim() === ''; })) {
       sheet.deleteRow(i + 1);
-      return { ok: true };
     }
   }
-  return { ok: false, error: 'Not found' };
+
+  SpreadsheetApp.flush();
+  return { ok: true, deleted: keyValue };
 }
 
-// ── AUTH ─────────────────────────────────────────────────────
-function handleAuth(e, body) {
-  body = body || {};
-  var action = e.parameter.action || body.action || '';
-  
-  if (action === 'login') {
-    var users = getUsers();
-    var email = (body.email || '').toLowerCase().trim();
-    var pass  = body.password || '';
-    
-    var user = users.find(function(u) {
-      return (u.email || u.login || '').toLowerCase() === email
-          && (u.password || '') === pass
-          && (u.status || 'active') === 'active';
+// ─── ИСПРАВЛЕНО: создаёт заголовки если их нет, добавляет новые колонки ───
+function addRow(resource, data) {
+  if (!SHEETS[resource]) return { error: 'No sheet: ' + resource };
+  const ss      = SpreadsheetApp.openById(SHEETS[resource]);
+  const sheet   = ss.getSheets()[0];
+  const lastCol = sheet.getLastColumn();
+  const lastRow = sheet.getLastRow();
+
+  // Если лист пустой — создать заголовки из ключей объекта
+  if (lastRow === 0 || lastCol === 0) {
+    const keys = Object.keys(data).filter(k =&gt; k !== '_dirty');
+    sheet.appendRow(keys);
+    sheet.appendRow(keys.map(k =&gt; data[k] !== undefined ? data[k] : ''));
+    SpreadsheetApp.flush();
+    return { ok: true };
+  }
+
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h =&gt; String(h).trim());
+
+  // Добавить недостающие колонки
+  const dataKeys = Object.keys(data).filter(k =&gt; k !== '_dirty');
+  dataKeys.forEach(key =&gt; {
+    if (key &amp;&amp; !headers.includes(key)) {
+      const newCol = headers.length + 1;
+      sheet.getRange(1, newCol).setValue(key);
+      headers.push(key);
+    }
+  });
+
+  sheet.appendRow(headers.map(h =&gt; data[h] !== undefined ? data[h] : ''));
+  SpreadsheetApp.flush();
+  return { ok: true };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ГЕТТЕРЫ
+// ═══════════════════════════════════════════════════════════════
+
+function getClients() {
+  return sheetToJson(SHEETS.clients).map(r =&gt; ({
+    id:          r['id'] || r['ID'] || '',
+    num:         r['num'] || '',           // ← номер клиента от менеджера
+    name:        r['name'] || '',
+    tg:          r['tg'] || '',
+    phone:       r['phone'] || '',
+    serviceType: r['serviceType'] || '',
+    stage:       r['stage'] || '',
+    substage:    r['substage'] || '',
+    last:        r['last'] || '',
+    consulate:   r['consulate'] || '',
+    city:        r['Город подачи'] || r['city'] || '',
+    lawyer:      r['lawyer'] || '',
+    driveLink:   r['driveLink'] || '',
+    clientToken: r['clientToken'] || '',
+    submitDate:  r['submitDate'] || '',
+    docsReady:   r['docsReady'] || '',
+    onboard:     parseOnboard(r['onboard']),
+    comment:     r['comment'] || '',
+    aimaDate:    r['Подача в AIMA'] || '',
+    bankDate:    r['Подача в БАНК'] || '',
+    caseNum:     r['Номер дела'] || '',
+    submitStatus:r['Статус подачи'] || '',
+    deleted:     r['deleted'] || '',
+  })).filter(r =&gt; r.deleted !== '1' &amp;&amp; r.stage !== 'Удалён');
+}
+
+function getStatuses() {
+  return sheetToJson(SHEETS.statuses)
+    .filter(r =&gt; r['deleted'] !== '1')
+    .map(r =&gt; ({
+    num:     r['num']||'',
+    name:    r['name']||'',
+    nipc:    r['nipc']||'',
+    dob:     r['dob']||'',
+    pass:    r['pass']||'',
+    status:  r['status']||'',
+    date:    r['date']||'',
+    updated: r['updated']||'',
+    sec:     r['sec']||r['section']||'',
+    type:    r['type']||'',
+    comment: r['comment']||'',
+  }));
+}
+
+function getCourts() {
+  return sheetToJson(SHEETS.courts)
+    .filter(r =&gt; r['deleted'] !== '1')
+    .map(r =&gt; ({
+    num:     r['num']||'',
+    name:    r['name']||'',
+    lawyer:  r['lawyer']||'',
+    article: r['article']||'',
+    date:    r['date']||'',
+    place:   r['place']||'',
+    stage:   r['stage']||'',
+    status:  r['status']||'',
+    updated: r['updated']||'',
+    comment: r['comment']||'',
+  }));
+}
+
+function getSchedule() {
+  const ss = SpreadsheetApp.openById(SHEETS.schedule);
+  const sheet = ss.getSheets()[0];
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow &lt; 2) return [];
+
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h =&gt; String(h).trim());
+  const values  = sheet.getRange(2, 1, lastRow-1, lastCol).getValues();
+  const display = sheet.getRange(2, 1, lastRow-1, lastCol).getDisplayValues();
+  const slotCol = headers.indexOf('Слот');
+
+  const result = [];
+  for (let i = 0; i &lt; values.length; i++) {
+    const status = String(values[i][headers.indexOf('Статус')]||'').trim().toLowerCase();
+    if (status !== 'подтверждено' &amp;&amp; status !== 'занято') continue;
+    const slot = slotCol &gt;= 0 ? String(display[i][slotCol]||'').trim() : '';
+    if (!slot) continue;
+    const comma = slot.lastIndexOf(',');
+    const date  = comma &gt; 0 ? slot.slice(0, comma).trim() : slot;
+    const time  = comma &gt; 0 ? slot.slice(comma+1).trim() : '';
+    const row = {};
+    headers.forEach((h, j) =&gt; {
+      if (!h) return;
+      row[h] = j === slotCol ? slot : (values[i][j] instanceof Date ? fmtDate(values[i][j]) : String(values[i][j]||''));
     });
-    
-    if (user) {
-      return jsonResponse({
-        ok: true,
-        user: {
-          name:  user.name,
-          role:  (user.role || '').toLowerCase(),
-          email: user.email || user.login || '',
-          login: user.login || user.email || ''
-        }
-      });
-    }
-    return jsonResponse({ ok: false, error: 'Invalid credentials' });
+    result.push({
+      date, time, slot,
+      dow:      row['День']||'',
+      status:   row['Статус']||'',
+      name:     row['Имя']||'',
+      tg:       row['Username']||'',
+      userId:   row['User_ID']||'',
+      email:    row['Email']||'',
+      service:  row['Услуга']||'',
+      moved:    row['Переносы']||'',
+      reminded: row['Напомнено']||'',
+      meet:     row['ссылка для встречи']||'',
+    });
   }
-  
-  if (action === 'check') {
-    return jsonResponse({ ok: true });
-  }
-  
-  return jsonResponse({ ok: false, error: 'Unknown auth action: ' + action });
+  return result;
 }
 
-// ── Тест ─────────────────────────────────────────────────────
-function testGetUsers() {
-  var users = getUsers();
-  Logger.log('Users count: ' + users.length);
-  Logger.log(JSON.stringify(users));
+function getCitizenship() {
+  return sheetToJson(SHEETS.citizenship)
+    .filter(r =&gt; r['deleted'] !== '1')
+    .map(r =&gt; ({
+    num:     r['num']||'',
+    name:    r['name']||'',
+    lawyer:  r['lawyer']||'',
+    type:    r['type']||'',
+    nipc:    r['nipc']||'',
+    dob:     r['dob']||'',
+    pass:    r['pass']||'',
+    date:    r['date']||'',
+    track:   r['track']||'',
+    stage:   r['stage']||'',
+    status:  r['status']||'',
+    updated: r['updated']||'',
+    comment: r['comment']||'',
+  }));
 }
-</textarea>
+
+function getRights() {
+  return sheetToJson(SHEETS.rights)
+    .filter(r =&gt; r['deleted'] !== '1')
+    .map(r =&gt; ({
+    num:        r['num']||'',
+    name:       r['name']||'',
+    dob:        r['dob']||'',
+    pass:       r['pass']||'',
+    country:    r['country']||'',
+    date:       r['date']||'',
+    stage:      r['stage']||'',
+    status:     r['status']||'',
+    translator: r['translator']||'',
+    updated:    r['updated']||'',
+    driveLink:  r['driveLink']||'',
+    comment:    r['comment']||'',
+  }));
+}
+
+function getOrders() {
+  return sheetToJson(SHEETS.orders)
+    .filter(r =&gt; r['deleted'] !== '1' &amp;&amp; r['status'] !== 'deleted')
+    .map(r =&gt; ({
+    id:         r['id']||'',
+    clientId:   r['clientId']||'',
+    svcType:    r['svcType']||'',
+    status:     r['status']||'',
+    translator: r['translator']||'',
+    driveLink:  r['driveLink']||'',
+    created:    r['created']||'',
+    updated:    r['updated']||'',
+    comment:    r['comment']||'',
+  }));
+}
+
+function getVisaD() {
+  if (!SHEETS.visad || SHEETS.visad === 'ВСТАВЬТЕ_ID_ТАБЛИЦЫ_VISAD') return [];
+  return sheetToJson(SHEETS.visad)
+    .filter(r =&gt; r['deleted'] !== '1')
+    .map(r =&gt; ({
+    num:     r['num']||'',
+    name:    r['name']||'',
+    type:    r['type']||'',
+    dob:     r['dob']||'',
+    pass:    r['pass']||'',
+    city:    r['city']||'',
+    status:  r['status']||'',
+    date:    r['date']||'',
+    updated: r['updated']||'',
+    comment: r['comment']||'',
+  }));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TASKS — отдельная таблица
+// ═══════════════════════════════════════════════════════════════
+
+function getTasksSheet() {
+  return SpreadsheetApp.openById(TASKS_SHEET_ID).getSheets()[0];
+}
+
+function initTasksSheet(sheet) {
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(['id','text','title','client','assignee','prio','stage','due','created','cmts','deleted']);
+  }
+}
+
+function getTasks() {
+  try {
+    const sheet = getTasksSheet();
+    initTasksSheet(sheet);
+    if (sheet.getLastRow() &lt; 2) return [];
+    const data    = sheet.getDataRange().getValues();
+    const headers = data[0].map(h =&gt; String(h).trim());
+    return data.slice(1).map(row =&gt; {
+      const obj = {};
+      headers.forEach((h, i) =&gt; { obj[h] = String(row[i]||''); });
+      return obj;
+    }).filter(t =&gt; t.id &amp;&amp; t.stage !== 'deleted' &amp;&amp; t.deleted !== '1');
+  } catch(e) {
+    return { error: e.toString() };
+  }
+}
+
+function createTask(body) {
+  try {
+    const sheet = getTasksSheet();
+    initTasksSheet(sheet);
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h =&gt; String(h).trim());
+
+    // Добавить недостающие колонки
+    const bodyKeys = Object.keys(body).filter(k =&gt; k !== '_dirty');
+    bodyKeys.forEach(key =&gt; {
+      if (key &amp;&amp; !headers.includes(key)) {
+        const newCol = headers.length + 1;
+        sheet.getRange(1, newCol).setValue(key);
+        headers.push(key);
+      }
+    });
+
+    const id = body.id || 'task_' + Date.now();
+    body.id = id;
+    sheet.appendRow(headers.map(h =&gt; body[h] !== undefined ? body[h] : ''));
+    SpreadsheetApp.flush();
+    return { ok: true, id };
+  } catch(e) {
+    return { error: e.toString() };
+  }
+}
+
+// ─── ИСПРАВЛЕНО: принимает id как отдельный аргумент ───
+function updateTask(taskId, body) {
+  try {
+    const sheet   = getTasksSheet();
+    const data    = sheet.getDataRange().getValues();
+    const headers = data[0].map(h =&gt; String(h).trim());
+    const idCol   = headers.indexOf('id');
+
+    // Поиск задачи по id
+    for (let i = 1; i &lt; data.length; i++) {
+      if (String(data[i][idCol]).trim() === String(taskId).trim()) {
+
+        // Добавить недостающие колонки
+        Object.keys(body).forEach(key =&gt; {
+          if (!key || key === 'id' || key === '_dirty') return;
+          let col = headers.indexOf(key);
+          if (col &lt; 0) {
+            const newCol = headers.length + 1;
+            sheet.getRange(1, newCol).setValue(key);
+            headers.push(key);
+            col = newCol - 1;
+          }
+          sheet.getRange(i + 1, col + 1).setValue(body[key]);
+        });
+
+        SpreadsheetApp.flush();
+        return { ok: true };
+      }
+    }
+    return { error: 'Task not found: ' + taskId };
+  } catch(e) {
+    return { error: e.toString() };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// USERS &amp; AUTH
+// ═══════════════════════════════════════════════════════════════
+
+function getUsersSheet() {
+  return SpreadsheetApp.openById(USERS_SHEET_ID).getSheets()[0];
+}
+
+function getUsers(roleFilter) {
+  try {
+    const sheet = getUsersSheet();
+    if (sheet.getLastRow() &lt; 2) return [];
+    const data    = sheet.getDataRange().getValues();
+    const headers = data[0].map(h =&gt; String(h).trim());
+    let rows = data.slice(1)
+      .filter(row =&gt; row.some(c =&gt; c !== '' &amp;&amp; c !== null))
+      .map(row =&gt; {
+        const obj = {};
+        headers.forEach((h, i) =&gt; { if(h) obj[h] = String(row[i]||'').trim(); });
+        return obj;
+      })
+      .filter(u =&gt; u.name &amp;&amp; u.role &amp;&amp; u.status !== 'deleted')
+      .map(u =&gt; { delete u.otp; delete u.otpExpiry; delete u.password; return u; });
+    if (roleFilter) rows = rows.filter(u =&gt; u.role === roleFilter);
+    return rows;
+  } catch(e) {
+    return { error: e.toString() };
+  }
+}
+
+function createUser(body) {
+  // Убедиться что все обязательные поля присутствуют
+  const now = new Date().toISOString();
+  const userData = {
+    id:            body.id || 'user_' + Date.now(),
+    name:          body.name || '',
+    email:         body.email || '',
+    role:          body.role || 'manager',
+    status:        body.status || 'active',
+    password:      body.password || '',
+    otp:           '',
+    otpExpiry:     '',
+    loginAttempts: '0',
+    lockUntil:     '',
+    lastLogin:     '',
+    createdAt:     body.createdAt || now,
+  };
+  return addRow('users', userData);
+}
+
+function updateUser(body) {
+  const key = body.id || body.email || '';
+  if (!key) return { error: 'No id or email' };
+  return updateRow('users', key, body);
+}
+
+function findUserByEmail(email) {
+  const sheet   = getUsersSheet();
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0].map(h =&gt; String(h).trim());
+  const emailCol = headers.indexOf('email');
+  for (let i = 1; i &lt; data.length; i++) {
+    if (String(data[i][emailCol]).toLowerCase() === email.toLowerCase()) {
+      const obj = {};
+      headers.forEach((h, j) =&gt; { obj[h] = String(data[i][j]||''); });
+      obj._row = i + 1;
+      return obj;
+    }
+  }
+  return null;
+}
+
+function updateUserRow(row, fields) {
+  const sheet   = getUsersSheet();
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h =&gt; String(h).trim());
+  headers.forEach((h, j) =&gt; {
+    if (fields[h] !== undefined) sheet.getRange(row, j + 1).setValue(fields[h]);
+  });
+}
+
+function handleAuth(params, body) {
+  params = params || {};
+  if (!body || typeof body === 'string') { try { body = JSON.parse(body||'{}'); } catch(e) { body = {}; } }
+  const action = (params.action || body.action || '').toString().trim();
+
+  if (action === 'login') {
+    const email    = (body.email||'').toLowerCase().trim();
+    const password = (body.password||'').trim();
+    if (!email || !password) return { error: 'Email и пароль обязательны' };
+    const user = findUserByEmail(email);
+    if (!user) return { error: 'Неверный email или пароль' };
+    if (user.status === 'blocked') return { error: 'Аккаунт заблокирован', blocked: true };
+    if (user.lockUntil) {
+      const lockUntil = new Date(user.lockUntil);
+      if (!isNaN(lockUntil.getTime()) &amp;&amp; Date.now() &lt; lockUntil.getTime()) {
+        const mins = Math.ceil((lockUntil.getTime() - Date.now()) / 60000);
+        return { error: 'Слишком много попыток. Попробуйте через ' + mins + ' мин.', blocked: true };
+      } else {
+        updateUserRow(user._row, { loginAttempts: '0', lockUntil: '' });
+      }
+    }
+    if (!user.password) return { error: 'Пароль не установлен — используйте сброс пароля' };
+    if (user.password !== password) {
+      const attempts = parseInt(user.loginAttempts||'0') + 1;
+      const MAX = 5;
+      const fields = { loginAttempts: String(attempts) };
+      if (attempts &gt;= MAX) {
+        fields.lockUntil = new Date(Date.now() + 2*60*60*1000).toISOString();
+        updateUserRow(user._row, fields);
+        return { error: 'Превышено число попыток. Вход заблокирован на 2 часа.', blocked: true };
+      }
+      updateUserRow(user._row, fields);
+      return { error: 'Неверный email или пароль', attemptsLeft: MAX - attempts };
+    }
+    updateUserRow(user._row, { loginAttempts: '0', lockUntil: '', lastLogin: new Date().toISOString() });
+    return { ok: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
+  }
+
+  if (action === 'request_otp') {
+    const email = (body.email||'').toLowerCase().trim();
+    if (!email) return { error: 'Email обязателен' };
+    const user = findUserByEmail(email);
+    if (!user) return { error: 'Пользователь не найден' };
+    if (user.status === 'blocked') return { error: 'Аккаунт заблокирован' };
+    const otp    = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 5*60*1000).toISOString();
+    updateUserRow(user._row, { otp, otpExpiry: expiry });
+    try {
+      MailApp.sendEmail({
+        to: email,
+        subject: 'Сброс пароля — MigrAll CRM',
+        body: 'Ваш код: ' + otp + '\n\nКод действителен 5 минут.'
+      });
+    } catch(e) { return { error: 'Ошибка отправки: ' + e.toString() }; }
+    return { ok: true, message: 'Код отправлен' };
+  }
+
+  if (action === 'reset_password') {
+    const email       = (body.email||'').toLowerCase().trim();
+    const otp         = (body.otp||'').trim();
+    const newPassword = (body.newPassword||'').trim();
+    if (!email || !otp || !newPassword) return { error: 'Все поля обязательны' };
+    if (newPassword.length &lt; 6) return { error: 'Пароль минимум 6 символов' };
+    const user = findUserByEmail(email);
+    if (!user) return { error: 'Пользователь не найден' };
+    if (user.otp !== otp) return { error: 'Неверный код' };
+    const expiry = new Date(user.otpExpiry);
+    if (isNaN(expiry.getTime()) || Date.now() &gt; expiry.getTime()) return { error: 'Код истёк' };
+    updateUserRow(user._row, { password: newPassword, otp: '', otpExpiry: '', loginAttempts: '0', lockUntil: '' });
+    return { ok: true };
+  }
+
+  return { error: 'Неизвестное действие: ' + action };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ХЕЛПЕРЫ
+// ═══════════════════════════════════════════════════════════════
+
+function parseOnboard(val) {
+  if (!val) return [false, false, false];
+  try { const p = JSON.parse(val); if (Array.isArray(p)) return p; } catch(e) {}
+  return String(val).split(',').map(v =&gt; v.trim() === 'true');
+}
+
+function fmtDate(val, includeTime) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return '';
+    const d = val.getDate().toString().padStart(2,'0');
+    const m = (val.getMonth()+1).toString().padStart(2,'0');
+    const y = val.getFullYear();
+    const base = d+'.'+m+'.'+y;
+    if (includeTime) {
+      const hh = val.getHours().toString().padStart(2,'0');
+      const mm = val.getMinutes().toString().padStart(2,'0');
+      return base+', '+hh+':'+mm;
+    }
+    return base;
+  }
+  const s = String(val);
+  if (s.includes('GMT')||s.includes('T')||/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const dt = new Date(s);
+    if (!isNaN(dt.getTime())) {
+      const d = dt.getDate().toString().padStart(2,'0');
+      const m = (dt.getMonth()+1).toString().padStart(2,'0');
+      const y = dt.getFullYear();
+      return d+'.'+m+'.'+y;
+    }
+  }
+  return s;
+}
+
+function fmtDateTime(dt) { return dt ? fmtDate(dt)+' '+fmtTime(dt) : ''; }
+function fmtTime(dt) {
+  if (!dt) return '';
+  return dt.getHours().toString().padStart(2,'0')+':'+dt.getMinutes().toString().padStart(2,'0');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GOOGLE DRIVE
+// ═══════════════════════════════════════════════════════════════
+
+function handleDrive(action, body) {
+  switch(action) {
+    case 'createClientFolder':  return createClientFolder(body.clientId, body.clientName, body.serviceType);
+    case 'createServiceFolder': return createServiceFolder(body.clientId, body.serviceType);
+    case 'createDocsFolder':    return createDocsFolder(body.clientId, body.serviceType, body.role);
+    default:                    return { error: 'Unknown drive action: ' + action };
+  }
+}
+
+function createClientFolder(clientId, clientName, serviceType) {
+  try {
+    const root       = DriveApp.getFolderById(DRIVE_ROOT_FOLDER_ID);
+    const folderName = clientId + ' - ' + clientName;
+    const existing   = root.getFoldersByName(folderName);
+    const folder     = existing.hasNext() ? existing.next() : root.createFolder(folderName);
+    const url        = folder.getUrl();
+    updateRow('clients', clientId, { driveLink: url });
+    let svcUrl = '';
+    if (serviceType) svcUrl = createServiceFolderInClient(folder, serviceType).folderUrl || '';
+    return { ok: true, folderUrl: url, serviceFolderUrl: svcUrl, folderName };
+  } catch(e) { return { error: e.toString() }; }
+}
+
+function createServiceFolder(clientId, serviceType) {
+  try {
+    const root = DriveApp.getFolderById(DRIVE_ROOT_FOLDER_ID);
+    const iter = root.getFolders();
+    let clientFolder = null;
+    while(iter.hasNext()) {
+      const f = iter.next();
+      if(f.getName().startsWith(clientId + ' - ')) { clientFolder = f; break; }
+    }
+    if(!clientFolder) return { error: 'Папка клиента не найдена: ' + clientId };
+    return createServiceFolderInClient(clientFolder, serviceType);
+  } catch(e) { return { error: e.toString() }; }
+}
+
+function createServiceFolderInClient(clientFolder, serviceType) {
+  const ex  = clientFolder.getFoldersByName(serviceType);
+  const svc = ex.hasNext() ? ex.next() : clientFolder.createFolder(serviceType);
+  if (!ex.hasNext()) {
+    svc.createFolder('📄 Документы клиента');
+    svc.createFolder('✅ Готовые документы');
+  }
+  return { ok: true, folderUrl: svc.getUrl(), folderName: serviceType };
+}
+
+function createDocsFolder(clientId, serviceType, role) {
+  try {
+    const root = DriveApp.getFolderById(DRIVE_ROOT_FOLDER_ID);
+    const iter = root.getFolders();
+    let clientFolder = null;
+    while(iter.hasNext()) {
+      const f = iter.next();
+      if(f.getName().startsWith(clientId + ' - ')) { clientFolder = f; break; }
+    }
+    if(!clientFolder) return { error: 'Папка клиента не найдена' };
+    const svcEx = clientFolder.getFoldersByName(serviceType);
+    const svc   = svcEx.hasNext() ? svcEx.next() : clientFolder.createFolder(serviceType);
+    const rName = '✅ Готовые документы' + (role ? ' (' + role + ')' : '');
+    const rEx   = svc.getFoldersByName(rName);
+    const ready = rEx.hasNext() ? rEx.next() : svc.createFolder(rName);
+    return { ok: true, folderUrl: ready.getUrl(), folderName: rName };
+  } catch(e) { return { error: e.toString() }; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GOOGLE CALENDAR
+// ═══════════════════════════════════════════════════════════════
+
+const TEAM_CALENDAR_ID = 'c_0205528e1356d27d5ec074f6bff04781d24e00136cb110e0c6a07c0f52c33395@group.calendar.google.com';
+
+function getCalendarEvents(daysBack, daysForward) {
+  try {
+    daysBack    = daysBack    || 30;
+    daysForward = daysForward || 60;
+    const now   = new Date();
+    const start = new Date(now); start.setDate(start.getDate() - daysBack);
+    const end   = new Date(now); end.setDate(end.getDate() + daysForward);
+    const cal   = CalendarApp.getCalendarById(TEAM_CALENDAR_ID);
+    if (!cal) return { error: 'Календарь не найден' };
+    return cal.getEvents(start, end).map(ev =&gt; ({
+      id:          ev.getId(),
+      title:       ev.getTitle(),
+      start:       fmtDateTime(ev.getStartTime()),
+      end:         fmtDateTime(ev.getEndTime()),
+      startDate:   fmtDate(ev.getStartTime()),
+      endDate:     fmtDate(ev.getEndTime()),
+      startTime:   fmtTime(ev.getStartTime()),
+      endTime:     fmtTime(ev.getEndTime()),
+      allDay:      ev.isAllDayEvent(),
+      location:    ev.getLocation()||'',
+      description: ev.getDescription()||'',
+      color:       ev.getColor()||'',
+      guests:      ev.getGuestList().map(g =&gt; ({ name: g.getName(), email: g.getEmail(), status: g.getGuestStatus() })),
+    }));
+  } catch(err) { return { error: err.toString() }; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FILINGS
+// ═══════════════════════════════════════════════════════════════
+
+function getFilingsSheet() {
+  const ss = SpreadsheetApp.openById(SHEETS.filings);
+  return ss.getSheetByName('Подачи') || ss.getSheetByName('Filings') || ss.getSheets()[0];
+}
+
+function getFilings() {
+  const sheet = getFilingsSheet();
+  const data  = sheet.getDataRange().getValues();
+  if (data.length &lt; 2) return [];
+  const headers = data[0].map(h =&gt; String(h).trim());
+
+  function col(row, ...names) {
+    for (const name of names) {
+      const idx = headers.findIndex(h =&gt; h.toLowerCase() === name.toLowerCase());
+      if (idx &gt;= 0) {
+        const val = row[idx];
+        if (val instanceof Date) {
+          if (isNaN(val.getTime())) return '';
+          return val.getDate().toString().padStart(2,'0')+'.'+
+                 (val.getMonth()+1).toString().padStart(2,'0')+'.'+
+                 val.getFullYear();
+        }
+        return String(val||'').trim();
+      }
+    }
+    return '';
+  }
+
+  function colTime(row, name) {
+    const idx = headers.findIndex(h =&gt; h.toLowerCase() === name.toLowerCase());
+    if (idx &lt; 0) return '';
+    const val = row[idx];
+    if (val instanceof Date) return val.getHours().toString().padStart(2,'0')+':'+val.getMinutes().toString().padStart(2,'0');
+    return String(val||'').replace(/^(\d{1,2}:\d{2}):\d{2}$/, '$1');
+  }
+
+  return data.slice(1)
+    .filter(row =&gt; row.some(c =&gt; String(c).trim() !== ''))
+    .map((row, idx) =&gt; ({
+      id:      col(row,'id','num') || String(idx+1),
+      client:  col(row,'client','name'),
+      date:    col(row,'date','AppointmentDate'),
+      time:    colTime(row,'time'),
+      place:   col(row,'place'),
+      lawyer:  col(row,'lawyer'),
+      status:  col(row,'status','Status') || 'Планируется',
+      comment: col(row,'comment','Comments'),
+      type:    col(row,'type'),
+      _row:    idx+2,
+    }));
+}
+
+function addOrUpdateFiling(body, isUpdate) {
+  const sheet   = getFilingsSheet();
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0].map(h =&gt; String(h).trim());
+
+  function hIdx(...names) {
+    for (const name of names) {
+      const i = headers.findIndex(h =&gt; h.toLowerCase() === name.toLowerCase());
+      if (i &gt;= 0) return i;
+    }
+    return -1;
+  }
+
+  if (isUpdate &amp;&amp; body.id) {
+    const keyCol = hIdx('num','id');
+    for (let i = 1; i &lt; data.length; i++) {
+      if (String(data[i][Math.max(keyCol,0)]) === String(body.id)) {
+        [['client','name'],['date','AppointmentDate'],['time'],['place'],['lawyer'],['status','Status'],['comment','Comments']].forEach(([field,...alts]) =&gt; {
+          if (body[field] === undefined) return;
+          const col = hIdx(field, ...alts);
+          if (col &gt;= 0) sheet.getRange(i+1, col+1).setValue(body[field]);
+        });
+        SpreadsheetApp.flush();
+        return { ok: true };
+      }
+    }
+    return { error: 'Запись не найдена: ' + body.id };
+  }
+
+  const newId  = String(Date.now());
+  const newRow = headers.map(h =&gt; {
+    const hl = h.toLowerCase();
+    if (hl === 'num' || hl === 'id')                   return newId;
+    if (hl === 'name' || hl === 'client')               return body.client  || '';
+    if (hl === 'appointmentdate' || hl === 'date')       return body.date    || '';
+    if (hl === 'time')                                   return body.time    || '';
+    if (hl === 'place')                                  return body.place   || '';
+    if (hl === 'lawyer')                                 return body.lawyer  || '';
+    if (hl === 'status' || hl === 'статус')             return body.status  || 'Планируется';
+    if (hl === 'comments' || hl === 'comment')          return body.comment || '';
+    return '';
+  });
+  sheet.appendRow(newRow);
+  SpreadsheetApp.flush();
+  return { ok: true, id: newId };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SPEC TASKS
+// ═══════════════════════════════════════════════════════════════
+
+function getSpecTasksSheet() {
+  const ss = SpreadsheetApp.openById(SHEETS.specTasks);
+  let sheet = ss.getSheetByName('Дела');
+  if (!sheet) {
+    sheet = ss.insertSheet('Дела');
+    sheet.appendRow(['id','client','clientId','type','role','assignee','stage','due','description','driveUrl','createdAt','createdBy']);
+  }
+  return sheet;
+}
+
+function getSpecTasks(roleFilter) {
+  const sheet   = getSpecTasksSheet();
+  const data    = sheet.getDataRange().getValues();
+  if (data.length &lt; 2) return [];
+  const headers = data[0].map(String);
+  const rows    = data.slice(1).map(row =&gt; {
+    const obj = {};
+    headers.forEach((h, i) =&gt; { obj[h] = row[i] !== undefined ? String(row[i]) : ''; });
+    return obj;
+  });
+  if (roleFilter) return rows.filter(r =&gt; r.role === roleFilter);
+  return rows;
+}
+
+function addOrUpdateSpecTask(body, isUpdate) {
+  const sheet   = getSpecTasksSheet();
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0].map(String);
+  const idCol   = headers.indexOf('id');
+
+  if (isUpdate &amp;&amp; body.id) {
+    for (let i = 1; i &lt; data.length; i++) {
+      if (String(data[i][idCol]) === String(body.id)) {
+        Object.keys(body).forEach(key =&gt; {
+          const col = headers.indexOf(key);
+          if (col &gt;= 0 &amp;&amp; key !== 'id') sheet.getRange(i+1, col+1).setValue(body[key]);
+        });
+        SpreadsheetApp.flush();
+        return { ok: true };
+      }
+    }
+    return { error: 'Задача не найдена: ' + body.id };
+  }
+
+  const row = headers.map(h =&gt; body[h] !== undefined ? body[h] : '');
+  if (!row[idCol]) row[idCol] = 'st_' + Date.now();
+  const caIdx = headers.indexOf('createdAt');
+  if (caIdx &gt;= 0 &amp;&amp; !body.createdAt) row[caIdx] = new Date().toISOString();
+  sheet.appendRow(row);
+  SpreadsheetApp.flush();
+  return { ok: true, id: row[idCol] };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHECKLISTS
+// ═══════════════════════════════════════════════════════════════
+
+function getChecklistsSheet() {
+  const ss = SpreadsheetApp.openById(SHEETS.checklists);
+  let sheet = ss.getSheetByName('Checklists');
+  if (!sheet) {
+    sheet = ss.insertSheet('Checklists');
+    sheet.appendRow(['id','clientId','title','template','status','created','items']);
+  }
+  return sheet;
+}
+
+function getChecklists() {
+  const sheet = getChecklistsSheet();
+  const data  = sheet.getDataRange().getValues();
+  if (data.length &lt; 2) return [];
+  const headers = data[0].map(h =&gt; String(h).trim());
+  return data.slice(1)
+    .filter(row =&gt; row.some(c =&gt; String(c).trim() !== ''))
+    .map(row =&gt; {
+      const obj = {};
+      headers.forEach((h, i) =&gt; { obj[h] = row[i] !== undefined ? String(row[i]) : ''; });
+      // items хранится как JSON-строка — парсим обратно
+      try { if (obj.items) obj.items = JSON.parse(obj.items); } catch(e) { obj.items = []; }
+      if (!Array.isArray(obj.items)) obj.items = [];
+      return obj;
+    });
+}
+
+function addOrUpdateChecklist(body, isUpdate) {
+  const sheet   = getChecklistsSheet();
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0].map(h =&gt; String(h).trim());
+  const idCol   = headers.indexOf('id');
+
+  // items сериализуем в JSON-строку для хранения в ячейке
+  const bodyToSave = Object.assign({}, body);
+  if (bodyToSave.items &amp;&amp; typeof bodyToSave.items !== 'string') {
+    bodyToSave.items = JSON.stringify(bodyToSave.items);
+  }
+
+  if (isUpdate &amp;&amp; body.id) {
+    for (let i = 1; i &lt; data.length; i++) {
+      if (String(data[i][idCol]).trim() === String(body.id).trim()) {
+        Object.keys(bodyToSave).forEach(key =&gt; {
+          const col = headers.indexOf(key);
+          if (col &gt;= 0 &amp;&amp; key !== 'id') sheet.getRange(i + 1, col + 1).setValue(bodyToSave[key]);
+        });
+        SpreadsheetApp.flush();
+        return { ok: true };
+      }
+    }
+    // Строки нет — создаём новую (upsert)
+  }
+
+  // POST: добавить новую строку
+  const newId = body.id || ('cl_' + Date.now());
+  const row = headers.map(h =&gt; {
+    if (h === 'id') return newId;
+    return bodyToSave[h] !== undefined ? bodyToSave[h] : '';
+  });
+  sheet.appendRow(row);
+  SpreadsheetApp.flush();
+  return { ok: true, id: newId };
+}
+
+function deleteChecklist(keyValue) {
+  const sheet = getChecklistsSheet();
+  const data  = sheet.getDataRange().getValues();
+  if (data.length &lt; 2) return { error: 'Empty sheet' };
+  const headers = data[0].map(h =&gt; String(h).trim());
+  const idCol   = headers.indexOf('id');
+  const kv      = String(keyValue).trim();
+  for (let i = 1; i &lt; data.length; i++) {
+    if (String(data[i][idCol]).trim() === kv) {
+      sheet.deleteRow(i + 1);
+      SpreadsheetApp.flush();
+      return { ok: true, deleted: kv };
+    }
+  }
+  return { error: 'Checklist not found: ' + keyValue };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ТЕСТЫ
+// ═══════════════════════════════════════════════════════════════
+
+function testAccess() {
+  Object.entries(SHEETS).forEach(([name, id]) =&gt; {
+    try {
+      Logger.log('OK: ' + name + ' → ' + SpreadsheetApp.openById(id).getName());
+    } catch(e) {
+      Logger.log('ERR: ' + name + ' → ' + e.toString());
+    }
+  });
+}
+
+function testClients() {
+  const data = getClients();
+  Logger.log('Clients: ' + data.length);
+  Logger.log('First: ' + JSON.stringify(data[0]));
+}
+
+function setupAdminUser() {
+  const sheet = getUsersSheet();
+  const data  = sheet.getDataRange().getValues();
+  const headers = data[0].map(h =&gt; String(h).trim());
+  const emailCol = headers.indexOf('email');
+  for (let i = 1; i &lt; data.length; i++) {
+    if (String(data[i][emailCol]).toLowerCase() === 'ops@migrall.com') {
+      Logger.log('Admin already exists'); return;
+    }
+  }
+  sheet.appendRow(['user_admin','Администратор','ops@migrall.com','admin','active','admin2024','','','0','','',new Date().toISOString(),'system']);
+  Logger.log('Admin created: ops@migrall.com / admin2024');
+}
+
+function debugUsers() {
+  const sheet = getUsersSheet();
+  const data  = sheet.getDataRange().getValues();
+  Logger.log('Rows: ' + data.length);
+  Logger.log('Headers: ' + JSON.stringify(data[0]));
+  if (data.length &gt; 1) Logger.log('Row 1: ' + JSON.stringify(data[1]));
+}</textarea>
     </div>
 
     <div class="api-info">
