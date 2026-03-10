@@ -334,7 +334,7 @@ async function init() {
     const clRes = await api('/checklists');
     if (clRes && Array.isArray(clRes)) {
       checklists = clRes
-        .filter(cl => cl.clientId === clientId)
+        .filter(cl => String(cl.clientId).trim() === String(clientId).trim())
         .map(cl => {
           if (typeof cl.items === 'string') {
             try { cl.items = JSON.parse(cl.items); } catch(e) { cl.items = []; }
