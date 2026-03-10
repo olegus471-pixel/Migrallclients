@@ -533,7 +533,7 @@ button:active{transform:scale(.97)}
 .cl-card-meta{font-size:11px;color:var(--t3)}
 .cl-progress-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;width:100px;flex-shrink:0}
 .cl-progress-fill{height:100%;background:var(--gre);border-radius:3px;transition:.3s}
-.cl-card-body{padding:14px 16px}
+.cl-card-body{padding:14px 16px;max-height:480px;overflow-y:auto}
 .cl-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:6px;border:1px solid var(--border);background:var(--bg2);transition:.15s}
 .cl-item:hover{background:var(--s3)}
 .cl-item-num{font-size:11px;font-weight:800;color:var(--t4);min-width:20px;padding-top:2px}
@@ -11105,7 +11105,7 @@ function renderChecklists(){
       <div class="cl-card-hdr" onclick="toggleClCard('${cl.id}')">
         <div style="flex:1">
           <div class="cl-card-title">${cl.title}</div>
-          <div class="cl-card-meta">👤 ${clientName} · 📋 ${cl.template||'—'} · ${done}/${total} выполнено · Создан: ${cl.created||'—'}</div>
+          <div class="cl-card-meta">👤 ${clientName} · 📋 ${cl.template||'—'} · ${done}/${total} выполнено · Создан: ${fmtDate(cl.created)||'—'}</div>
         </div>
         <div class="cl-progress-bar"><div class="cl-progress-fill" style="width:${pct}%"></div></div>
         <span style="font-size:11px;font-weight:700;color:var(--t3);margin-left:8px">${pct}%</span>
