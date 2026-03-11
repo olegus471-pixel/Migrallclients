@@ -608,6 +608,7 @@ button:active{transform:scale(.97)}
     <div class="ni manager-only" onclick="showView('orders',this)"><span class="ni-ic">📦</span><span data-i18n="ni_orders">Заказы</span><span class="ni-bdg y" id="bdg-orders">0</span></div>
     <div class="ni manager-only" onclick="showView('checklists',this)"><span class="ni-ic">☑</span>Чеклисты</div>
     <div class="ni manager-only" onclick="showView('client-portal',this)"><span class="ni-ic">🗂</span>Кабинет клиента</div>
+    <div class="ni admin-only" onclick="showView('staff-portals',this)"><span class="ni-ic">👔</span>Кабинеты сотрудников</div>
     <div class="ni admin-only" onclick="showView('users',this)"><span class="ni-ic">👥</span>Пользователи</div>
     <div class="ni admin-only" onclick="showView('stats-lawyers',this)"><span class="ni-ic">📊</span>Статистика адвокатов</div>
     <div class="ni admin-only" onclick="showView('stats-activity',this)"><span class="ni-ic">📈</span>Активность команды</div>
@@ -916,8 +917,7 @@ button:active{transform:scale(.97)}
         <input type="checkbox" id="rights-hide-done" checked onchange="renderRights()">
         Скрыть завершённых
       </label>
-      <button class="btn btn-p btn-sm" onclick="editRights(-1)">+ Добавить (legacy)</button>
-      <button class="btn btn-p btn-sm" onclick="showView('orders',null);openNewOrderModal()"><span data-i18n="ord_new">+ Новый заказ</span> ↗</button>
+      <button class="btn btn-p btn-sm" onclick="openNewOrderModal()"><span data-i18n="ord_new">+ Новый заказ</span></button>
     </div></div>
     <div class="chips" id="rights-status-chips" style="margin-bottom:8px">
       <div class="chip active" onclick="filterRightsStatus('all',this)">Все</div>
@@ -3893,6 +3893,23 @@ CRM ↔ Backend (Render) ↔ Google Sheets
     <div id="cp-list"></div>
   </div>
 
+  <!-- =================== STAFF PORTALS =================== -->
+  <div class="view" id="view-staff-portals">
+    <div class="sec-h">
+      <div class="sec-t">👔 Кабинеты сотрудников</div>
+      <div class="sec-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input class="inp" id="sp-search" placeholder="🔍 Поиск по имени..." style="width:220px;font-size:12px" oninput="renderStaffPortals()">
+        <select class="inp" id="sp-role" style="width:160px;font-size:12px" onchange="renderStaffPortals()">
+          <option value="">Все роли</option>
+          <option value="lawyer">Адвокаты</option>
+          <option value="translator">Переводчики</option>
+          <option value="realestate">Менеджеры RE</option>
+        </select>
+      </div>
+    </div>
+    <div id="sp-list"></div>
+  </div>
+
   <!-- =================== REAL ESTATE =================== -->
   <div class="view" id="view-realestate">
     <div class="sec-h">
@@ -4650,12 +4667,15 @@ function getVisibleTasks(){
   if(currentUser.role==='admin'||currentUser.canSeeAll) return alive;
   if(currentUser.role==='lawyer'){
     const myIds=new Set(clients.filter(c=>c.lawyer===currentUser.name).map(c=>c.id));
+    if(taskScope==='all') return alive.filter(t=>myIds.has(t.client)||t.assignee===currentUser.name||!t.assignee||t.assignee==='—');
     return alive.filter(t=>myIds.has(t.client)||t.assignee===currentUser.name);
   }
   if(currentUser.role==='translator'){
     const myOrdClients=new Set(orders.filter(o=>o.translator===currentUser.name).map(o=>o.clientId));
+    if(taskScope==='all') return alive;
     return alive.filter(t=>myOrdClients.has(t.client)&&t.assignee===currentUser.name);
   }
+  // manager: scope переключает "Мои" / "Все"
   if(taskScope==='all') return alive;
   return alive.filter(t=>!t.assignee||t.assignee==='—'||t.assignee===currentUser.name);
 }
@@ -4891,7 +4911,7 @@ function restoreSidebarState(){
 // ============================================================
 // NAVIGATION
 // ============================================================
-const VIEW_TITLES = {dashboard:'Дашборд',clients:'Клиенты',kanban:'Kanban Pipeline',aima:'Проверки AIMA',courts:'Суды',citizenship:'Гражданство',rights:'Водительские права',schedule:'Расписание встреч',calendar:'Командный календарь',tasks:'Задачи',integration:'API / Интеграции',users:'Пользователи',filings:'Планируемые подачи','lawyer-tasks':'Дела адвоката','translator-tasks':'Задания переводчика',translations:'Переводы',nocrims:'Справки о несудимости',orders:'Заказы',checklists:'Чеклисты','client-portal':'Кабинет клиента','realestate':'Real Estate 🏢'};
+const VIEW_TITLES = {dashboard:'Дашборд',clients:'Клиенты',kanban:'Kanban Pipeline',aima:'Проверки AIMA',courts:'Суды',citizenship:'Гражданство',rights:'Водительские права',schedule:'Расписание встреч',calendar:'Командный календарь',tasks:'Задачи',integration:'API / Интеграции',users:'Пользователи',filings:'Планируемые подачи','lawyer-tasks':'Дела адвоката','translator-tasks':'Задания переводчика',translations:'Переводы',nocrims:'Справки о несудимости',orders:'Заказы',checklists:'Чеклисты','client-portal':'Кабинет клиента','realestate':'Real Estate 🏢','staff-portals':'Кабинеты сотрудников 👔'};
 function showView(id,el){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
@@ -4903,6 +4923,7 @@ function showView(id,el){
   if(id==='checklists'){ populateChecklistClientFilter(); renderChecklists(); loadChecklists().then(()=>{ populateChecklistClientFilter(); renderChecklists(); }); }
   if(id==='client-portal') { renderClientPortal(); loadChecklists().then(()=>renderClientPortal()); }
   if(id==='realestate') { loadREDeals(); }
+  if(id==='staff-portals') { renderStaffPortals(); }
   if(id==='aima') filterAIMA(_aimaCurrentFilter||'all', document.querySelector('#aima-filter-chips .chip.active'));
   if(id==='courts') filterCourts(_courtsCurrentFilter||'all', document.querySelector('#courts-chips .chip.active'));
   if(id==='translator') { renderTranslatorCabinet(); loadSpecTasks(); }
@@ -7142,6 +7163,7 @@ function editCourt(idx,e){
       </div>
     </div>
     <div class="msec"><label class="mfl">Комментарий</label><textarea class="mta" id="ct-comment">${c.comment}</textarea></div>
+    ${idx<0?`<div class="msec" style="background:var(--gre-d);border-radius:8px;padding:10px 14px;font-size:12px;color:#065f46">📁 <b>Google Drive:</b> После сохранения автоматически создастся папка <b>Суд</b> внутри папки клиента</div>`:`<div class="msec"><label class="mfl">Ссылка Drive</label><input class="mi" id="ct-drive" value="${c.driveLink||''}" placeholder="https://drive.google.com/..."></div>`}
     <div class="mft">
       <button class="btn btn-g" onclick="closeModal()">Отмена</button>
       <button class="btn btn-p" onclick="saveCourt(${idx})">${idx<0?'Добавить':'Сохранить'}</button>
@@ -7179,7 +7201,7 @@ async function _createServiceDriveFolder(clientNum, serviceType) {
 }
 async function saveCourt(idx){
   if(_isSaving)return; _isSaving=true;
-  const obj={num:g('ct-num').value,name:g('ct-name').value,lawyer:g('ct-lawyer').value,article:g('ct-art').value,date:g('ct-date').value,place:g('ct-place').value,stage:g('ct-stage').value,status:g('ct-status').value,updated:nowDMY(),comment:g('ct-comment').value};
+  const _ctDrive=g('ct-drive'); const obj={num:g('ct-num').value,name:g('ct-name').value,lawyer:g('ct-lawyer').value,article:g('ct-art').value,date:g('ct-date').value,place:g('ct-place').value,stage:g('ct-stage').value,status:g('ct-status').value,updated:nowDMY(),comment:g('ct-comment').value,driveLink:_ctDrive?_ctDrive.value:undefined};
   if(idx<0)courts.push(obj);else courts[idx]=obj;
   _isSaving=false; closeModal();renderCourts();renderDash();toast(idx<0?'Дело добавлено ✓':'Суд обновлён ✓');
   await (idx<0?apiPost('/courts',obj):apiPut('/courts/'+obj.num,obj));
@@ -7437,6 +7459,7 @@ function editCitizenship(idx,e){
       </div>
     </div>
     <div class="msec"><label class="mfl">Комментарий</label><textarea class="mta" id="ci-comment">${c.comment}</textarea></div>
+    ${idx<0?`<div class="msec" style="background:var(--gre-d);border-radius:8px;padding:10px 14px;font-size:12px;color:#065f46">📁 <b>Google Drive:</b> После сохранения автоматически создастся папка <b>Гражданство</b> внутри папки клиента</div>`:`<div class="msec"><label class="mfl">Ссылка Drive</label><input class="mi" id="ci-drive" value="${c.driveLink||''}" placeholder="https://drive.google.com/..."></div>`}
     <div class="mft">
       <button class="btn btn-g" onclick="closeModal()">Отмена</button>
       <button class="btn btn-p" onclick="saveCitizenship(${idx})">${idx<0?'Добавить':'Сохранить'}</button>
@@ -7446,7 +7469,7 @@ function editCitizenship(idx,e){
 }
 async function saveCitizenship(idx){
   if(_isSaving)return; _isSaving=true;
-  const obj={num:g('ci-num').value,name:g('ci-name').value,lawyer:g('ci-lawyer').value,type:g('ci-type').value,date:g('ci-date').value,track:g('ci-track').value,stage:g('ci-stage').value,status:g('ci-status').value,updated:nowDMY(),comment:g('ci-comment').value};
+  const _ciDrive=g('ci-drive'); const obj={num:g('ci-num').value,name:g('ci-name').value,lawyer:g('ci-lawyer').value,type:g('ci-type').value,date:g('ci-date').value,track:g('ci-track').value,stage:g('ci-stage').value,status:g('ci-status').value,updated:nowDMY(),comment:g('ci-comment').value,driveLink:_ciDrive?_ciDrive.value:undefined};
   if(idx<0)citizenship.push(obj);else citizenship[idx]=obj;
   _isSaving=false; closeModal();renderCitizenship();renderDash();toast(idx<0?'Добавлено ✓':'Гражданство обновлено ✓');
   await (idx<0?apiPost('/citizenship',obj):apiPut('/citizenship/'+obj.num,obj));
@@ -10774,7 +10797,32 @@ async function saveSubmitInfo(cid){
   c.submitDate  = date.trim();
   closeModal();
   toast('📅 Подача сохранена ✓');
+  // Сохранить в таблице клиентов
   await apiPut('/clients/'+cid, {submitPlace: c.submitPlace, submitDate: c.submitDate}).catch(()=>{});
+  // Добавить/обновить запись в таблице Подачи (filings)
+  if(c.submitDate) {
+    const filing = {
+      id:      'FIL-'+cid,
+      client:  c.name || cid,
+      name:    c.name || cid,
+      num:     c.num  || cid,
+      tg:      c.tg   || '',
+      lawyer:  c.lawyer || '',
+      type:    c.serviceType || '',
+      date:    c.submitDate,
+      place:   c.submitPlace,
+      status:  'Планируется',
+      comment: '',
+    };
+    // Обновить в локальном массиве filings если есть
+    if(window.filings && Array.isArray(window.filings)) {
+      const fi = window.filings.findIndex(function(f){ return f.id==='FIL-'+cid || (f.client===c.name&&f.num===c.num); });
+      if(fi>=0) window.filings[fi]=Object.assign(window.filings[fi], filing);
+      else window.filings.push(filing);
+    }
+    await apiPost('/filings', filing).catch(()=>{});
+    if(typeof renderFilings === 'function') renderFilings();
+  }
 }
 
 
@@ -12061,6 +12109,160 @@ async function saveREDeal() {
 
 function fmtRENum(n) {
   return Number(n).toLocaleString('ru-RU');
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// STAFF PORTALS — кабинеты сотрудников
+// ═══════════════════════════════════════════════════════════
+
+const STAFF_ROLES = {
+  lawyer:      { label: 'Адвокат',       icon: '⚖️',  portal: '/lawyer',      color: 'var(--pur)' },
+  translator:  { label: 'Переводчик',    icon: '🌐',  portal: '/translator',  color: 'var(--ora,#f97316)' },
+  realestate:  { label: 'Менеджер RE',   icon: '🏢',  portal: '/realestate',  color: 'var(--tea,#0d9488)' },
+  re_manager:  { label: 'Менеджер RE',   icon: '🏢',  portal: '/realestate',  color: 'var(--tea,#0d9488)' },
+};
+
+function renderStaffPortals() {
+  const wrap = document.getElementById('sp-list');
+  if(!wrap) return;
+  const q      = (document.getElementById('sp-search')||{}).value||'';
+  const fRole  = (document.getElementById('sp-role')||{}).value||'';
+  const staffRoles = ['lawyer','translator','realestate','re_manager'];
+
+  // Build list from usersData (staff users)
+  var staffList = (window.usersData||[]).filter(function(u){
+    if(!staffRoles.includes(u.role||'')) return false;
+    if(fRole && u.role !== fRole && !(fRole==='realestate'&&u.role==='re_manager')) return false;
+    if(q && !(u.name||'').toLowerCase().includes(q.toLowerCase()) && !(u.email||'').toLowerCase().includes(q.toLowerCase())) return false;
+    return true;
+  });
+
+  if(!staffList.length) {
+    wrap.innerHTML = '<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px">Нет сотрудников с ролями адвоката / переводчика / RE</div>';
+    return;
+  }
+
+  const baseUrl = (window.location.origin + window.location.pathname).replace(/index\.html$/, '').replace(/\/+$/, '');
+
+  wrap.innerHTML = staffList.map(function(u) {
+    const ri = STAFF_ROLES[u.role] || { label: u.role, icon: '👤', portal: '', color: 'var(--acc)' };
+    const hasPass = !!(u.password || u.pass);
+    const portalUrl = ri.portal ? baseUrl + ri.portal : '';
+    const initials  = (u.name||'?').split(' ').map(function(w){ return w[0]||''; }).slice(0,2).join('').toUpperCase();
+
+    return '<div class="cp-card" id="sp-card-' + esc(u.email||u.id) + '">'
+      + '<div class="cp-card-hdr" onclick="toggleSpCard('' + esc(u.email||u.id) + '')">'
+        + '<div class="cp-avatar" style="background:' + ri.color + '">' + initials + '</div>'
+        + '<div style="flex:1">'
+          + '<div class="cp-name">' + esc(u.name||'—') + '</div>'
+          + '<div class="cp-meta">' + ri.icon + ' ' + ri.label + ' · ' + esc(u.email||'—') + '</div>'
+        + '</div>'
+        + '<span class="cp-badge" style="background:' + ri.color + '18;color:' + ri.color + '">' + ri.label + '</span>'
+        + '<span style="font-size:16px;color:var(--t3);margin-left:6px" id="sp-arr-' + esc(u.email||u.id) + '">▸</span>'
+      + '</div>'
+      + '<div class="cp-body" id="sp-body-' + esc(u.email||u.id) + '" style="display:none">'
+        // Portal link
+        + '<div class="cp-section-lbl">🔗 Кабинет ' + ri.label.toLowerCase() + '</div>'
+        + '<div class="cp-drive-block" style="gap:10px">'
+          + '<div class="cp-drive-icon">' + ri.icon + '</div>'
+          + '<div class="cp-drive-info">'
+            + '<div class="cp-drive-title">Ссылка на кабинет</div>'
+            + (portalUrl
+              ? '<div style="font-size:11px;color:var(--t3)">' + esc(portalUrl) + '</div>'
+              : '<div style="font-size:11px;color:var(--t3)">Портал не настроен</div>')
+          + '</div>'
+          + (portalUrl ? '<button class="cp-edit-drive" onclick="copyStaffPortalLink('' + esc(portalUrl) + '')">📋 Скопировать</button>' : '')
+          + (portalUrl ? '<a class="cp-edit-drive" href="' + esc(portalUrl) + '" target="_blank" style="text-decoration:none">↗ Открыть</a>' : '')
+        + '</div>'
+        // Password
+        + '<div class="cp-section-lbl">🔑 Логин и пароль</div>'
+        + '<div class="cp-drive-block" style="gap:10px">'
+          + '<div class="cp-drive-icon">🔐</div>'
+          + '<div class="cp-drive-info">'
+            + '<div class="cp-drive-title">Доступ к кабинету</div>'
+            + '<div style="font-size:11px;color:var(--t3)" id="sp-pass-hint-' + esc(u.email||u.id) + '">'
+              + (hasPass ? '🟢 Пароль установлен · Email: ' + esc(u.email||'—') : '🔴 Пароль не установлен')
+            + '</div>'
+          + '</div>'
+          + '<button class="cp-edit-drive" onclick="openStaffPassModal('' + esc(u.email||u.id) + '')">'
+            + (hasPass ? '🔑 Сменить пароль' : '🔑 Задать пароль') + '</button>'
+        + '</div>'
+      + '</div>'
+    + '</div>';
+  }).join('');
+}
+
+function toggleSpCard(uid) {
+  var card = document.getElementById('sp-card-' + uid);
+  var body = document.getElementById('sp-body-' + uid);
+  var arr  = document.getElementById('sp-arr-' + uid);
+  if(!body) return;
+  var open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if(arr) arr.textContent = open ? '▸' : '▾';
+  if(card) card.classList.toggle('open', !open);
+}
+
+function copyStaffPortalLink(url) {
+  navigator.clipboard.writeText(url).then(function(){
+    showToast('✅ Ссылка скопирована');
+  }).catch(function(){
+    prompt('Скопируйте ссылку вручную:', url);
+  });
+}
+
+function openStaffPassModal(uid) {
+  var u = (window.usersData||[]).find(function(x){ return (x.email||x.id) === uid; });
+  if(!u) return;
+  const ri = STAFF_ROLES[u.role] || { label: u.role, icon: '👤' };
+  openModal(
+    '<div class="mhdr">'
+      + '<div><div style="font-size:10px;color:var(--t3);font-family:'IBM Plex Mono',monospace">' + ri.icon + ' ' + ri.label + '</div>'
+      + '<div style="font-size:16px;font-weight:700;margin-top:2px">' + esc(u.name||u.email) + '</div></div>'
+      + '<button class="mcls" onclick="closeModal()">✕</button>'
+    + '</div>'
+    + '<div class="msec">'
+      + '<div class="msl">Учётные данные для входа</div>'
+      + '<div class="mrow">'
+        + '<div class="mf"><label class="mfl">Email (логин)</label>'
+          + '<input class="mi" id="sp-m-email" value="' + esc(u.email||'') + '" readonly style="background:var(--s3);color:var(--t3)"></div>'
+        + '<div class="mf"><label class="mfl">Новый пароль</label>'
+          + '<input class="mi" id="sp-m-pass" type="password" placeholder="Введите пароль" autocomplete="new-password">'
+          + '<button type="button" style="font-size:10px;margin-top:4px;background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer" '
+            + 'onclick="var p=Math.random().toString(36).slice(2,10);document.getElementById('sp-m-pass').value=p;document.getElementById('sp-m-pass').type='text'">🎲 Случайный</button>'
+        + '</div>'
+      + '</div>'
+    + '</div>'
+    + '<div class="mfoot">'
+      + '<button class="btn" onclick="closeModal()">Отмена</button>'
+      + '<button class="btn btn-p" onclick="saveStaffPass('' + esc(uid) + '')">💾 Сохранить пароль</button>'
+    + '</div>'
+  );
+}
+
+async function saveStaffPass(uid) {
+  var u = (window.usersData||[]).find(function(x){ return (x.email||x.id) === uid; });
+  if(!u) return;
+  var pass = (document.getElementById('sp-m-pass')||{}).value||'';
+  if(!pass || pass.length < 4) { showToast('⚠️ Пароль слишком короткий (минимум 4 символа)'); return; }
+  closeModal();
+  showToast('💾 Сохраняю...');
+  try {
+    var res = await apiPut('/users/' + encodeURIComponent(u.email||u.id), { password: pass });
+    if(res && res.ok) {
+      u.password = pass;
+      showToast('✅ Пароль для ' + (u.name||u.email) + ' обновлён');
+      // Update hint
+      var hint = document.getElementById('sp-pass-hint-' + uid);
+      if(hint) hint.innerHTML = '🟢 Пароль установлен · Email: ' + esc(u.email||'—');
+    } else {
+      showToast('⚠️ ' + (res&&res.error?res.error:'Ошибка сохранения'));
+    }
+  } catch(e) {
+    showToast('⚠️ Ошибка сети');
+    console.error(e);
+  }
 }
 
 // Открыть внешний кабинет в новой вкладке
