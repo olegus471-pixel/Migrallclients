@@ -140,6 +140,18 @@ app.use(express.static(__dirname, { index: false }));
 app.get('/client.html', (req, res) => serveHtml('client.html', res));
 app.get('/client',      (req, res) => serveHtml('client.html', res));
 
+// Кабинет адвоката
+app.get('/lawyer.html', (req, res) => serveHtml('lawyer.html', res));
+app.get('/lawyer',      (req, res) => serveHtml('lawyer.html', res));
+
+// Кабинет переводчика
+app.get('/translator.html', (req, res) => serveHtml('translator.html', res));
+app.get('/translator',      (req, res) => serveHtml('translator.html', res));
+
+// Кабинет менеджера Real Estate
+app.get('/realestate.html', (req, res) => serveHtml('realestate.html', res));
+app.get('/realestate',      (req, res) => serveHtml('realestate.html', res));
+
 // Всё остальное → index.html
 app.get('*', (req, res) => serveHtml('index.html', res));
 
