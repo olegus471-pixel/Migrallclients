@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MigrAll — Кабинет адвоката</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0f3fa;--surface:#fff;--s2:#f7f8fd;--s3:#eef1f8;--border:#e2e7f2;
+  --t1:#0d1426;--t2:#3a4260;--t3:#8892b0;--t4:#c0c8df;
+  --acc:#4f6ef7;--acc-d:#eaedfe;--gre:#12b76a;--gre-d:#d1fadf;
+  --yel:#f59e0b;--yel-d:#fef3c7;--red:#ef4444;--red-d:#fee2e2;
+  --pur:#7c3aed;--pur-d:#ede9fe;
+  --sh:0 1px 4px rgba(13,20,38,.06),0 1px 2px rgba(13,20,38,.04);
+  --sh2:0 8px 32px rgba(13,20,38,.10),0 2px 8px rgba(13,20,38,.05);
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:var(--bg);color:var(--t1);font-family:'Manrope',sans-serif;font-size:14px;line-height:1.6}
+a{color:var(--acc);text-decoration:none}
+button:active{transform:scale(.97)}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* Loading */
+#screen-loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:18px}
+.loading-logo{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:var(--t1)}
+.loading-logo span{color:var(--acc)}
+.loading-bar-wrap{width:180px;height:3px;background:var(--border);border-radius:4px;overflow:hidden}
+.loading-bar-fill{height:100%;background:linear-gradient(90deg,var(--acc),var(--pur));border-radius:4px;animation:loadbar 1.6s ease-in-out infinite}
+@keyframes loadbar{0%{width:0;margin-left:0}60%{width:100%;margin-left:0}100%{width:0;margin-left:100%}}
+
+/* Login */
+#screen-login{display:none;position:fixed;inset:0;background:var(--bg);align-items:center;justify-content:center;z-index:9997;padding:16px}
+.login-card{background:var(--surface);border-radius:var(--r);padding:36px 32px;width:100%;max-width:400px;box-shadow:var(--sh2)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.login-logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--acc),var(--pur));border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.login-logo-icon svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.login-logo-text{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--t1)}
+.login-logo-sub{font-size:10px;color:var(--t3);font-family:'IBM Plex Mono',monospace;margin-top:1px}
+.login-title{font-size:20px;font-weight:800;color:var(--t1);margin-bottom:6px}
+.login-sub{font-size:12.5px;color:var(--t3);margin-bottom:24px;line-height:1.6}
+.login-field{margin-bottom:16px}
+.login-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:6px;display:block;font-family:'IBM Plex Mono',monospace}
+.login-inp{width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;font-family:'Manrope',sans-serif;color:var(--t1);outline:none;transition:border-color .18s}
+.login-inp:focus{border-color:var(--acc);background:var(--surface)}
+.login-inp.error{border-color:var(--red)}
+.login-btn{width:100%;background:linear-gradient(135deg,var(--acc),var(--pur));color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif;transition:opacity .15s;margin-top:4px}
+.login-btn:hover{opacity:.9}
+.login-btn:disabled{opacity:.5;cursor:default}
+.login-error{background:var(--red-d);color:#991b1b;border-radius:8px;padding:10px 14px;font-size:12.5px;font-weight:600;margin-bottom:16px;display:none}
+
+/* App layout */
+#app{display:none;min-height:100vh}
+.top-bar{background:var(--surface);border-bottom:1.5px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--sh)}
+.top-logo{display:flex;align-items:center;gap:10px}
+.top-logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--acc),var(--pur));border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.top-logo-icon svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.top-logo-text{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--t1)}
+.top-logo-sub{font-size:9px;color:var(--t3);font-family:'IBM Plex Mono',monospace}
+.top-user{display:flex;align-items:center;gap:10px}
+.user-badge{background:var(--pur-d);border:1.5px solid var(--pur);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--pur);font-family:'IBM Plex Mono',monospace}
+.logout-btn{background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--t2);font-family:'Manrope',sans-serif}
+
+.content{max-width:1100px;margin:0 auto;padding:24px 20px 60px}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;background:var(--s2);border-radius:12px;padding:4px;margin-bottom:24px;border:1.5px solid var(--border)}
+.tab{flex:1;padding:9px 16px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;text-align:center;color:var(--t3);transition:all .18s;border:none;background:none;font-family:'Manrope',sans-serif}
+.tab.active{background:var(--surface);color:var(--t1);box-shadow:var(--sh)}
+
+/* KPI cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.kpi-card{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:16px 18px;box-shadow:var(--sh)}
+.kpi-val{font-size:28px;font-weight:800;color:var(--t1);font-family:'IBM Plex Mono',monospace;margin-bottom:2px}
+.kpi-lbl{font-size:11px;color:var(--t3);font-weight:600}
+.kpi-card.accent{border-color:rgba(79,110,247,.3);background:var(--acc-d)}
+.kpi-card.accent .kpi-val{color:var(--acc)}
+.kpi-card.urgent{border-color:rgba(239,68,68,.3);background:var(--red-d)}
+.kpi-card.urgent .kpi-val{color:var(--red)}
+
+/* Panel */
+.panel{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--sh);margin-bottom:20px}
+.panel-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--s2)}
+.panel-title{font-size:13px;font-weight:700;color:var(--t1)}
+.panel-cnt{font-size:11px;color:var(--t3);font-family:'IBM Plex Mono',monospace}
+
+/* Table */
+.dt{width:100%;border-collapse:collapse;font-size:13px}
+.dt th{padding:10px 14px;font-size:10px;font-weight:700;color:var(--t3);text-align:left;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border)}
+.dt td{padding:10px 14px;border-bottom:1px solid var(--s3)}
+.dt tr:last-child td{border-bottom:none}
+.dt tr:hover td{background:var(--s2)}
+.mono{font-family:'IBM Plex Mono',monospace}
+
+/* Badges */
+.bdg{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace}
+.bdg.acc{background:var(--acc-d);color:var(--acc)}
+.bdg.grn{background:var(--gre-d);color:#065f46}
+.bdg.yel{background:var(--yel-d);color:#92400e}
+.bdg.red{background:var(--red-d);color:#991b1b}
+.bdg.pur{background:var(--pur-d);color:var(--pur)}
+.bdg.blu{background:#dbeafe;color:#1d4ed8}
+
+/* Task item */
+.task-item{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.task-item:last-child{border-bottom:none}
+.task-prio{width:4px;height:36px;border-radius:4px;flex-shrink:0}
+.task-body{flex:1}
+.task-title{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:2px}
+.task-meta{font-size:11px;color:var(--t3)}
+.task-done-btn{background:var(--gre-d);color:var(--gre);border:none;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif}
+
+/* Urgent row */
+.row-urgent td{background:#fff5f5!important}
+.row-soon td{background:#fffbeb!important}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--t1);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+#toast.show{opacity:1;transform:translateY(0)}
+
+@media(max-width:600px){.content{padding:16px 12px 60px}.kpi-grid{grid-template-columns:1fr 1fr}.tabs{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+
+<div id="screen-loading">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+    <div class="top-logo-icon" style="width:52px;height:52px;border-radius:14px">
+      <svg viewBox="0 0 24 24" style="width:24px;height:24px"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <div class="loading-logo">Migr<span>All</span></div>
+  </div>
+  <div><div class="loading-bar-wrap"><div class="loading-bar-fill"></div></div></div>
+  <div style="font-size:11px;color:var(--t3);font-family:'IBM Plex Mono',monospace">Загрузка кабинета адвоката...</div>
+</div>
+
+<div id="screen-login">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <div><div class="login-logo-text">MigrAll</div><div class="login-logo-sub">Кабинет адвоката</div></div>
+    </div>
+    <div class="login-title">Вход для адвоката</div>
+    <div class="login-sub">Введите ваш email и пароль от системы MigrAll</div>
+    <div class="login-error" id="login-error">Неверный email или пароль</div>
+    <div class="login-field">
+      <label class="login-label">Email</label>
+      <input class="login-inp" id="login-email" type="email" placeholder="your@email.com" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label class="login-label">Пароль</label>
+      <input class="login-inp" id="login-pass" type="password" placeholder="Введите пароль" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Войти</button>
+  </div>
+</div>
+
+<div id="app">
+  <div class="top-bar">
+    <div class="top-logo">
+      <div class="top-logo-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <div><div class="top-logo-text">MigrAll</div><div class="top-logo-sub">Кабинет адвоката</div></div>
+    </div>
+    <div class="top-user">
+      <div class="user-badge">⚖️ <span id="user-name">Адвокат</span></div>
+      <button class="logout-btn" onclick="doLogout()">Выйти</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- KPI -->
+    <div class="kpi-grid">
+      <div class="kpi-card accent"><div class="kpi-val" id="kpi-clients">—</div><div class="kpi-lbl">Моих клиентов</div></div>
+      <div class="kpi-card urgent"><div class="kpi-val" id="kpi-submits">—</div><div class="kpi-lbl">Подач до 90 дней</div></div>
+      <div class="kpi-card"><div class="kpi-val" id="kpi-courts">—</div><div class="kpi-lbl">Активных дел</div></div>
+      <div class="kpi-card"><div class="kpi-val" id="kpi-tasks">—</div><div class="kpi-lbl">Открытых задач</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('tab-clients',this)">👥 Клиенты</button>
+      <button class="tab" onclick="switchTab('tab-submits',this)">📅 Подачи</button>
+      <button class="tab" onclick="switchTab('tab-courts',this)">⚖️ Суды</button>
+      <button class="tab" onclick="switchTab('tab-tasks',this)">✅ Задачи</button>
+    </div>
+
+    <!-- Clients tab -->
+    <div id="tab-clients">
+      <div class="panel">
+        <div class="panel-hdr">
+          <div class="panel-title">Мои клиенты</div>
+          <div class="panel-cnt" id="cnt-clients">—</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="dt"><thead><tr>
+            <th>№</th><th>Клиент</th><th>Услуга</th><th>Этап</th><th>Подача</th><th>Документы</th><th>Drive</th>
+          </tr></thead>
+          <tbody id="tb-clients"><tr><td colspan="7" style="padding:24px;text-align:center;color:var(--t3)">Загрузка...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submits tab -->
+    <div id="tab-submits" style="display:none">
+      <div class="panel">
+        <div class="panel-hdr">
+          <div class="panel-title">📅 Планируемые подачи</div>
+          <div class="panel-cnt" id="cnt-submits">—</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="dt"><thead><tr>
+            <th>Клиент</th><th>Услуга</th><th>Место подачи</th><th>Дата подачи</th><th>Осталось дней</th><th>Документы</th>
+          </tr></thead>
+          <tbody id="tb-submits"><tr><td colspan="6" style="padding:24px;text-align:center;color:var(--t3)">Загрузка...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Courts tab -->
+    <div id="tab-courts" style="display:none">
+      <div class="panel">
+        <div class="panel-hdr">
+          <div class="panel-title">⚖️ Судебные дела</div>
+          <div class="panel-cnt" id="cnt-courts">—</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="dt"><thead><tr>
+            <th>№</th><th>Клиент</th><th>Статья</th><th>Место</th><th>Дата</th><th>Статус</th><th>Drive</th>
+          </tr></thead>
+          <tbody id="tb-courts"><tr><td colspan="7" style="padding:24px;text-align:center;color:var(--t3)">Загрузка...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tasks tab -->
+    <div id="tab-tasks" style="display:none">
+      <div class="panel">
+        <div class="panel-hdr">
+          <div class="panel-title">✅ Мои задачи</div>
+          <div class="panel-cnt" id="cnt-tasks">—</div>
+        </div>
+        <div id="tasks-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API_BASE = (window.__ENV && window.__ENV.GAS_URL)
+  ? window.__ENV.GAS_URL
+  : 'https://script.google.com/macros/s/AKfycbwDvmzX8V2fy2Qojrf8k4vq-t0GctFPhXywdp-7SnRuwDAu3h2NdvAwOVXzr3mXgObB/exec';
+
+let currentUser = null;
+let allClients  = [];
+let allCourts   = [];
+let allTasks    = [];
+let allUsers    = [];
+
+// ── INIT ────────────────────────────────────────────────────
+async function init() {
+  document.getElementById('screen-loading').style.display = 'none';
+  document.getElementById('screen-login').style.display   = 'flex';
+  document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  document.getElementById('login-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value.trim();
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('login-btn');
+  errEl.style.display = 'none';
+  if(!email || !pass) { errEl.textContent='Заполните все поля'; errEl.style.display='block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Проверка...';
+  try {
+    const res = await api('/auth/login', { method:'POST', body: JSON.stringify({email, password: pass}) });
+    if(!res || !res.ok) {
+      errEl.textContent = res?.error || 'Неверный email или пароль';
+      errEl.style.display = 'block';
+      return;
+    }
+    if(res.user.role !== 'lawyer' && res.user.role !== 'admin') {
+      errEl.textContent = 'Доступ только для адвокатов';
+      errEl.style.display = 'block';
+      return;
+    }
+    currentUser = res.user;
+    document.getElementById('screen-login').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('user-name').textContent = currentUser.name || currentUser.email;
+    await loadData();
+  } catch(e) {
+    errEl.textContent = 'Ошибка соединения. Попробуйте позже.';
+    errEl.style.display = 'block';
+    console.error(e);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Войти';
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('screen-login').style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value  = '';
+}
+
+// ── DATA ────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const [clientsRes, courtsRes, tasksRes] = await Promise.all([
+      api('/clients'), api('/courts'), api('/tasks')
+    ]);
+    allClients = Array.isArray(clientsRes) ? clientsRes : [];
+    allCourts  = Array.isArray(courtsRes)  ? courtsRes  : [];
+    allTasks   = Array.isArray(tasksRes)   ? tasksRes   : [];
+    renderAll();
+  } catch(e) {
+    toast('⚠️ Ошибка загрузки данных');
+    console.error(e);
+  }
+}
+
+// ── RENDER ──────────────────────────────────────────────────
+function renderAll() {
+  const isLawyer = currentUser.role === 'lawyer';
+  const myName   = currentUser.name || '';
+
+  const myClients = isLawyer
+    ? allClients.filter(c => c.lawyer === myName)
+    : allClients;
+
+  const myClientIds = new Set(myClients.map(c => c.id));
+
+  const myCourts = isLawyer
+    ? allCourts.filter(c => myClientIds.has(c.num) || myClientIds.has(c.clientId))
+    : allCourts;
+
+  const myTasks = isLawyer
+    ? allTasks.filter(t => (t.assignee === myName || myClientIds.has(t.client)) && t.stage !== 'done')
+    : allTasks.filter(t => t.stage !== 'done');
+
+  // KPI
+  const now = new Date(); now.setHours(0,0,0,0);
+  const submits = myClients.filter(c => {
+    if(!c.submitDate) return false;
+    const d = parseDate(c.submitDate);
+    return d && d >= now && (d - now) / 86400000 <= 90;
+  });
+  document.getElementById('kpi-clients').textContent = myClients.length;
+  document.getElementById('kpi-submits').textContent = submits.length;
+  document.getElementById('kpi-courts').textContent  = myCourts.filter(c => c.status !== 'Завершено').length;
+  document.getElementById('kpi-tasks').textContent   = myTasks.length;
+
+  // Clients table
+  document.getElementById('cnt-clients').textContent = myClients.length + ' клиентов';
+  document.getElementById('tb-clients').innerHTML = myClients.length
+    ? myClients.map(c => `<tr>
+        <td class="mono" style="color:var(--acc);font-weight:700">${c.num||c.id}</td>
+        <td style="font-weight:600">${esc(c.name)}</td>
+        <td>${svcBdg(c.serviceType)}</td>
+        <td>${stageBdg(c.stage)}</td>
+        <td class="mono" style="color:${c.submitDate?'var(--acc)':'var(--t3)'};font-weight:600">${c.submitDate||'—'}</td>
+        <td>${c.docsReady==='TRUE'||c.docsReady===true?'<span class="bdg grn">✓ Готовы</span>':'<span class="bdg yel">В процессе</span>'}</td>
+        <td>${c.driveLink?`<a href="${esc(c.driveLink)}" target="_blank" class="bdg blu" style="text-decoration:none">📁 Drive</a>`:'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--t3)">Нет назначенных клиентов</td></tr>';
+
+  // Submits table
+  const sortedSubmits = myClients
+    .filter(c => c.submitDate)
+    .sort((a,b) => (parseDate(a.submitDate)||0) - (parseDate(b.submitDate)||0));
+  document.getElementById('cnt-submits').textContent = sortedSubmits.length + ' клиентов';
+  document.getElementById('tb-submits').innerHTML = sortedSubmits.length
+    ? sortedSubmits.map(c => {
+        const days = daysUntil(c.submitDate);
+        const cls  = days !== null && days <= 7 ? 'row-urgent' : days !== null && days <= 30 ? 'row-soon' : '';
+        const daysTxt = days === null ? '—'
+          : days === 0 ? '<b style="color:var(--red)">СЕГОДНЯ</b>'
+          : days < 0   ? `<span style="color:var(--t3)">${Math.abs(days)} дн. назад</span>`
+          : `<b style="color:${days<=7?'var(--red)':days<=30?'var(--yel)':'var(--acc)'}">${days} дн.</b>`;
+        return `<tr class="${cls}">
+          <td style="font-weight:600">${esc(c.name)}</td>
+          <td>${svcBdg(c.serviceType)}</td>
+          <td style="color:var(--t2)">${esc(c.submitPlace||'—')}</td>
+          <td class="mono" style="font-weight:700;color:var(--acc)">${c.submitDate}</td>
+          <td style="text-align:center">${daysTxt}</td>
+          <td>${c.docsReady==='TRUE'||c.docsReady===true?'<span class="bdg grn">✓ Готовы</span>':'<span class="bdg yel">В процессе</span>'}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--t3)">Нет дат подачи</td></tr>';
+
+  // Courts table
+  document.getElementById('cnt-courts').textContent = myCourts.length + ' дел';
+  document.getElementById('tb-courts').innerHTML = myCourts.length
+    ? myCourts.map(c => `<tr>
+        <td class="mono" style="color:var(--pur);font-weight:700">${c.num||'—'}</td>
+        <td style="font-weight:600">${esc(c.name)}</td>
+        <td><span class="bdg pur">${esc(c.article||'—')}</span></td>
+        <td style="color:var(--t2)">${esc(c.place||'—')}</td>
+        <td class="mono">${c.date||'—'}</td>
+        <td>${statusBdg(c.status)}</td>
+        <td>${c.driveLink?`<a href="${esc(c.driveLink)}" target="_blank" class="bdg blu" style="text-decoration:none">📁 Drive</a>`:'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--t3)">Нет дел</td></tr>';
+
+  // Tasks
+  document.getElementById('cnt-tasks').textContent = myTasks.length + ' задач';
+  document.getElementById('tasks-list').innerHTML = myTasks.length
+    ? myTasks.map(t => {
+        const client = allClients.find(c => c.id === t.client);
+        const prioColor = t.prio==='high' ? 'var(--red)' : t.prio==='mid' ? 'var(--yel)' : 'var(--t4)';
+        return `<div class="task-item">
+          <div class="task-prio" style="background:${prioColor}"></div>
+          <div class="task-body">
+            <div class="task-title">${esc(t.text||t.title||'Задача')}</div>
+            <div class="task-meta">${client?esc(client.name):'—'}${t.due?' · 📅 '+t.due:''}</div>
+          </div>
+          ${statusBdg(t.stage)}
+        </div>`;
+      }).join('')
+    : '<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Нет открытых задач 🎉</div>';
+}
+
+// ── TABS ────────────────────────────────────────────────────
+function switchTab(tabId, btn) {
+  ['tab-clients','tab-submits','tab-courts','tab-tasks'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = id === tabId ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+}
+
+// ── API ─────────────────────────────────────────────────────
+async function api(path, opts = {}) {
+  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+  let url, fetchOpts;
+  if(!opts.method || opts.method === 'GET') {
+    url = API_BASE + '?path=' + encodedPath;
+    fetchOpts = { method: 'GET' };
+  } else {
+    url = API_BASE + '?path=' + encodedPath;
+    const body = opts.body ? JSON.parse(opts.body) : {};
+    if(opts.method !== 'POST') body._method = opts.method;
+    fetchOpts = { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(body) };
+  }
+  const res = await fetch(url, fetchOpts);
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+// ── HELPERS ─────────────────────────────────────────────────
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function parseDate(s) {
+  if(!s) return null;
+  const str = String(s).trim();
+  // DD.MM.YYYY
+  const m = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if(m) return new Date(+m[3], +m[2]-1, +m[1]);
+  const d = new Date(str);
+  return isNaN(d) ? null : d;
+}
+
+function daysUntil(s) {
+  const d = parseDate(s);
+  if(!d) return null;
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((d - now) / 86400000);
+}
+
+function svcBdg(svc) {
+  const map = {'Права':'acc','Переводы':'blu','Справка о несудимости':'grn','Гражданство':'pur','Суды':'red'};
+  const cls = map[svc] || 'acc';
+  return `<span class="bdg ${cls}">${esc(svc||'—')}</span>`;
+}
+
+function stageBdg(s) {
+  if(!s) return '<span style="color:var(--t3)">—</span>';
+  return `<span class="bdg acc">${esc(s)}</span>`;
+}
+
+function statusBdg(s) {
+  if(!s) return '<span style="color:var(--t3)">—</span>';
+  return `<span class="bdg grn">${esc(s)}</span>`;
+}
+
+let _toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+init();
+</script>
+</body>
+</html>
