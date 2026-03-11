@@ -526,6 +526,14 @@ button:active{transform:scale(.97)}
 .cp-edit-drive{background:none;border:1px solid var(--border);color:var(--t2);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;transition:.15s}
 .cp-edit-drive:hover{background:var(--s2);color:var(--t1)}
 /* ── CHECKLISTS ─────────────────────────────────────── */
+.cl-client-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;margin-bottom:16px;box-shadow:var(--sh);overflow:hidden}
+.cl-client-hdr{display:flex;align-items:center;gap:12px;padding:16px 18px;cursor:pointer;user-select:none;background:var(--surface);transition:background .15s}
+.cl-client-hdr:hover{background:var(--s2)}
+.cl-client-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--pur));display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:800;flex-shrink:0}
+.cl-client-body{border-top:1px solid var(--border);padding:10px 12px;background:var(--s2)}
+.cl-sub-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden}
+.cl-sub-hdr{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none;transition:background .15s}
+.cl-sub-hdr:hover{background:var(--s2)}
 .cl-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:0;margin-bottom:14px;box-shadow:var(--sh);overflow:hidden}
 .cl-card-hdr{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none;background:var(--bg2);border-bottom:1px solid var(--border)}
 .cl-card-hdr:hover{background:var(--s3)}
@@ -1609,8 +1617,10 @@ function getClients() {
     city:        r['Город подачи'] || r['city'] || '',
     lawyer:      r['lawyer'] || '',
     driveLink:   r['driveLink'] || '',
-    clientToken: r['clientToken'] || '',
-    clientPass:  r['clientPass']  || '',
+    clientToken:  r['clientToken']  || '',
+    clientPass:   r['clientPass']   || '',
+    submitPlace:  r['submitPlace']  || '',
+    submitDate:   r['submitDate']   || '',
     submitDate:  r['submitDate'] || '',
     docsReady:   r['docsReady'] || '',
     onboard:     parseOnboard(r['onboard']),
@@ -2779,8 +2789,10 @@ function getClients() {
     city:        r['Город подачи'] || r['city'] || '',
     lawyer:      r['lawyer'] || '',
     driveLink:   r['driveLink'] || '',
-    clientToken: r['clientToken'] || '',
-    clientPass:  r['clientPass']  || '',
+    clientToken:  r['clientToken']  || '',
+    clientPass:   r['clientPass']   || '',
+    submitPlace:  r['submitPlace']  || '',
+    submitDate:   r['submitDate']   || '',
     submitDate:  r['submitDate'] || '',
     docsReady:   r['docsReady'] || '',
     onboard:     parseOnboard(r['onboard']),
@@ -5638,6 +5650,20 @@ function openClientModal(cid){
         <button type="button" class="btn btn-p btn-sm" style="margin-top:8px" onclick="createAIMAFromClientModal('${cid}')">
           ➕ Создать запись AIMA
         </button>
+      </div>
+    </div>
+    <div class="msec">
+      <div class="msl">📅 Планируемая подача</div>
+      <div style="background:var(--s2);border-radius:8px;padding:10px 12px">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:8px">Место и дата планируемой подачи документов</div>
+        <div class="mrow" style="margin-bottom:8px">
+          <div class="mf"><label class="mfl">Место подачи</label>
+            <input class="mi" id="cm-submit-place" value="${c.submitPlace||''}" placeholder="Консульство / SEF / AIMA"></div>
+          <div class="mf"><label class="mfl">Дата подачи</label>
+            <input class="mi mi-date" id="cm-submit-date" value="${c.submitDate||''}" placeholder="ДД.ММ.ГГГГ"></div>
+        </div>
+        <button type="button" class="btn btn-p btn-sm" onclick="saveSubmitInfo('${cid}')">💾 Сохранить</button>
+        ${c.submitPlace||c.submitDate?`<div style="margin-top:8px;font-size:11px;background:var(--gre-d);color:#065f46;border-radius:6px;padding:6px 10px">📍 ${c.submitPlace||'—'} · 📅 ${c.submitDate||'—'}</div>`:''}
       </div>
     </div>
   </div><!-- /ct-main -->
@@ -8653,7 +8679,7 @@ function renderOrders(){
 function _rebuildOrdFilterBar(){
   const bar = g('ord-filter-bar'); if(!bar) return;
   const allStatuses = [...new Set(orders.map(o=>o.status).filter(Boolean))];
-  bar.innerHTML = `<div class="ord-sfilter${_ordFilter==='all'?' active':''}" onclick="setOrdFilter('all',this)">All (${orders.length})</div>`
+  bar.innerHTML = `<div class="ord-sfilter${_ordFilter==='all'?' active':''}" onclick="setOrdFilter('all',this)">Все (${orders.length})</div>`
     + allStatuses.map(s=>{
         const cnt = orders.filter(o=>o.status===s).length;
         return `<div class="ord-sfilter${_ordFilter===s?' active':''}" onclick="setOrdFilter('${s.replace(/'/g,"\\'")}',this)">${s} (${cnt})</div>`;
@@ -10525,6 +10551,7 @@ document.addEventListener('DOMContentLoaded',_initAllDateInputs);
 // ════════════════════════════════════════════════════════════
 // CLIENT PORTAL — Личный кабинет клиента
 // ════════════════════════════════════════════════════════════
+let _cpOpenCards = new Set();
 function renderClientPortal(){
   const wrap = document.getElementById('cp-list');
   if(!wrap) return;
@@ -10565,7 +10592,7 @@ function renderClientPortal(){
           </div>`;
         }).join('')
       : `<div style="font-size:11px;color:var(--t3);font-style:italic">Чеклисты ещё не назначены</div>`;
-    return `<div class="cp-card" id="cp-card-${c.id}">
+    return `<div class="cp-card${_cpOpenCards.has(c.id)?' open':''}" id="cp-card-${c.id}">
       <div class="cp-card-hdr" onclick="toggleCpCard('${c.id}')">
         <div class="cp-avatar">${initials}</div>
         <div style="flex:1">
@@ -10573,7 +10600,7 @@ function renderClientPortal(){
           <div class="cp-meta">#${c.id} · ${service}${c.lawyer?' · '+c.lawyer:''}</div>
         </div>
         <span class="cp-badge">${c.stage||'—'}</span>
-        <span style="font-size:16px;color:var(--t3);margin-left:6px" id="cp-arr-${c.id}">▸</span>
+        <span style="font-size:16px;color:var(--t3);margin-left:6px" id="cp-arr-${c.id}">${_cpOpenCards.has(c.id)?'▾':'▸'}</span>
       </div>
       <div class="cp-body" id="cp-body-${c.id}">
         <div class="cp-section-lbl">📁 Google Drive — папка кейса</div>
@@ -10608,6 +10635,10 @@ function toggleCpCard(cid){
   if(!card) return;
   card.classList.toggle('open');
   if(arr) arr.textContent = card.classList.contains('open')?'▾':'▸';
+  // Сохраняем открытые карточки чтобы не сбрасывались после ре-рендера
+  _cpOpenCards = new Set([..._cpOpenCards]);
+  if(card.classList.contains('open')) _cpOpenCards.add(cid);
+  else _cpOpenCards.delete(cid);
 }
 
 function openEditDriveModal(cid){
@@ -10688,6 +10719,18 @@ async function saveClientPass(cid){
   await apiPut('/clients/'+cid, {clientPass: pass}).catch(()=>{});
   toast('🔑 Пароль установлен ✓');
 }
+async function saveSubmitInfo(cid){
+  const c = clients.find(x=>x.id===cid);
+  if(!c) return;
+  const place = (document.getElementById('cm-submit-place')||{}).value||'';
+  const date  = (document.getElementById('cm-submit-date')||{}).value||'';
+  c.submitPlace = place.trim();
+  c.submitDate  = date.trim();
+  closeModal();
+  toast('📅 Подача сохранена ✓');
+  await apiPut('/clients/'+cid, {submitPlace: c.submitPlace, submitDate: c.submitDate}).catch(()=>{});
+}
+
 
 function copyClientLink(cid){
   const link = (window.location.origin + window.location.pathname).replace('index.html','').replace(/\/$/,'') + '/client.html';
@@ -10707,6 +10750,9 @@ function makeToken(len=24){
 }
 
 // URL страницы клиента — поменяйте на ваш реальный URL при деплое
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 function getClientPageBase(){
   // Если client.html лежит рядом с index.html
   return location.origin + location.pathname.replace('index.html','').replace(/\/$/,'') + '/client.html';
@@ -11155,35 +11201,90 @@ function renderChecklists(){
     wrap.innerHTML='<div style="text-align:center;color:var(--t3);padding:40px 0;font-size:13px">Чеклисты не найдены. Нажмите «＋ Новый чеклист» чтобы создать.</div>';
     return;
   }
-  wrap.innerHTML = data.map(cl=>{
-    const client = clients.find(c=>c.id===cl.clientId);
-    const clientName = client?client.name:'—';
-    const done = cl.items.filter(i=>i.status==='done').length;
-    const total = cl.items.length;
-    const pct = total?Math.round(done/total*100):0;
-    const canEdit = currentUser&&(currentUser.role==='manager'||currentUser.role==='admin');
-    return `<div class="cl-card" id="cl-card-${cl.id}">
-      <div class="cl-card-hdr" onclick="toggleClCard('${cl.id}')">
-        <div style="flex:1">
-          <div class="cl-card-title">${cl.title}</div>
-          <div class="cl-card-meta">👤 ${clientName} · 📋 ${cl.template||'—'} · ${done}/${total} выполнено · Создан: ${fmtDate(cl.created)||'—'}</div>
+
+  // Группируем по клиенту
+  const byClient = {};
+  data.forEach(cl=>{
+    const cid = cl.clientId||'unknown';
+    if(!byClient[cid]) byClient[cid]=[];
+    byClient[cid].push(cl);
+  });
+
+  const canEdit = currentUser&&(currentUser.role==='manager'||currentUser.role==='admin');
+
+  wrap.innerHTML = Object.entries(byClient).map(([cid, cls])=>{
+    const client = clients.find(c=>c.id===cid);
+    const clientName = client?(client.name||'Без имени'):'Неизвестный клиент';
+    const clientNum  = client&&(client.num||client.id) ? '№'+(client.num||client.id) : '';
+    const initials   = clientName.trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
+
+    // Суммарный прогресс по всем чеклистам клиента
+    const totalItems = cls.reduce((s,cl)=>s+cl.items.length,0);
+    const doneItems  = cls.reduce((s,cl)=>s+cl.items.filter(i=>i.status==='done').length,0);
+    const totalPct   = totalItems?Math.round(doneItems/totalItems*100):0;
+
+    const clHtml = cls.map(cl=>{
+      const done  = cl.items.filter(i=>i.status==='done').length;
+      const total = cl.items.length;
+      const pct   = total?Math.round(done/total*100):0;
+      return `<div class="cl-sub-card" id="cl-card-${cl.id}">
+        <div class="cl-sub-hdr" onclick="toggleClCard('${cl.id}')">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cl.title}</div>
+            <div style="font-size:10.5px;color:var(--t3);margin-top:2px">📋 ${cl.template||'—'} · ${done}/${total} · ${fmtDate(cl.created)||'—'}</div>
+          </div>
+          <div class="cl-progress-bar" style="width:60px"><div class="cl-progress-fill" style="width:${pct}%"></div></div>
+          <span style="font-size:11px;font-weight:700;color:var(--t3);margin-left:6px;width:28px;text-align:right">${pct}%</span>
+          ${canEdit?`<button class="cl-btn-sm" style="margin-left:6px" onclick="event.stopPropagation();openAddClItemModal('${cl.id}')">＋</button>`:''}
+          ${canEdit?`<button class="cl-btn-sm" style="color:var(--red)" onclick="event.stopPropagation();deleteChecklist('${cl.id}')">🗑</button>`:''}
+          <span style="font-size:14px;color:var(--t3);margin-left:4px" id="cl-arr-${cl.id}">▸</span>
         </div>
-        <div class="cl-progress-bar"><div class="cl-progress-fill" style="width:${pct}%"></div></div>
-        <span style="font-size:11px;font-weight:700;color:var(--t3);margin-left:8px">${pct}%</span>
-        ${canEdit?`<button class="cl-btn-sm" style="margin-left:8px" onclick="event.stopPropagation();openAddClItemModal('${cl.id}')">＋ Пункт</button>`:''}
-        ${canEdit?`<button class="cl-btn-sm" style="margin-left:4px;color:var(--red)" onclick="event.stopPropagation();deleteChecklist('${cl.id}')">🗑</button>`:''}
-        <span style="font-size:16px;color:var(--t3);margin-left:6px" id="cl-arr-${cl.id}">▸</span>
+        <div class="cl-card-body" id="cl-body-${cl.id}" style="display:none">
+          ${cl.items.length?cl.items.map((item,idx)=>renderClItem(cl,item,idx,canEdit)).join('')
+            :'<div style="color:var(--t3);font-size:12px;text-align:center;padding:16px 0">Нет пунктов. Добавьте первый!</div>'}
+          ${canEdit?`<div class="cl-add-item">
+            <input class="cl-add-input" id="cl-quick-${cl.id}" placeholder="Добавить пункт..." onkeydown="if(event.key==='Enter')quickAddClItem('${cl.id}')">
+            <button class="btn btn-p btn-sm" onclick="quickAddClItem('${cl.id}')">Добавить</button>
+          </div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="cl-client-card" id="cl-client-${cid}">
+      <div class="cl-client-hdr" onclick="toggleClClient('${cid}')">
+        <div class="cl-client-avatar">${initials}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:800;color:var(--t1)">${clientName} <span style="font-size:12px;font-weight:600;color:var(--acc)">${clientNum}</span></div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px">${cls.length} чеклист${cls.length===1?'':cls.length<5?'а':'ов'} · ${doneItems}/${totalItems} пунктов</div>
+        </div>
+        <div class="cl-progress-bar"><div class="cl-progress-fill" style="width:${totalPct}%"></div></div>
+        <span style="font-size:11px;font-weight:700;color:var(--t2);margin-left:8px;width:32px;text-align:right">${totalPct}%</span>
+        ${canEdit?`<button class="cl-btn-sm" style="margin-left:8px" onclick="event.stopPropagation();openNewChecklistForClient('${cid}')">＋ Чеклист</button>`:''}
+        <span style="font-size:16px;color:var(--t3);margin-left:6px" id="cl-client-arr-${cid}">▸</span>
       </div>
-      <div class="cl-card-body" id="cl-body-${cl.id}" style="display:none">
-        ${cl.items.length?cl.items.map((item,idx)=>renderClItem(cl,item,idx,canEdit)).join('')
-          :'<div style="color:var(--t3);font-size:12px;text-align:center;padding:16px 0">Нет пунктов. Добавьте первый!</div>'}
-        ${canEdit?`<div class="cl-add-item">
-          <input class="cl-add-input" id="cl-quick-${cl.id}" placeholder="Добавить пункт..." onkeydown="if(event.key==='Enter')quickAddClItem('${cl.id}')">
-          <button class="btn btn-p btn-sm" onclick="quickAddClItem('${cl.id}')">Добавить</button>
-        </div>`:''}
+      <div class="cl-client-body" id="cl-client-body-${cid}" style="display:none">
+        ${clHtml}
       </div>
     </div>`;
   }).join('');
+}
+
+function toggleClClient(cid){
+  const body = document.getElementById('cl-client-body-'+cid);
+  const arr  = document.getElementById('cl-client-arr-'+cid);
+  if(!body) return;
+  const open = body.style.display==='block';
+  body.style.display = open?'none':'block';
+  if(arr) arr.textContent = open?'▸':'▾';
+}
+
+function openNewChecklistForClient(cid){
+  // Pre-select client in new checklist modal
+  openNewChecklistModal();
+  setTimeout(()=>{
+    const sel = document.getElementById('ncl-client');
+    if(sel) sel.value = cid;
+  }, 80);
 }
 
 function renderClItem(cl,item,idx,canEdit){
