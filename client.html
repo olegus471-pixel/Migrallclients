@@ -59,6 +59,28 @@ button:active{transform:scale(.97)}
 .error-title{font-size:18px;font-weight:700;margin-bottom:8px}
 .error-msg{color:var(--t3);font-size:13px;line-height:1.7}
 
+
+/* ── LOGIN ── */
+#screen-login{display:none;position:fixed;inset:0;background:var(--bg);align-items:center;justify-content:center;z-index:9997;padding:16px}
+.login-card{background:var(--surface);border-radius:var(--r);padding:36px 32px;width:100%;max-width:400px;box-shadow:var(--sh2)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.login-logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--acc) 0%,var(--pur) 100%);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px rgba(79,110,247,.3)}
+.login-logo-icon svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.login-logo-text{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--t1)}
+.login-logo-sub{font-size:10px;color:var(--t3);font-family:'IBM Plex Mono',monospace;margin-top:1px}
+.login-title{font-size:20px;font-weight:800;color:var(--t1);margin-bottom:6px}
+.login-sub{font-size:12.5px;color:var(--t3);margin-bottom:24px;line-height:1.6}
+.login-field{margin-bottom:16px}
+.login-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:6px;display:block;font-family:'IBM Plex Mono',monospace}
+.login-inp{width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;font-family:'Manrope',sans-serif;color:var(--t1);outline:none;transition:border-color .18s}
+.login-inp:focus{border-color:var(--acc);background:var(--surface)}
+.login-inp.error{border-color:var(--red)}
+.login-btn{width:100%;background:linear-gradient(135deg,var(--acc),var(--pur));color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif;transition:opacity .15s;margin-top:4px}
+.login-btn:hover{opacity:.9}
+.login-btn:disabled{opacity:.5;cursor:default}
+.login-error{background:var(--red-d);color:#991b1b;border-radius:8px;padding:10px 14px;font-size:12.5px;font-weight:600;margin-bottom:16px;display:none}
+.login-hint{font-size:11.5px;color:var(--t3);text-align:center;margin-top:16px;line-height:1.6}
+
 /* ── LAYOUT ── */
 #app{display:none;max-width:720px;margin:0 auto;padding:24px 16px 60px}
 
@@ -216,6 +238,34 @@ button:active{transform:scale(.97)}
   </div>
 </div>
 
+<!-- Login -->
+<div id="screen-login">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div>
+        <div class="login-logo-text">MigrAll</div>
+        <div class="login-logo-sub">Кабинет клиента</div>
+      </div>
+    </div>
+    <div class="login-title">Войдите в кабинет</div>
+    <div class="login-sub">Введите ваш Telegram ID и пароль, которые предоставил менеджер</div>
+    <div class="login-error" id="login-error">Неверный Telegram ID или пароль</div>
+    <div class="login-field">
+      <label class="login-label">Telegram ID</label>
+      <input class="login-inp" id="login-tg" type="text" placeholder="Например: 5652671788" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label class="login-label">Пароль</label>
+      <input class="login-inp" id="login-pass" type="password" placeholder="Введите пароль" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Войти</button>
+    <div class="login-hint">Не знаете данные для входа?<br>Обратитесь к вашему менеджеру.</div>
+  </div>
+</div>
+
 <!-- Main app -->
 <div id="app">
   <!-- Header -->
@@ -290,51 +340,82 @@ const API_BASE = (window.__ENV && window.__ENV.GAS_URL)
 // ═══════════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════════
-let clientData    = null;  // данные клиента из CRM_Clients
-let checklists    = [];    // чеклисты этого клиента
-let clientToken   = '';
-let clientId      = '';
+let clientData  = null;
+let checklists  = [];
+let clientId    = '';
+let _allClients = [];
 
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
 async function init() {
-  // 1. Читаем токен из URL: ?t=TOKEN  или  ?token=TOKEN
-  const params = new URLSearchParams(location.search);
-  clientToken = params.get('t') || params.get('token') || '';
+  // Скрываем loading, показываем форму логина
+  document.getElementById('screen-loading').style.display = 'none';
+  document.getElementById('screen-login').style.display   = 'flex';
 
-  if (!clientToken) {
-    return showError('Ссылка недействительна', 'В ссылке отсутствует токен доступа. Запросите новую ссылку у вашего менеджера.');
+  // Enter на полях
+  document.getElementById('login-pass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  document.getElementById('login-tg').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('login-pass').focus();
+  });
+}
+
+async function doLogin() {
+  const tgRaw  = document.getElementById('login-tg').value.trim();
+  const pass   = document.getElementById('login-pass').value.trim();
+  const errEl  = document.getElementById('login-error');
+  const btn    = document.getElementById('login-btn');
+
+  errEl.style.display = 'none';
+  document.getElementById('login-tg').classList.remove('error');
+  document.getElementById('login-pass').classList.remove('error');
+
+  if (!tgRaw || !pass) {
+    errEl.textContent = 'Заполните все поля';
+    errEl.style.display = 'block';
+    return;
   }
 
+  btn.disabled = true;
+  btn.textContent = 'Проверка...';
+
   try {
-    // 2. Загружаем данные клиента по токену
-    const clientRes = await api('/clients');
-    if (!clientRes || !Array.isArray(clientRes)) {
-      return showError('Ошибка соединения', 'Не удалось загрузить данные. Попробуйте обновить страницу или свяжитесь с менеджером.');
+    // Загружаем клиентов (один раз)
+    if (!_allClients.length) {
+      const res = await api('/clients');
+      if (!res || !Array.isArray(res)) throw new Error('no data');
+      _allClients = res;
     }
 
-    // DEBUG — удалить после проверки
-    console.log('🔑 Token from URL:', clientToken);
-    console.log('📋 Clients received:', clientRes ? clientRes.length : 'null');
-    if (clientRes && clientRes.length > 0) {
-      console.log('📋 First client fields:', Object.keys(clientRes[0]));
-      console.log('📋 clientToken values:', clientRes.map(c => c.id + ' → ' + (c.clientToken || '(empty)')));
-    }
+    // Ищем по tg (Telegram ID) — сравниваем как строки
+    const tgStr = String(tgRaw).trim();
+    clientData = _allClients.find(c => String(c.tg || '').trim() === tgStr);
 
-    // Ищем клиента с совпадающим токеном
-    clientData = clientRes.find(c => (c.clientToken || c.token || '') === clientToken);
     if (!clientData) {
-      return showError('Ссылка недействительна', 'Эта ссылка устарела или неверна. Свяжитесь с вашим менеджером для получения новой ссылки.');
+      showLoginError('Неверный Telegram ID или пароль');
+      return;
     }
 
-    clientId = clientData.id || clientData.num || '';
+    // Проверяем пароль (поле clientPass)
+    const storedPass = String(clientData.clientPass || '').trim();
+    if (!storedPass) {
+      showLoginError('Пароль не установлен. Обратитесь к менеджеру.');
+      return;
+    }
+    if (storedPass !== pass) {
+      showLoginError('Неверный Telegram ID или пароль');
+      return;
+    }
 
-    // 3. Загружаем чеклисты
+    // Успех — загружаем данные
+    clientId = String(clientData.id || clientData.tg || '').trim();
+
     const clRes = await api('/checklists');
     if (clRes && Array.isArray(clRes)) {
       checklists = clRes
-        .filter(cl => String(cl.clientId).trim() === String(clientId).trim())
+        .filter(cl => String(cl.clientId).trim() === clientId)
         .map(cl => {
           if (typeof cl.items === 'string') {
             try { cl.items = JSON.parse(cl.items); } catch(e) { cl.items = []; }
@@ -344,15 +425,26 @@ async function init() {
         });
     }
 
-    // 4. Рендерим
+    // Показываем портал
+    document.getElementById('screen-login').style.display = 'none';
     renderApp();
-    document.getElementById('screen-loading').style.display = 'none';
     document.getElementById('app').style.display = 'block';
 
   } catch(e) {
-    showError('Ошибка загрузки', 'Что-то пошло не так. Попробуйте обновить страницу.');
+    showLoginError('Ошибка соединения. Попробуйте позже.');
     console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Войти';
   }
+}
+
+function showLoginError(msg) {
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = msg;
+  errEl.style.display = 'block';
+  document.getElementById('login-tg').classList.add('error');
+  document.getElementById('login-pass').classList.add('error');
 }
 
 // ═══════════════════════════════════════════════════════════════
