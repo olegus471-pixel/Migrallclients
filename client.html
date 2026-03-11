@@ -348,6 +348,25 @@ let _allClients = [];
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
+async function showDebugInfo() {
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'block';
+  errEl.textContent = 'Проверка подключения...';
+  try {
+    const res = await api('/clients');
+    if (!res || !Array.isArray(res)) {
+      errEl.textContent = '❌ Ошибка API: не удалось получить данные. Проверьте GAS_URL в server.js.';
+    } else {
+      const withPass = res.filter(c => c.clientPass && c.clientPass.trim()).length;
+      errEl.style.background = '#d1fae5';
+      errEl.style.color = '#065f46';
+      errEl.textContent = `✅ Подключение работает. Клиентов в базе: ${res.length}. Из них с паролем: ${withPass}. Ваш TG ID: введите точно как в таблице (поле tg).`;
+    }
+  } catch(e) {
+    errEl.textContent = '❌ Ошибка сети: ' + e.message;
+  }
+}
+
 async function init() {
   // Если в URL старый токен ?t=... — показываем подсказку
   const urlParams = new URLSearchParams(window.location.search);
@@ -404,23 +423,47 @@ async function doLogin() {
       _allClients = res;
     }
 
-    // Ищем по tg (Telegram ID) — сравниваем как строки
-    const tgStr = String(tgRaw).trim();
-    clientData = _allClients.find(c => String(c.tg || '').trim() === tgStr);
+    // Ищем по tg / ID — гибкое сравнение
+    const tgInput = String(tgRaw).trim();
+    // Нормализация: убрать @ и пробелы, сравнить как строку и как число
+    const tgNorm = tgInput.replace(/^@/, '').toLowerCase();
+    const tgNum  = parseFloat(tgNorm);
+
+    clientData = _allClients.find(c => {
+      const cTg  = String(c.tg  || '').trim();
+      const cId  = String(c.id  || '').trim();
+      const cNum = String(c.num || '').trim();
+
+      // Точное строковое совпадение
+      if (cTg === tgInput || cId === tgInput || cNum === tgInput) return true;
+      // Без @ (@ username)
+      const cTgNorm = cTg.replace(/^@/, '').toLowerCase();
+      if (cTgNorm === tgNorm) return true;
+      // Числовое сравнение (Google Sheets может хранить как float)
+      if (!isNaN(tgNum)) {
+        if (!isNaN(parseFloat(cTg)) && parseFloat(cTg) === tgNum) return true;
+        if (!isNaN(parseFloat(cId)) && parseFloat(cId) === tgNum) return true;
+      }
+      return false;
+    });
 
     if (!clientData) {
-      showLoginError('Неверный Telegram ID или пароль');
+      // Показываем список найденных ID для отладки
+      const sample = _allClients.slice(0,3).map(c=>c.tg||c.id).join(', ');
+      showLoginError('Telegram ID не найден. Проверьте правильность ввода.');
+      console.warn('[Login] Not found. Input:', tgInput, '| Sample tg in DB:', sample);
       return;
     }
 
     // Проверяем пароль (поле clientPass)
     const storedPass = String(clientData.clientPass || '').trim();
+    console.log('[Login] Found client:', clientData.name, '| clientPass set:', !!storedPass);
     if (!storedPass) {
-      showLoginError('Пароль не установлен. Обратитесь к менеджеру.');
+      showLoginError('Пароль не установлен. Менеджер должен задать пароль в разделе «Кабинеты сотрудников» → карточка клиента.');
       return;
     }
     if (storedPass !== pass) {
-      showLoginError('Неверный Telegram ID или пароль');
+      showLoginError('Неверный пароль. Уточните у менеджера.');
       return;
     }
 
