@@ -4668,7 +4668,10 @@ function getVisibleTasks(){
   // Не показывать удалённые и архивированные задачи
   var alive = tasks.filter(function(t){ return t.stage !== 'deleted' && t.deleted !== '1' && !t._archived && t.archived !== '1'; });
   if(!currentUser) return alive;
-  if(currentUser.role==='admin'||currentUser.canSeeAll) return alive;
+  if(currentUser.role==='admin'||currentUser.canSeeAll){
+    if(taskScope==='mine') return alive.filter(t=>!t.assignee||t.assignee==='—'||t.assignee===currentUser.name);
+    return alive;
+  }
   if(currentUser.role==='lawyer'){
     const myIds=new Set(clients.filter(c=>c.lawyer===currentUser.name).map(c=>c.id));
     if(taskScope==='all') return alive.filter(t=>myIds.has(t.client)||t.assignee===currentUser.name||!t.assignee||t.assignee==='—');
@@ -11295,6 +11298,9 @@ function getClStatusCls(key){
 function renderChecklists(){
   const wrap = document.getElementById('cl-list');
   if(!wrap) return;
+  // Сохраняем открытые карточки перед перерисовкой
+  const openClients = new Set([...wrap.querySelectorAll('.cl-client-body')].filter(el=>el.style.display==='block').map(el=>el.id.replace('cl-client-body-','')));
+  const openCards   = new Set([...wrap.querySelectorAll('.cl-card-body')].filter(el=>el.style.display==='block').map(el=>el.id.replace('cl-body-','')));
   const fclient = (document.getElementById('cl-filter-client')||{}).value||'';
   const fstatus = (document.getElementById('cl-filter-status')||{}).value||'';
   let data = window.checklistsData||[];
@@ -11316,6 +11322,7 @@ function renderChecklists(){
 
   const canEdit = currentUser&&(currentUser.role==='manager'||currentUser.role==='admin');
 
+  // Build and set HTML, then restore open state
   wrap.innerHTML = Object.entries(byClient).map(([cid, cls])=>{
     const client = clients.find(c=>c.id===cid);
     const clientName = client?(client.name||'Без имени'):'Неизвестный клиент';
@@ -11381,6 +11388,17 @@ function renderChecklists(){
       </div>
     </div>`;
   }).join('');
+  // Восстанавливаем открытые карточки после перерисовки
+  openClients.forEach(cid=>{
+    var body=document.getElementById('cl-client-body-'+cid);
+    var arr=document.getElementById('cl-client-arr-'+cid);
+    if(body){body.style.display='block';if(arr)arr.textContent='▾';}
+  });
+  openCards.forEach(id=>{
+    var body=document.getElementById('cl-body-'+id);
+    var arr=document.getElementById('cl-arr-'+id);
+    if(body){body.style.display='block';if(arr)arr.textContent='▾';}
+  });
 }
 
 function toggleClClient(cid){
@@ -11880,7 +11898,7 @@ function renderStaffPortals() {
     const initials  = (u.name||'?').split(' ').map(function(w){ return w[0]||''; }).slice(0,2).join('').toUpperCase();
 
     return '<div class="cp-card" id="sp-card-' + esc(u.email||u.id) + '">'
-      + '<div class="cp-card-hdr" onclick="toggleSpCard('' + esc(u.email||u.id) + '')">'
+      + '<div class="cp-card-hdr" onclick="toggleSpCard(\'' + esc(u.email||u.id) + '\')">'  
         + '<div class="cp-avatar" style="background:' + ri.color + '">' + initials + '</div>'
         + '<div style="flex:1">'
           + '<div class="cp-name">' + esc(u.name||'—') + '</div>'
@@ -11900,7 +11918,7 @@ function renderStaffPortals() {
               ? '<div style="font-size:11px;color:var(--t3)">' + esc(portalUrl) + '</div>'
               : '<div style="font-size:11px;color:var(--t3)">Портал не настроен</div>')
           + '</div>'
-          + (portalUrl ? '<button class="cp-edit-drive" onclick="copyStaffPortalLink('' + esc(portalUrl) + '')">📋 Скопировать</button>' : '')
+          + (portalUrl ? '<button class="cp-edit-drive" onclick="copyStaffPortalLink(\'' + esc(portalUrl) + '\')">📋 Скопировать</button>' : '')
           + (portalUrl ? '<a class="cp-edit-drive" href="' + esc(portalUrl) + '" target="_blank" style="text-decoration:none">↗ Открыть</a>' : '')
         + '</div>'
         // Password
@@ -11913,7 +11931,7 @@ function renderStaffPortals() {
               + (hasPass ? '🟢 Пароль установлен · Email: ' + esc(u.email||'—') : '🔴 Пароль не установлен')
             + '</div>'
           + '</div>'
-          + '<button class="cp-edit-drive" onclick="openStaffPassModal('' + esc(u.email||u.id) + '')">'
+          + '<button class="cp-edit-drive" onclick="openStaffPassModal(\'' + esc(u.email||u.id) + '\')">'  
             + (hasPass ? '🔑 Сменить пароль' : '🔑 Задать пароль') + '</button>'
         + '</div>'
       + '</div>'
@@ -11946,7 +11964,7 @@ function openStaffPassModal(uid) {
   const ri = STAFF_ROLES[u.role] || { label: u.role, icon: '👤' };
   openModal(
     '<div class="mhdr">'
-      + '<div><div style="font-size:10px;color:var(--t3);font-family:'IBM Plex Mono',monospace">' + ri.icon + ' ' + ri.label + '</div>'
+      + '<div><div style="font-size:10px;color:var(--t3);font-family:IBM Plex Mono,monospace">' + ri.icon + ' ' + ri.label + '</div>'
       + '<div style="font-size:16px;font-weight:700;margin-top:2px">' + esc(u.name||u.email) + '</div></div>'
       + '<button class="mcls" onclick="closeModal()">✕</button>'
     + '</div>'
@@ -11958,13 +11976,13 @@ function openStaffPassModal(uid) {
         + '<div class="mf"><label class="mfl">Новый пароль</label>'
           + '<input class="mi" id="sp-m-pass" type="password" placeholder="Введите пароль" autocomplete="new-password">'
           + '<button type="button" style="font-size:10px;margin-top:4px;background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer" '
-            + 'onclick="var p=Math.random().toString(36).slice(2,10);document.getElementById('sp-m-pass').value=p;document.getElementById('sp-m-pass').type='text'">🎲 Случайный</button>'
+            + 'onclick="var p=Math.random().toString(36).slice(2,10);g(\'sp-m-pass\').value=p;g(\'sp-m-pass\').type=\'text\'">🎲 Случайный</button>'
         + '</div>'
       + '</div>'
     + '</div>'
     + '<div class="mfoot">'
       + '<button class="btn" onclick="closeModal()">Отмена</button>'
-      + '<button class="btn btn-p" onclick="saveStaffPass('' + esc(uid) + '')">💾 Сохранить пароль</button>'
+      + '<button class="btn btn-p" onclick="saveStaffPass(\'' + esc(uid) + '\')">💾 Сохранить пароль</button>'
     + '</div>'
   );
 }
