@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MigrAll — Кабинет переводчика</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0f3fa;--surface:#fff;--s2:#f7f8fd;--s3:#eef1f8;--border:#e2e7f2;
+  --t1:#0d1426;--t2:#3a4260;--t3:#8892b0;--t4:#c0c8df;
+  --acc:#4f6ef7;--acc-d:#eaedfe;--gre:#12b76a;--gre-d:#d1fadf;
+  --yel:#f59e0b;--yel-d:#fef3c7;--red:#ef4444;--red-d:#fee2e2;
+  --pur:#7c3aed;--pur-d:#ede9fe;--ora:#f97316;--ora-d:#ffedd5;
+  --sh:0 1px 4px rgba(13,20,38,.06),0 1px 2px rgba(13,20,38,.04);
+  --sh2:0 8px 32px rgba(13,20,38,.10),0 2px 8px rgba(13,20,38,.05);
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:var(--bg);color:var(--t1);font-family:'Manrope',sans-serif;font-size:14px;line-height:1.6}
+a{color:var(--acc);text-decoration:none}
+button:active{transform:scale(.97)}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+#screen-loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:18px}
+.loading-logo{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:var(--t1)}
+.loading-logo span{color:var(--acc)}
+.loading-bar-wrap{width:180px;height:3px;background:var(--border);border-radius:4px;overflow:hidden}
+.loading-bar-fill{height:100%;background:linear-gradient(90deg,var(--acc),var(--ora));border-radius:4px;animation:loadbar 1.6s ease-in-out infinite}
+@keyframes loadbar{0%{width:0;margin-left:0}60%{width:100%;margin-left:0}100%{width:0;margin-left:100%}}
+
+#screen-login{display:none;position:fixed;inset:0;background:var(--bg);align-items:center;justify-content:center;z-index:9997;padding:16px}
+.login-card{background:var(--surface);border-radius:var(--r);padding:36px 32px;width:100%;max-width:400px;box-shadow:var(--sh2)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.login-logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--ora),var(--acc));border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.login-logo-icon svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.login-logo-text{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--t1)}
+.login-logo-sub{font-size:10px;color:var(--t3);font-family:'IBM Plex Mono',monospace;margin-top:1px}
+.login-title{font-size:20px;font-weight:800;color:var(--t1);margin-bottom:6px}
+.login-sub{font-size:12.5px;color:var(--t3);margin-bottom:24px;line-height:1.6}
+.login-field{margin-bottom:16px}
+.login-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:6px;display:block;font-family:'IBM Plex Mono',monospace}
+.login-inp{width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;font-family:'Manrope',sans-serif;color:var(--t1);outline:none;transition:border-color .18s}
+.login-inp:focus{border-color:var(--ora);background:var(--surface)}
+.login-inp.error{border-color:var(--red)}
+.login-btn{width:100%;background:linear-gradient(135deg,var(--ora),var(--acc));color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif;transition:opacity .15s;margin-top:4px}
+.login-btn:hover{opacity:.9}
+.login-btn:disabled{opacity:.5;cursor:default}
+.login-error{background:var(--red-d);color:#991b1b;border-radius:8px;padding:10px 14px;font-size:12.5px;font-weight:600;margin-bottom:16px;display:none}
+
+#app{display:none;min-height:100vh}
+.top-bar{background:var(--surface);border-bottom:1.5px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--sh)}
+.top-logo{display:flex;align-items:center;gap:10px}
+.top-logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--ora),var(--acc));border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.top-logo-icon svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.top-logo-text{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--t1)}
+.top-logo-sub{font-size:9px;color:var(--t3);font-family:'IBM Plex Mono',monospace}
+.top-user{display:flex;align-items:center;gap:10px}
+.user-badge{background:var(--ora-d);border:1.5px solid var(--ora);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--ora);font-family:'IBM Plex Mono',monospace}
+.logout-btn{background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--t2);font-family:'Manrope',sans-serif}
+
+.content{max-width:960px;margin:0 auto;padding:24px 20px 60px}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.kpi-card{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:16px 18px;box-shadow:var(--sh)}
+.kpi-val{font-size:28px;font-weight:800;color:var(--t1);font-family:'IBM Plex Mono',monospace;margin-bottom:2px}
+.kpi-lbl{font-size:11px;color:var(--t3);font-weight:600}
+.kpi-card.new-card{border-color:rgba(249,115,22,.4);background:var(--ora-d)}
+.kpi-card.new-card .kpi-val{color:var(--ora)}
+.kpi-card.active-card{border-color:rgba(79,110,247,.3);background:var(--acc-d)}
+.kpi-card.active-card .kpi-val{color:var(--acc)}
+.kpi-card.done-card{border-color:rgba(18,183,106,.3);background:var(--gre-d)}
+.kpi-card.done-card .kpi-val{color:var(--gre)}
+
+/* Section */
+.section-wrap{margin-bottom:20px}
+.section-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-family:'IBM Plex Mono',monospace;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.section-cnt{background:var(--acc);color:#fff;font-size:9px;padding:1px 6px;border-radius:8px;font-weight:700}
+
+/* Task card */
+.task-card{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:10px;box-shadow:var(--sh);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.task-card.new-task{border-color:rgba(249,115,22,.4);background:linear-gradient(135deg,#fffbf5,#fff)}
+.task-card.active-task{border-color:rgba(79,110,247,.35);background:linear-gradient(135deg,#f5f7ff,#fff)}
+.task-body{flex:1;min-width:180px}
+.task-client{font-size:14px;font-weight:700;color:var(--t1);margin-bottom:3px}
+.task-type{font-size:12px;color:var(--t3);margin-bottom:6px}
+.task-badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;font-family:'IBM Plex Mono',monospace}
+.task-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-accept{background:var(--acc);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif}
+.btn-ready{background:var(--gre);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif}
+.btn-drive{background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--t2);text-decoration:none;display:inline-block}
+.btn-drive:hover{background:var(--acc-d);color:var(--acc);text-decoration:none}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:16px}
+.stat-card{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;box-shadow:var(--sh)}
+.stat-title{font-size:11px;font-weight:700;color:var(--t3);margin-bottom:8px;font-family:'IBM Plex Mono',monospace}
+.stat-val{font-size:22px;font-weight:800;color:var(--t1)}
+
+#toast{position:fixed;bottom:24px;right:24px;background:var(--t1);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+#toast.show{opacity:1;transform:translateY(0)}
+
+@media(max-width:600px){.content{padding:16px 12px 60px}.kpi-grid{grid-template-columns:1fr 1fr}.task-card{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body>
+
+<div id="screen-loading">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+    <div class="top-logo-icon" style="width:52px;height:52px;border-radius:14px">
+      <svg viewBox="0 0 24 24" style="width:24px;height:24px"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <div class="loading-logo">Migr<span>All</span></div>
+  </div>
+  <div><div class="loading-bar-wrap"><div class="loading-bar-fill"></div></div></div>
+  <div style="font-size:11px;color:var(--t3);font-family:'IBM Plex Mono',monospace">Загрузка кабинета переводчика...</div>
+</div>
+
+<div id="screen-login">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <div><div class="login-logo-text">MigrAll</div><div class="login-logo-sub">Кабинет переводчика</div></div>
+    </div>
+    <div class="login-title">Вход для переводчика</div>
+    <div class="login-sub">Введите ваш email и пароль от системы MigrAll</div>
+    <div class="login-error" id="login-error">Неверный email или пароль</div>
+    <div class="login-field">
+      <label class="login-label">Email</label>
+      <input class="login-inp" id="login-email" type="email" placeholder="your@email.com" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label class="login-label">Пароль</label>
+      <input class="login-inp" id="login-pass" type="password" placeholder="Введите пароль" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Войти</button>
+  </div>
+</div>
+
+<div id="app">
+  <div class="top-bar">
+    <div class="top-logo">
+      <div class="top-logo-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <div><div class="top-logo-text">MigrAll</div><div class="top-logo-sub">Кабинет переводчика</div></div>
+    </div>
+    <div class="top-user">
+      <div class="user-badge">🌐 <span id="user-name">Переводчик</span></div>
+      <button class="logout-btn" onclick="doLogout()">Выйти</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- KPI -->
+    <div class="kpi-grid">
+      <div class="kpi-card new-card"><div class="kpi-val" id="kpi-new">—</div><div class="kpi-lbl">Новых заданий</div></div>
+      <div class="kpi-card active-card"><div class="kpi-val" id="kpi-active">—</div><div class="kpi-lbl">В работе</div></div>
+      <div class="kpi-card"><div class="kpi-val" id="kpi-pending">—</div><div class="kpi-lbl">Готово к выдаче</div></div>
+      <div class="kpi-card done-card"><div class="kpi-val" id="kpi-done">—</div><div class="kpi-lbl">Завершено</div></div>
+    </div>
+
+    <!-- New tasks -->
+    <div class="section-wrap" id="new-section">
+      <div class="section-title">🔔 Новые задания <span class="section-cnt" id="cnt-new">0</span></div>
+      <div id="list-new"></div>
+    </div>
+
+    <!-- Active tasks -->
+    <div class="section-wrap">
+      <div class="section-title">🔄 В работе <span class="section-cnt" id="cnt-active">0</span></div>
+      <div id="list-active"></div>
+    </div>
+
+    <!-- Pending tasks -->
+    <div class="section-wrap">
+      <div class="section-title">📤 Готово к выдаче <span class="section-cnt" id="cnt-pending">0</span></div>
+      <div id="list-pending"></div>
+    </div>
+
+    <!-- Done tasks -->
+    <div class="section-wrap">
+      <div class="section-title">✅ Завершённые <span class="section-cnt" id="cnt-done">0</span></div>
+      <div id="list-done"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API_BASE = (window.__ENV && window.__ENV.GAS_URL)
+  ? window.__ENV.GAS_URL
+  : 'https://script.google.com/macros/s/AKfycbwDvmzX8V2fy2Qojrf8k4vq-t0GctFPhXywdp-7SnRuwDAu3h2NdvAwOVXzr3mXgObB/exec';
+
+let currentUser = null;
+let allTasks    = [];
+let allOrders   = [];
+
+// ── INIT ────────────────────────────────────────────────────
+async function init() {
+  document.getElementById('screen-loading').style.display = 'none';
+  document.getElementById('screen-login').style.display   = 'flex';
+  document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  document.getElementById('login-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value.trim();
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('login-btn');
+  errEl.style.display = 'none';
+  if(!email || !pass) { errEl.textContent='Заполните все поля'; errEl.style.display='block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Проверка...';
+  try {
+    const res = await api('/auth/login', { method:'POST', body: JSON.stringify({email, password: pass}) });
+    if(!res || !res.ok) {
+      errEl.textContent = res?.error || 'Неверный email или пароль';
+      errEl.style.display = 'block';
+      return;
+    }
+    if(res.user.role !== 'translator' && res.user.role !== 'admin') {
+      errEl.textContent = 'Доступ только для переводчиков';
+      errEl.style.display = 'block';
+      return;
+    }
+    currentUser = res.user;
+    document.getElementById('screen-login').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('user-name').textContent = currentUser.name || currentUser.email;
+    await loadData();
+  } catch(e) {
+    errEl.textContent = 'Ошибка соединения. Попробуйте позже.';
+    errEl.style.display = 'block';
+    console.error(e);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Войти';
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('screen-login').style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value  = '';
+}
+
+// ── DATA ────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const [tasksRes, ordersRes] = await Promise.all([
+      api('/spectasks'), api('/orders')
+    ]);
+    allTasks  = Array.isArray(tasksRes)  ? tasksRes  : [];
+    allOrders = Array.isArray(ordersRes) ? ordersRes : [];
+    renderAll();
+  } catch(e) {
+    toast('⚠️ Ошибка загрузки данных');
+    console.error(e);
+  }
+}
+
+// ── RENDER ──────────────────────────────────────────────────
+const STAGE_COLORS = {
+  'Новое':            'var(--ora)',
+  'В работе':         'var(--acc)',
+  'Готово к выдаче':  'var(--yel)',
+  'Завершено':        'var(--gre)',
+};
+
+function renderAll() {
+  const isTranslator = currentUser.role === 'translator';
+  const myName = currentUser.name || '';
+
+  let myTasks = isTranslator
+    ? allTasks.filter(t => t.role === 'translator' && t.assignee === myName)
+    : allTasks.filter(t => t.role === 'translator');
+
+  // Also include orders assigned to this translator
+  let myOrders = isTranslator
+    ? allOrders.filter(o => o.svcType === 'Переводы' && o.translator === myName)
+    : allOrders.filter(o => o.svcType === 'Переводы');
+
+  const newTasks     = myTasks.filter(t => t.stage === 'Новое');
+  const activeTasks  = myTasks.filter(t => t.stage === 'В работе');
+  const pendingTasks = myTasks.filter(t => t.stage === 'Готово к выдаче');
+  const doneTasks    = myTasks.filter(t => t.stage === 'Завершено');
+
+  // KPI
+  document.getElementById('kpi-new').textContent     = newTasks.length;
+  document.getElementById('kpi-active').textContent  = activeTasks.length;
+  document.getElementById('kpi-pending').textContent = pendingTasks.length;
+  document.getElementById('kpi-done').textContent    = doneTasks.length;
+
+  // New section visibility
+  document.getElementById('new-section').style.display = newTasks.length ? '' : 'none';
+
+  // Render each list
+  renderTaskList('list-new',     'cnt-new',     newTasks,     'new');
+  renderTaskList('list-active',  'cnt-active',  activeTasks,  'active');
+  renderTaskList('list-pending', 'cnt-pending', pendingTasks, 'pending');
+  renderTaskList('list-done',    'cnt-done',    doneTasks.slice().reverse(), 'done');
+}
+
+function renderTaskList(listId, cntId, tasks, mode) {
+  const cnt = document.getElementById(cntId);
+  const list = document.getElementById(listId);
+  if(cnt) cnt.textContent = tasks.length;
+  if(!list) return;
+
+  if(!tasks.length) {
+    list.innerHTML = `<div style="padding:16px;color:var(--t3);font-size:12.5px;text-align:center;background:var(--surface);border-radius:10px;border:1px dashed var(--border)">Нет заданий</div>`;
+    return;
+  }
+
+  list.innerHTML = tasks.map(t => {
+    const stageColor = STAGE_COLORS[t.stage] || 'var(--t3)';
+    const stageBg    = t.stage === 'Новое' ? 'var(--ora-d)' : t.stage === 'В работе' ? 'var(--acc-d)' : t.stage === 'Готово к выдаче' ? 'var(--yel-d)' : 'var(--gre-d)';
+    const driveBtn   = t.driveUrl
+      ? `<a href="${esc(t.driveUrl)}" target="_blank" class="btn-drive">📁 Drive</a>`
+      : '';
+    let actionBtn = '';
+    if(mode === 'new')
+      actionBtn = `<button class="btn-accept" onclick="acceptTask('${t.id}')">✅ Принять в работу</button>`;
+    else if(mode === 'active')
+      actionBtn = `<button class="btn-ready" onclick="markReady('${t.id}')">📤 Готово</button>`;
+
+    const cardCls = mode === 'new' ? 'new-task' : mode === 'active' ? 'active-task' : '';
+
+    return `<div class="task-card ${cardCls}">
+      <div class="task-body">
+        <div class="task-client">${esc(t.client || '—')}</div>
+        <div class="task-type">${esc(t.type || 'Перевод')}${t.due ? ' · 📅 ' + esc(t.due) : ''}</div>
+        <span class="task-badge" style="background:${stageBg};color:${stageColor}">${esc(t.stage)}</span>
+      </div>
+      <div class="task-actions">
+        ${driveBtn}
+        ${actionBtn}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── ACTIONS ─────────────────────────────────────────────────
+async function acceptTask(taskId) {
+  const t = allTasks.find(x => x.id === taskId);
+  if(!t) return;
+  t.stage = 'В работе';
+  renderAll();
+  toast('✅ Задание принято в работу');
+  try {
+    await api('/spectasks/' + taskId, { method:'PUT', body: JSON.stringify({stage: 'В работе'}) });
+  } catch(e) { console.warn(e); }
+}
+
+async function markReady(taskId) {
+  const t = allTasks.find(x => x.id === taskId);
+  if(!t) return;
+  t.stage = 'Готово к выдаче';
+  renderAll();
+  toast('📤 Статус обновлён: Готово к выдаче');
+  try {
+    await api('/spectasks/' + taskId, { method:'PUT', body: JSON.stringify({stage: 'Готово к выдаче'}) });
+  } catch(e) { console.warn(e); }
+}
+
+// ── API ─────────────────────────────────────────────────────
+async function api(path, opts = {}) {
+  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+  let url, fetchOpts;
+  if(!opts.method || opts.method === 'GET') {
+    url = API_BASE + '?path=' + encodedPath;
+    fetchOpts = { method: 'GET' };
+  } else {
+    url = API_BASE + '?path=' + encodedPath;
+    const body = opts.body ? JSON.parse(opts.body) : {};
+    if(opts.method !== 'POST') body._method = opts.method;
+    fetchOpts = { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(body) };
+  }
+  const res = await fetch(url, fetchOpts);
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+let _toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+init();
+</script>
+</body>
+</html>
