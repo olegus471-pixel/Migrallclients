@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MigrAll — Real Estate</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0f3fa;--surface:#fff;--s2:#f7f8fd;--s3:#eef1f8;--border:#e2e7f2;
+  --t1:#0d1426;--t2:#3a4260;--t3:#8892b0;--t4:#c0c8df;
+  --acc:#4f6ef7;--acc-d:#eaedfe;--gre:#12b76a;--gre-d:#d1fadf;
+  --yel:#f59e0b;--yel-d:#fef3c7;--red:#ef4444;--red-d:#fee2e2;
+  --pur:#7c3aed;--pur-d:#ede9fe;--tea:#0d9488;--tea-d:#ccfbf1;
+  --sh:0 1px 4px rgba(13,20,38,.06),0 1px 2px rgba(13,20,38,.04);
+  --sh2:0 8px 32px rgba(13,20,38,.10),0 2px 8px rgba(13,20,38,.05);
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:var(--bg);color:var(--t1);font-family:'Manrope',sans-serif;font-size:14px;line-height:1.6}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+button:active{transform:scale(.97)}
+
+/* ── Loading ── */
+#screen-loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:18px}
+.loading-logo{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600}
+.loading-logo span{color:var(--tea)}
+.bar-wrap{width:180px;height:3px;background:var(--border);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--tea),var(--acc));border-radius:4px;animation:lb 1.6s ease-in-out infinite}
+@keyframes lb{0%{width:0;margin-left:0}60%{width:100%;margin-left:0}100%{width:0;margin-left:100%}}
+
+/* ── Login ── */
+#screen-login{display:none;position:fixed;inset:0;background:var(--bg);align-items:center;justify-content:center;z-index:9997;padding:16px}
+.login-card{background:var(--surface);border-radius:var(--r);padding:36px 32px;width:100%;max-width:400px;box-shadow:var(--sh2)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--tea),var(--acc));border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px}
+.logo-text{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600}
+.logo-sub{font-size:10px;color:var(--t3);font-family:'IBM Plex Mono',monospace}
+.lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:6px;display:block;font-family:'IBM Plex Mono',monospace}
+.inp{width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;font-family:'Manrope',sans-serif;color:var(--t1);outline:none;transition:border-color .18s}
+.inp:focus{border-color:var(--tea);background:var(--surface)}
+.inp-wrap{margin-bottom:16px}
+.login-btn{width:100%;background:linear-gradient(135deg,var(--tea),var(--acc));color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Manrope',sans-serif;margin-top:4px}
+.login-btn:hover{opacity:.9}
+.login-btn:disabled{opacity:.5;cursor:default}
+.login-err{background:var(--red-d);color:#991b1b;border-radius:8px;padding:10px 14px;font-size:12.5px;font-weight:600;margin-bottom:16px;display:none}
+
+/* ── App ── */
+#app{display:none;min-height:100vh}
+.top-bar{background:var(--surface);border-bottom:1.5px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--sh);height:56px}
+.tl{display:flex;align-items:center;gap:10px}
+.tl-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--tea),var(--acc));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.tl-name{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600}
+.tl-sub{font-size:9px;color:var(--t3);font-family:'IBM Plex Mono',monospace}
+.user-badge{background:var(--tea-d);border:1.5px solid var(--tea);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--tea);font-family:'IBM Plex Mono',monospace}
+.logout-btn{background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--t2);font-family:'Manrope',sans-serif;margin-left:8px}
+.top-right{display:flex;align-items:center}
+
+/* ── Nav tabs ── */
+.nav{display:flex;gap:2px;background:var(--s2);border-radius:12px;padding:4px;margin:20px 0;border:1.5px solid var(--border)}
+.nav-btn{flex:1;padding:8px 14px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;text-align:center;color:var(--t3);transition:all .18s;border:none;background:none;font-family:'Manrope',sans-serif}
+.nav-btn.active{background:var(--surface);color:var(--t1);box-shadow:var(--sh)}
+
+.content{max-width:1140px;margin:0 auto;padding:20px 20px 60px}
+
+/* ── KPI ── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
+.kc{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:15px 18px;box-shadow:var(--sh)}
+.kc-val{font-size:26px;font-weight:800;font-family:'IBM Plex Mono',monospace;margin-bottom:2px}
+.kc-lbl{font-size:11px;color:var(--t3);font-weight:600}
+.kc.c-tea{border-color:rgba(13,148,136,.3);background:var(--tea-d)}.kc.c-tea .kc-val{color:var(--tea)}
+.kc.c-gre{border-color:rgba(18,183,106,.3);background:var(--gre-d)}.kc.c-gre .kc-val{color:var(--gre)}
+.kc.c-yel{border-color:rgba(245,158,11,.3);background:var(--yel-d)}.kc.c-yel .kc-val{color:var(--yel)}
+.kc.c-acc{border-color:rgba(79,110,247,.3);background:var(--acc-d)}.kc.c-acc .kc-val{color:var(--acc)}
+
+/* ── Panel ── */
+.panel{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--sh);margin-bottom:18px}
+.ph{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--s2);flex-wrap:wrap;gap:8px}
+.ph-title{font-size:13px;font-weight:700}
+.ph-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ph-cnt{font-size:11px;color:var(--t3);font-family:'IBM Plex Mono',monospace}
+
+/* ── Table ── */
+.dt{width:100%;border-collapse:collapse;font-size:13px}
+.dt th{padding:10px 13px;font-size:10px;font-weight:700;color:var(--t3);text-align:left;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap}
+.dt td{padding:10px 13px;border-bottom:1px solid var(--s3)}
+.dt tr:last-child td{border-bottom:none}
+.dt tr:hover td{background:var(--s2);cursor:pointer}
+.mono{font-family:'IBM Plex Mono',monospace}
+
+/* ── Badges ── */
+.bdg{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:'IBM Plex Mono',monospace;white-space:nowrap}
+.bdg-tea{background:var(--tea-d);color:var(--tea)}
+.bdg-gre{background:var(--gre-d);color:#065f46}
+.bdg-yel{background:var(--yel-d);color:#92400e}
+.bdg-red{background:var(--red-d);color:#991b1b}
+.bdg-acc{background:var(--acc-d);color:var(--acc)}
+.bdg-pur{background:var(--pur-d);color:var(--pur)}
+.bdg-gray{background:var(--s3);color:var(--t3)}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;border:none;font-family:'Manrope',sans-serif;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn-p{background:var(--tea);color:#fff}
+.btn-g{background:var(--s3);border:1px solid var(--border);color:var(--t2)}
+.btn-sm{padding:5px 10px;font-size:11px}
+
+/* ── Search/Filter bar ── */
+.filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.search-inp{background:var(--s2);border:1.5px solid var(--border);border-radius:9px;padding:7px 12px;font-size:13px;font-family:'Manrope',sans-serif;color:var(--t1);outline:none;width:200px}
+.search-inp:focus{border-color:var(--tea)}
+.sel{background:var(--s2);border:1.5px solid var(--border);border-radius:9px;padding:7px 10px;font-size:12px;font-family:'Manrope',sans-serif;color:var(--t2);outline:none;cursor:pointer}
+.sel:focus{border-color:var(--tea)}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(13,20,38,.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--surface);border-radius:16px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:var(--sh2)}
+.modal-hdr{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:15px;font-weight:800}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--t3);line-height:1;padding:2px 6px;border-radius:6px}
+.modal-close:hover{background:var(--s3)}
+.modal-body{padding:20px 22px}
+.modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.field{margin-bottom:14px}
+.field label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);display:block;margin-bottom:5px;font-family:'IBM Plex Mono',monospace}
+.field .inp{width:100%}
+.field textarea{width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Manrope',sans-serif;color:var(--t1);outline:none;resize:vertical;min-height:72px}
+.field textarea:focus{border-color:var(--tea);background:var(--surface)}
+.field select{width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;font-size:13px;font-family:'Manrope',sans-serif;color:var(--t1);outline:none}
+.field select:focus{border-color:var(--tea)}
+
+/* ── Stats chart-like ── */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:18px}
+.stat-card{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--sh)}
+.stat-label{font-size:11px;font-weight:700;color:var(--t3);margin-bottom:6px;font-family:'IBM Plex Mono',monospace}
+.stat-val{font-size:22px;font-weight:800;font-family:'IBM Plex Mono',monospace}
+.stat-sub{font-size:11px;color:var(--t3);margin-top:2px}
+.bar-list{margin-top:10px}
+.bar-item{margin-bottom:8px}
+.bar-item-label{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px}
+.bar-item-label span:last-child{font-weight:700;font-family:'IBM Plex Mono',monospace}
+.bar-track{height:6px;background:var(--s3);border-radius:3px;overflow:hidden}
+.bar-fill-el{height:100%;background:linear-gradient(90deg,var(--tea),var(--acc));border-radius:3px;transition:width .4s}
+
+/* ── Empty state ── */
+.empty{padding:32px;text-align:center;color:var(--t3);font-size:13px}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--t1);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+#toast.show{opacity:1;transform:translateY(0)}
+
+@media(max-width:640px){
+  .content{padding:14px 12px 60px}
+  .field-row{grid-template-columns:1fr}
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .filter-bar{flex-direction:column;align-items:flex-start}
+  .search-inp{width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="screen-loading">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+    <div class="tl-icon" style="width:52px;height:52px;border-radius:14px;font-size:24px">🏢</div>
+    <div class="loading-logo">Migr<span>All</span> RE</div>
+  </div>
+  <div><div class="bar-wrap"><div class="bar-fill"></div></div></div>
+  <div style="font-size:11px;color:var(--t3);font-family:'IBM Plex Mono',monospace">Загрузка кабинета Real Estate...</div>
+</div>
+
+<!-- Login -->
+<div id="screen-login">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon">🏢</div>
+      <div><div class="logo-text">MigrAll RE</div><div class="logo-sub">Real Estate Manager</div></div>
+    </div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:6px">Вход</div>
+    <div style="font-size:12.5px;color:var(--t3);margin-bottom:24px">Кабинет менеджера Real Estate</div>
+    <div class="login-err" id="login-err"></div>
+    <div class="inp-wrap">
+      <label class="lbl">Email</label>
+      <input class="inp" id="login-email" type="email" placeholder="your@email.com" autocomplete="username">
+    </div>
+    <div class="inp-wrap">
+      <label class="lbl">Пароль</label>
+      <input class="inp" id="login-pass" type="password" placeholder="Введите пароль" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Войти</button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <div class="top-bar">
+    <div class="tl">
+      <div class="tl-icon">🏢</div>
+      <div><div class="tl-name">MigrAll RE</div><div class="tl-sub">Real Estate Manager</div></div>
+    </div>
+    <div class="top-right">
+      <div class="user-badge">🏢 <span id="user-name">Менеджер</span></div>
+      <button class="logout-btn" onclick="doLogout()">Выйти</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kc c-tea"><div class="kc-val" id="kpi-total">—</div><div class="kc-lbl">Всего сделок</div></div>
+      <div class="kc c-acc"><div class="kc-val" id="kpi-active">—</div><div class="kc-lbl">Активных</div></div>
+      <div class="kc c-gre"><div class="kc-val" id="kpi-closed">—</div><div class="kc-lbl">Закрытых</div></div>
+      <div class="kc c-yel"><div class="kc-val" id="kpi-revenue">—</div><div class="kc-lbl">Комиссия (€)</div></div>
+    </div>
+
+    <!-- Nav -->
+    <div class="nav">
+      <button class="nav-btn active" onclick="switchTab('tab-deals', this)">🏠 Сделки</button>
+      <button class="nav-btn" onclick="switchTab('tab-clients', this)">👥 Клиенты</button>
+      <button class="nav-btn" onclick="switchTab('tab-stats', this)">📊 Статистика</button>
+    </div>
+
+    <!-- ── DEALS TAB ── -->
+    <div id="tab-deals">
+      <div class="panel">
+        <div class="ph">
+          <div class="ph-title">Объекты / Сделки</div>
+          <div class="ph-right">
+            <div class="filter-bar">
+              <input class="search-inp" id="deals-search" placeholder="🔍 Поиск..." oninput="renderDeals()">
+              <select class="sel" id="deals-status" onchange="renderDeals()">
+                <option value="">Все статусы</option>
+                <option>Новый запрос</option>
+                <option>В подборе</option>
+                <option>Показ</option>
+                <option>Сделка закрыта</option>
+                <option>Отказ</option>
+              </select>
+              <select class="sel" id="deals-type" onchange="renderDeals()">
+                <option value="">Аренда + Покупка</option>
+                <option>Аренда</option>
+                <option>Покупка</option>
+              </select>
+            </div>
+            <button class="btn btn-p btn-sm" onclick="openDealModal(null)">+ Новая сделка</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="dt">
+            <thead><tr>
+              <th>ID</th><th>Клиент</th><th>Адрес / Район</th><th>Тип</th><th>Площадь</th><th>Цена (€)</th><th>Комиссия (€)</th><th>Статус</th><th>Менеджер</th><th>Drive</th><th></th>
+            </tr></thead>
+            <tbody id="tb-deals"></tbody>
+          </table>
+        </div>
+        <div style="padding:10px 18px;border-top:1px solid var(--border);font-size:11px;color:var(--t3);font-family:'IBM Plex Mono',monospace" id="deals-footer"></div>
+      </div>
+    </div>
+
+    <!-- ── CLIENTS TAB ── -->
+    <div id="tab-clients" style="display:none">
+      <div class="panel">
+        <div class="ph">
+          <div class="ph-title">Клиенты RE</div>
+          <div class="ph-right">
+            <input class="search-inp" id="cli-search" placeholder="🔍 Поиск..." oninput="renderREClients()">
+            <span class="ph-cnt" id="cnt-clients"></span>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="dt">
+            <thead><tr>
+              <th>Клиент</th><th>Телефон</th><th>Telegram</th><th>Сделок</th><th>Закрытых</th><th>Последняя активность</th>
+            </tr></thead>
+            <tbody id="tb-clients"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STATS TAB ── -->
+    <div id="tab-stats" style="display:none">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">Сделки по статусу</div>
+          <div class="bar-list" id="stat-by-status"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Аренда vs Покупка</div>
+          <div class="bar-list" id="stat-by-type"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">По районам (топ-5)</div>
+          <div class="bar-list" id="stat-by-district"></div>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">Конверсия</div>
+          <div class="stat-val" id="stat-conv">—</div>
+          <div class="stat-sub">запросов → закрытых</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Средняя цена (€)</div>
+          <div class="stat-val" id="stat-avg-price">—</div>
+          <div class="stat-sub">по закрытым сделкам</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Средняя комиссия (€)</div>
+          <div class="stat-val" id="stat-avg-comm">—</div>
+          <div class="stat-sub">по закрытым сделкам</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Всего комиссия (€)</div>
+          <div class="stat-val" id="stat-total-comm">—</div>
+          <div class="stat-sub">по всем сделкам</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<!-- Deal Modal -->
+<div class="modal-overlay" id="deal-modal" style="display:none" onclick="if(event.target===this)closeDealModal()">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="dm-title">Новая сделка</div>
+      <button class="modal-close" onclick="closeDealModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="dm-id">
+      <div class="field-row">
+        <div class="field"><label>Клиент</label><input class="inp" id="dm-client" placeholder="Имя клиента"></div>
+        <div class="field"><label>Тип</label>
+          <select class="inp" id="dm-type">
+            <option>Аренда</option>
+            <option>Покупка</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Адрес объекта</label><input class="inp" id="dm-address" placeholder="Улица, дом"></div>
+      <div class="field-row">
+        <div class="field"><label>Район</label><input class="inp" id="dm-district" placeholder="Район города"></div>
+        <div class="field"><label>Площадь (м²)</label><input class="inp" id="dm-area" type="number" placeholder="65"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Комнат</label><input class="inp" id="dm-rooms" type="number" placeholder="2"></div>
+        <div class="field"><label>Цена (€)</label><input class="inp" id="dm-price" type="number" placeholder="150000"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Комиссия (€)</label><input class="inp" id="dm-commission" type="number" placeholder="3000"></div>
+        <div class="field"><label>Статус</label>
+          <select class="inp" id="dm-status">
+            <option>Новый запрос</option>
+            <option>В подборе</option>
+            <option>Показ</option>
+            <option>Сделка закрыта</option>
+            <option>Отказ</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Менеджер</label><input class="inp" id="dm-manager" placeholder="ФИО менеджера"></div>
+        <div class="field"><label>Дата сделки</label><input class="inp" id="dm-dealdate" type="date"></div>
+      </div>
+      <div class="field"><label>Ссылка Drive</label><input class="inp" id="dm-drive" placeholder="https://drive.google.com/..."></div>
+      <div class="field"><label>Комментарий</label><textarea id="dm-comment" placeholder="Заметки по сделке..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-g" onclick="closeDealModal()">Отмена</button>
+      <button class="btn btn-p" onclick="saveDeal()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API_BASE = (window.__ENV && window.__ENV.GAS_URL)
+  ? window.__ENV.GAS_URL
+  : 'https://script.google.com/macros/s/AKfycbwDvmzX8V2fy2Qojrf8k4vq-t0GctFPhXywdp-7SnRuwDAu3h2NdvAwOVXzr3mXgObB/exec';
+
+let currentUser = null;
+let deals       = [];
+let reClients   = []; // clients with serviceType matching RE
+
+const STATUSES = ['Новый запрос','В подборе','Показ','Сделка закрыта','Отказ'];
+const STATUS_COLORS = {
+  'Новый запрос': 'bdg-acc',
+  'В подборе':    'bdg-tea',
+  'Показ':        'bdg-yel',
+  'Сделка закрыта':'bdg-gre',
+  'Отказ':        'bdg-red',
+};
+
+// ── INIT ─────────────────────────────────────────────────────
+async function init() {
+  document.getElementById('screen-loading').style.display = 'none';
+  document.getElementById('screen-login').style.display   = 'flex';
+  document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  document.getElementById('login-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value.trim();
+  const errEl = document.getElementById('login-err');
+  const btn   = document.getElementById('login-btn');
+  errEl.style.display = 'none';
+  if(!email || !pass){ errEl.textContent='Заполните все поля'; errEl.style.display='block'; return; }
+  btn.disabled=true; btn.textContent='Проверка...';
+  try {
+    const res = await gasAPI('/auth/login', 'POST', {email, password: pass});
+    if(!res || !res.ok){ errEl.textContent=res?.error||'Неверный email или пароль'; errEl.style.display='block'; return; }
+    if(!['realestate','re_manager','admin'].includes(res.user.role)){
+      errEl.textContent='Доступ только для менеджеров Real Estate'; errEl.style.display='block'; return;
+    }
+    currentUser = res.user;
+    document.getElementById('screen-login').style.display = 'none';
+    document.getElementById('app').style.display          = 'block';
+    document.getElementById('user-name').textContent = currentUser.name || currentUser.email;
+    await loadData();
+  } catch(e){ errEl.textContent='Ошибка соединения'; errEl.style.display='block'; console.error(e); }
+  finally{ btn.disabled=false; btn.textContent='Войти'; }
+}
+
+function doLogout(){
+  currentUser=null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('screen-login').style.display='flex';
+  document.getElementById('login-email').value='';
+  document.getElementById('login-pass').value='';
+}
+
+// ── DATA ─────────────────────────────────────────────────────
+async function loadData(){
+  try {
+    const [dealsRes, clientsRes] = await Promise.all([
+      gasAPI('/realestate'),
+      gasAPI('/clients'),
+    ]);
+    deals     = Array.isArray(dealsRes)   ? dealsRes   : [];
+    const allClients = Array.isArray(clientsRes) ? clientsRes : [];
+    // RE clients = those who have RE deals or serviceType contains RE
+    const reClientNames = new Set(deals.map(d => (d.client||'').trim().toLowerCase()));
+    reClients = allClients.filter(c =>
+      reClientNames.has((c.name||'').trim().toLowerCase()) ||
+      (c.serviceType||'').toLowerCase().includes('real estate') ||
+      (c.serviceType||'').toLowerCase().includes('недвижимост')
+    );
+    renderKPI();
+    renderDeals();
+    renderREClients();
+    renderStats();
+  } catch(e){ toast('⚠️ Ошибка загрузки данных'); console.error(e); }
+}
+
+// ── KPI ──────────────────────────────────────────────────────
+function renderKPI(){
+  const active = deals.filter(d => d.status && d.status !== 'Сделка закрыта' && d.status !== 'Отказ').length;
+  const closed = deals.filter(d => d.status === 'Сделка закрыта').length;
+  const revenue = deals.reduce((sum, d) => sum + (parseFloat(d.commission)||0), 0);
+  document.getElementById('kpi-total').textContent   = deals.length;
+  document.getElementById('kpi-active').textContent  = active;
+  document.getElementById('kpi-closed').textContent  = closed;
+  document.getElementById('kpi-revenue').textContent = fmtNum(revenue);
+}
+
+// ── DEALS ────────────────────────────────────────────────────
+function renderDeals(){
+  const q      = (document.getElementById('deals-search').value||'').toLowerCase();
+  const fSt    = document.getElementById('deals-status').value;
+  const fType  = document.getElementById('deals-type').value;
+
+  let list = deals.filter(d => {
+    if(fSt   && d.status !== fSt)   return false;
+    if(fType && d.type   !== fType) return false;
+    if(q && !(
+      (d.client||'').toLowerCase().includes(q) ||
+      (d.address||'').toLowerCase().includes(q) ||
+      (d.district||'').toLowerCase().includes(q) ||
+      (d.id||'').toLowerCase().includes(q)
+    )) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('tb-deals');
+  if(!list.length){
+    tbody.innerHTML='<tr><td colspan="11" class="empty">Нет сделок по фильтру</td></tr>';
+    document.getElementById('deals-footer').textContent='';
+    return;
+  }
+
+  tbody.innerHTML = list.map(d => {
+    const stCls = STATUS_COLORS[d.status] || 'bdg-gray';
+    const typCls = d.type==='Покупка' ? 'bdg-pur' : 'bdg-tea';
+    const drBtn  = d.driveLink
+      ? `<a href="${esc(d.driveLink)}" target="_blank" class="bdg bdg-acc" style="text-decoration:none" onclick="event.stopPropagation()">📁</a>`
+      : '<span style="color:var(--t4)">—</span>';
+    return `<tr onclick="openDealModal('${esc(d.id)}')">
+      <td class="mono" style="color:var(--tea);font-size:11px">${esc(d.id)}</td>
+      <td style="font-weight:600">${esc(d.client||'—')}</td>
+      <td>
+        <div style="font-weight:500">${esc(d.address||'—')}</div>
+        ${d.district ? `<div style="font-size:11px;color:var(--t3)">${esc(d.district)}</div>` : ''}
+      </td>
+      <td><span class="bdg ${typCls}">${esc(d.type||'—')}</span></td>
+      <td class="mono">${d.area ? d.area+'м²' : '—'}</td>
+      <td class="mono" style="font-weight:600">${d.price ? fmtNum(d.price)+'€' : '—'}</td>
+      <td class="mono" style="color:var(--gre);font-weight:600">${d.commission ? fmtNum(d.commission)+'€' : '—'}</td>
+      <td><span class="bdg ${stCls}">${esc(d.status||'—')}</span></td>
+      <td style="font-size:12px;color:var(--t2)">${esc(d.manager||'—')}</td>
+      <td>${drBtn}</td>
+      <td><button class="btn btn-g btn-sm" onclick="event.stopPropagation();openDealModal('${esc(d.id)}')">✏</button></td>
+    </tr>`;
+  }).join('');
+
+  const totalPrice = list.reduce((s,d)=>s+(parseFloat(d.price)||0),0);
+  const totalComm  = list.reduce((s,d)=>s+(parseFloat(d.commission)||0),0);
+  document.getElementById('deals-footer').textContent =
+    `Показано: ${list.length} из ${deals.length} · Сумма цен: ${fmtNum(totalPrice)} € · Комиссия: ${fmtNum(totalComm)} €`;
+}
+
+// ── RE CLIENTS ───────────────────────────────────────────────
+function renderREClients(){
+  const q = (document.getElementById('cli-search').value||'').toLowerCase();
+  const list = reClients.filter(c =>
+    !q ||
+    (c.name||'').toLowerCase().includes(q) ||
+    (c.phone||'').includes(q) ||
+    (c.tg||'').toLowerCase().includes(q)
+  );
+  document.getElementById('cnt-clients').textContent = list.length + ' клиентов';
+  const tbody = document.getElementById('tb-clients');
+  if(!list.length){ tbody.innerHTML='<tr><td colspan="6" class="empty">Нет клиентов RE</td></tr>'; return; }
+  tbody.innerHTML = list.map(c => {
+    const cDeals   = deals.filter(d => (d.client||'').trim().toLowerCase() === (c.name||'').trim().toLowerCase());
+    const cClosed  = cDeals.filter(d => d.status === 'Сделка закрыта').length;
+    const lastDeal = cDeals.sort((a,b)=>(b.updated||'').localeCompare(a.updated||''))[0];
+    return `<tr>
+      <td style="font-weight:600">${esc(c.name)}</td>
+      <td class="mono">${esc(c.phone||'—')}</td>
+      <td class="mono">${esc(c.tg||'—')}</td>
+      <td style="text-align:center"><span class="bdg bdg-acc">${cDeals.length}</span></td>
+      <td style="text-align:center"><span class="bdg bdg-gre">${cClosed}</span></td>
+      <td class="mono" style="font-size:12px;color:var(--t3)">${lastDeal?fmtDate(lastDeal.updated):'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── STATS ────────────────────────────────────────────────────
+function renderStats(){
+  // By status
+  const byStatus = {};
+  STATUSES.forEach(s => byStatus[s] = 0);
+  deals.forEach(d => { if(d.status) byStatus[d.status] = (byStatus[d.status]||0)+1; });
+  const maxSt = Math.max(...Object.values(byStatus), 1);
+  document.getElementById('stat-by-status').innerHTML = STATUSES.map(s =>
+    barItem(s, byStatus[s], maxSt, byStatus[s])
+  ).join('');
+
+  // By type
+  const byType = {Аренда:0, Покупка:0};
+  deals.forEach(d => { if(d.type) byType[d.type] = (byType[d.type]||0)+1; });
+  const maxTy = Math.max(...Object.values(byType), 1);
+  document.getElementById('stat-by-type').innerHTML = Object.entries(byType).map(([k,v])=>
+    barItem(k, v, maxTy, v)
+  ).join('');
+
+  // By district top-5
+  const byDist = {};
+  deals.forEach(d => { if(d.district) byDist[d.district] = (byDist[d.district]||0)+1; });
+  const distEntries = Object.entries(byDist).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxDi = distEntries.length ? distEntries[0][1] : 1;
+  document.getElementById('stat-by-district').innerHTML = distEntries.length
+    ? distEntries.map(([k,v]) => barItem(k, v, maxDi, v)).join('')
+    : '<div style="color:var(--t3);font-size:12px">Нет данных по районам</div>';
+
+  // Conversion
+  const total  = deals.length;
+  const closed = deals.filter(d => d.status === 'Сделка закрыта').length;
+  document.getElementById('stat-conv').textContent = total
+    ? Math.round(closed/total*100) + '%'
+    : '—';
+
+  // Avg price/commission for closed
+  const closedDeals = deals.filter(d => d.status === 'Сделка закрыта' && d.price);
+  const avgPrice = closedDeals.length
+    ? Math.round(closedDeals.reduce((s,d)=>s+(parseFloat(d.price)||0),0) / closedDeals.length)
+    : 0;
+  const closedComm = deals.filter(d => d.status === 'Сделка закрыта' && d.commission);
+  const avgComm = closedComm.length
+    ? Math.round(closedComm.reduce((s,d)=>s+(parseFloat(d.commission)||0),0) / closedComm.length)
+    : 0;
+  const totalComm = deals.reduce((s,d)=>s+(parseFloat(d.commission)||0),0);
+  document.getElementById('stat-avg-price').textContent   = avgPrice   ? fmtNum(avgPrice)+'€'   : '—';
+  document.getElementById('stat-avg-comm').textContent    = avgComm    ? fmtNum(avgComm)+'€'    : '—';
+  document.getElementById('stat-total-comm').textContent  = totalComm  ? fmtNum(totalComm)+'€'  : '—';
+}
+
+function barItem(label, val, max, displayVal){
+  const pct = max > 0 ? Math.round(val/max*100) : 0;
+  return `<div class="bar-item">
+    <div class="bar-item-label"><span>${esc(label)}</span><span>${displayVal}</span></div>
+    <div class="bar-track"><div class="bar-fill-el" style="width:${pct}%"></div></div>
+  </div>`;
+}
+
+// ── DEAL MODAL ───────────────────────────────────────────────
+function openDealModal(id){
+  const d = id ? deals.find(x => x.id === id) : null;
+  document.getElementById('dm-title').textContent = d ? 'Редактировать сделку' : 'Новая сделка';
+  document.getElementById('dm-id').value          = d ? d.id         : '';
+  document.getElementById('dm-client').value      = d ? d.client     : '';
+  document.getElementById('dm-type').value        = d ? d.type       : 'Аренда';
+  document.getElementById('dm-address').value     = d ? d.address    : '';
+  document.getElementById('dm-district').value    = d ? d.district   : '';
+  document.getElementById('dm-area').value        = d ? d.area       : '';
+  document.getElementById('dm-rooms').value       = d ? d.rooms      : '';
+  document.getElementById('dm-price').value       = d ? d.price      : '';
+  document.getElementById('dm-commission').value  = d ? d.commission : '';
+  document.getElementById('dm-status').value      = d ? d.status     : 'Новый запрос';
+  document.getElementById('dm-manager').value     = d ? d.manager    : (currentUser.name||'');
+  document.getElementById('dm-dealdate').value    = d ? d.dealDate   : '';
+  document.getElementById('dm-drive').value       = d ? d.driveLink  : '';
+  document.getElementById('dm-comment').value     = d ? d.comment    : '';
+  document.getElementById('deal-modal').style.display = 'flex';
+}
+
+function closeDealModal(){
+  document.getElementById('deal-modal').style.display = 'none';
+}
+
+async function saveDeal(){
+  const id = document.getElementById('dm-id').value;
+  const data = {
+    id:         id || '',
+    client:     document.getElementById('dm-client').value.trim(),
+    type:       document.getElementById('dm-type').value,
+    address:    document.getElementById('dm-address').value.trim(),
+    district:   document.getElementById('dm-district').value.trim(),
+    area:       document.getElementById('dm-area').value,
+    rooms:      document.getElementById('dm-rooms').value,
+    price:      document.getElementById('dm-price').value,
+    commission: document.getElementById('dm-commission').value,
+    status:     document.getElementById('dm-status').value,
+    manager:    document.getElementById('dm-manager').value.trim(),
+    dealDate:   document.getElementById('dm-dealdate').value,
+    driveLink:  document.getElementById('dm-drive').value.trim(),
+    comment:    document.getElementById('dm-comment').value.trim(),
+  };
+  if(!data.client){ toast('⚠️ Укажите клиента'); return; }
+
+  closeDealModal();
+  // Optimistic update
+  if(id){
+    const idx = deals.findIndex(d => d.id === id);
+    if(idx >= 0) deals[idx] = {...deals[idx], ...data};
+  } else {
+    data.id = 'RE-' + Date.now();
+    data.created = new Date().toISOString();
+    deals.unshift(data);
+  }
+  renderKPI(); renderDeals(); renderREClients(); renderStats();
+  toast(id ? '✅ Сделка обновлена' : '✅ Сделка добавлена');
+
+  try {
+    await gasAPI('/realestate', 'POST', data);
+    await loadData();
+  } catch(e){ toast('⚠️ Ошибка сохранения'); console.error(e); }
+}
+
+// ── TABS ─────────────────────────────────────────────────────
+function switchTab(tabId, btn){
+  ['tab-deals','tab-clients','tab-stats'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = id===tabId ? 'block' : 'none';
+  });
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+}
+
+// ── API ──────────────────────────────────────────────────────
+async function gasAPI(path, method='GET', body=null){
+  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+  const url = API_BASE + '?path=' + encodedPath;
+  let opts;
+  if(method==='GET'){
+    opts = { method:'GET' };
+  } else {
+    const payload = body ? {...body} : {};
+    if(method !== 'POST') payload._method = method;
+    opts = { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(payload) };
+  }
+  const res = await fetch(url, opts);
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return res.json();
+}
+
+// ── HELPERS ──────────────────────────────────────────────────
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtNum(n){ return Number(n).toLocaleString('ru-RU'); }
+function fmtDate(s){
+  if(!s) return '—';
+  try{ return new Date(s).toLocaleDateString('ru-RU'); } catch(e){ return String(s).slice(0,10); }
+}
+
+let _tt;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'), 2800);
+}
+
+init();
+</script>
+</body>
+</html>
