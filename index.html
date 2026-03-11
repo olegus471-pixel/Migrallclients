@@ -1610,6 +1610,7 @@ function getClients() {
     lawyer:      r['lawyer'] || '',
     driveLink:   r['driveLink'] || '',
     clientToken: r['clientToken'] || '',
+    clientPass:  r['clientPass']  || '',
     submitDate:  r['submitDate'] || '',
     docsReady:   r['docsReady'] || '',
     onboard:     parseOnboard(r['onboard']),
@@ -2779,6 +2780,7 @@ function getClients() {
     lawyer:      r['lawyer'] || '',
     driveLink:   r['driveLink'] || '',
     clientToken: r['clientToken'] || '',
+    clientPass:  r['clientPass']  || '',
     submitDate:  r['submitDate'] || '',
     docsReady:   r['docsReady'] || '',
     onboard:     parseOnboard(r['onboard']),
@@ -10583,15 +10585,15 @@ function renderClientPortal(){
           </div>
           <button class="cp-edit-drive" onclick="openEditDriveModal('${c.id}')">✏ Изменить</button>
         </div>
-        <div class="cp-section-lbl">🔗 Ссылка для клиента</div>
+        <div class="cp-section-lbl">🔗 Кабинет клиента</div>
         <div class="cp-drive-block" style="gap:10px">
-          <div class="cp-drive-icon">🔗</div>
+          <div class="cp-drive-icon">🔐</div>
           <div class="cp-drive-info">
             <div class="cp-drive-title">Личный кабинет клиента</div>
-            <div style="font-size:11px;color:var(--t3)" id="cp-token-hint-${c.id}">${c.clientToken ? 'Ссылка создана · токен: '+c.clientToken.slice(0,8)+'...' : 'Ссылка не создана'}</div>
+            <div style="font-size:11px;color:var(--t3)" id="cp-pass-hint-${c.id}">${c.clientPass ? '🟢 Пароль установлен · Логин: '+esc(c.tg||'—') : '🔴 Пароль не установлен'}</div>
           </div>
-          <button class="cp-edit-drive" onclick="copyClientLink('${c.id}')">📋 Скопировать</button>
-          <button class="cp-edit-drive" style="margin-left:2px" onclick="genClientToken('${c.id}')">🔄 ${c.clientToken?'Обновить':'Создать'}</button>
+          <button class="cp-edit-drive" onclick="copyClientLink('${c.id}')">📋 Ссылка</button>
+          <button class="cp-edit-drive" style="margin-left:2px" onclick="openSetPassModal('${c.id}')">🔑 ${c.clientPass?'Сменить пароль':'Задать пароль'}</button>
         </div>
         <div class="cp-section-lbl">☑ Чеклисты по делу</div>
         ${clBlock}
@@ -10637,7 +10639,66 @@ async function saveDriveLink(cid){
   await apiPut('/clients/'+cid,{driveLink:c.driveLink}).catch(()=>{});
 }
 
-// ── Генерация токена для клиентской ссылки ──────────────────
+// ── Управление паролем клиентского кабинета ──────────────────
+function openSetPassModal(cid){
+  const c = clients.find(x=>x.id===cid);
+  if(!c) return;
+  openModal(`<div class="mhdr">
+    <div><div style="font-size:15px;font-weight:700">🔑 Пароль для кабинета клиента</div>
+    <div style="font-size:11px;color:var(--t3);margin-top:2px">${esc(c.name)} · Telegram ID: ${esc(c.tg||'—')}</div></div>
+    <button class="mcls" onclick="closeModal()">✕</button>
+  </div>
+  <div style="font-size:12px;color:var(--t3);margin-bottom:14px;line-height:1.6">
+    Клиент входит по <b>Telegram ID</b> (логин) и паролю ниже.<br>
+    Сообщите клиенту его Telegram ID и пароль.
+  </div>
+  <div class="mf" style="margin-bottom:14px">
+    <label class="mfl">Telegram ID (логин клиента)</label>
+    <input class="mi" value="${esc(c.tg||'')}" readonly style="background:var(--s3);color:var(--t3);cursor:default">
+  </div>
+  <div class="mf" style="margin-bottom:14px">
+    <label class="mfl">Пароль</label>
+    <div style="display:flex;gap:8px">
+      <input class="mi" id="cp-pass-input" value="${esc(c.clientPass||'')}" placeholder="Введите пароль для клиента" style="flex:1">
+      <button class="btn btn-g" onclick="genRandPass()" style="white-space:nowrap">🎲 Случайный</button>
+    </div>
+  </div>
+  <div class="mft">
+    <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+    <button class="btn btn-p" onclick="saveClientPass('${c.id}')">Сохранить</button>
+  </div>`);
+}
+
+function genRandPass(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let p = '';
+  for(let i=0;i<10;i++) p += chars[Math.floor(Math.random()*chars.length)];
+  const inp = document.getElementById('cp-pass-input');
+  if(inp) inp.value = p;
+}
+
+async function saveClientPass(cid){
+  const c = clients.find(x=>x.id===cid);
+  if(!c) return;
+  const pass = (document.getElementById('cp-pass-input').value||'').trim();
+  if(!pass){ toast('⚠ Введите пароль'); return; }
+  c.clientPass = pass;
+  closeModal();
+  renderClientPortal();
+  await apiPut('/clients/'+cid, {clientPass: pass}).catch(()=>{});
+  toast('🔑 Пароль установлен ✓');
+}
+
+function copyClientLink(cid){
+  const link = (window.location.origin + window.location.pathname).replace('index.html','').replace(/\/$/,'') + '/client.html';
+  navigator.clipboard.writeText(link).then(()=>{
+    toast('✅ Ссылка скопирована:\n'+link);
+  }).catch(()=>{
+    prompt('Скопируйте ссылку вручную:', link);
+  });
+}
+
+// ── (legacy — оставлено для совместимости) ──────────────────
 function makeToken(len=24){
   const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
   let t='';
