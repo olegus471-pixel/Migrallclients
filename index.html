@@ -7997,7 +7997,13 @@ function openModal(html,size=''){
   g('modal-in').innerHTML=html;
   g('modal-ov').classList.add('open');
 }
-function closeModal(){g('modal-ov').classList.remove('open');}
+function closeModal(id){
+  if(id) {
+    var el = document.getElementById(id);
+    if(el) { el.style.display='none'; return; }
+  }
+  g('modal-ov').classList.remove('open');
+}
 function toast(msg, type) {
   var wrap = document.getElementById('toast-wrap');
   if(!wrap) { console.log('[toast]', msg); return; }
@@ -11351,12 +11357,22 @@ function renderChecklists(){
           <div style="font-size:14px;font-weight:800;color:var(--t1)">${clientName} <span style="font-size:12px;font-weight:600;color:var(--acc)">${clientNum}</span></div>
           <div style="font-size:11px;color:var(--t3);margin-top:2px">${cls.length} чеклист${cls.length===1?'':cls.length<5?'а':'ов'} · ${doneItems}/${totalItems} пунктов</div>
         </div>
+        ${client&&client.driveLink?`<a href="${client.driveLink}" target="_blank" class="btn btn-g btn-sm" style="font-size:11px;flex-shrink:0;text-decoration:none;padding:4px 8px" onclick="event.stopPropagation()">📁 Drive</a>`:''}
         <div class="cl-progress-bar"><div class="cl-progress-fill" style="width:${totalPct}%"></div></div>
         <span style="font-size:11px;font-weight:700;color:var(--t2);margin-left:8px;width:32px;text-align:right">${totalPct}%</span>
         ${canEdit?`<button class="cl-btn-sm" style="margin-left:8px" onclick="event.stopPropagation();openNewChecklistForClient('${cid}')">＋ Чеклист</button>`:''}
         <span style="font-size:16px;color:var(--t3);margin-left:6px" id="cl-client-arr-${cid}">▸</span>
       </div>
       <div class="cl-client-body" id="cl-client-body-${cid}" style="display:none">
+        ${client&&client.driveLink?`
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--acc-d);border-radius:8px;margin-bottom:10px">
+          <span style="font-size:18px">📁</span>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:700;color:var(--acc)">Папка Google Drive клиента</div>
+            <div style="font-size:11px;color:var(--t3)">Загружайте и просматривайте документы</div>
+          </div>
+          <a href="${client.driveLink}" target="_blank" class="btn btn-p btn-sm" style="text-decoration:none;font-size:12px">📂 Открыть Drive</a>
+        </div>`:''}
         ${clHtml}
       </div>
     </div>`;
@@ -11775,7 +11791,7 @@ loadChecklists();
   </div>
 
 <!-- Modal: Create/Edit User -->
-<div class="modal-overlay" id="user-modal" onclick="if(event.target===this)closeModal('user-modal')">
+<div class="modal-overlay" id="user-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeModal('user-modal')">
   <div class="modal-box" style="max-width:420px">
     <div class="modal-hdr"><span id="user-modal-title">Новый пользователь</span><button class="modal-close" onclick="closeModal('user-modal')">✕</button></div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
@@ -11787,6 +11803,7 @@ loadChecklists();
         <option value="manager" selected>Менеджер</option>
         <option value="lawyer">Адвокат</option>
         <option value="translator">Переводчик</option>
+        <option value="realestate">Менеджер Real Estate</option>
         <option value="viewer">Только просмотр</option>
       </select>
       <div id="umod-err" style="color:#dc2626;font-size:13px;display:none"></div>
