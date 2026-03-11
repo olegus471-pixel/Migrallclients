@@ -349,6 +349,21 @@ let _allClients = [];
 // INIT
 // ═══════════════════════════════════════════════════════════════
 async function init() {
+  // Если в URL старый токен ?t=... — показываем подсказку
+  const urlParams = new URLSearchParams(window.location.search);
+  const oldToken  = urlParams.get('t');
+  if (oldToken) {
+    // Убираем токен из URL без перезагрузки
+    const cleanUrl = window.location.pathname;
+    history.replaceState({}, '', cleanUrl);
+    // Показываем мягкое предупреждение
+    const errEl = document.getElementById('login-error');
+    if (errEl) {
+      errEl.textContent = '⚠️ Ссылка устарела. Войдите по Telegram ID и паролю, который выдал менеджер.';
+      errEl.style.display = 'block';
+    }
+  }
+
   // Скрываем loading, показываем форму логина
   document.getElementById('screen-loading').style.display = 'none';
   document.getElementById('screen-login').style.display   = 'flex';
