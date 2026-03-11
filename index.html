@@ -3893,6 +3893,43 @@ CRM ↔ Backend (Render) ↔ Google Sheets
     <div id="cp-list"></div>
   </div>
 
+  <!-- =================== REAL ESTATE =================== -->
+  <div class="view" id="view-realestate">
+    <div class="sec-h">
+      <div class="sec-t">🏢 Real Estate</div>
+      <div class="sec-a" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input class="inp" id="re-search" placeholder="🔍 Клиент, адрес, район..." style="width:220px;font-size:12px" oninput="renderRE()">
+        <select class="inp" id="re-status" style="width:150px;font-size:12px" onchange="renderRE()">
+          <option value="">Все статусы</option>
+          <option>Новый запрос</option>
+          <option>В подборе</option>
+          <option>Показ</option>
+          <option>Сделка закрыта</option>
+          <option>Отказ</option>
+        </select>
+        <select class="inp" id="re-type" style="width:130px;font-size:12px" onchange="renderRE()">
+          <option value="">Все типы</option>
+          <option>Аренда</option>
+          <option>Покупка</option>
+        </select>
+        <button class="btn btn-p btn-sm" onclick="openREModal(null)">＋ Новая сделка</button>
+      </div>
+    </div>
+    <!-- KPI row -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px" id="re-kpi-row">
+      <div class="stat-card"><div class="stat-n" id="re-kpi-total">—</div><div class="stat-l">Всего сделок</div></div>
+      <div class="stat-card"><div class="stat-n" id="re-kpi-active">—</div><div class="stat-l">Активных</div></div>
+      <div class="stat-card"><div class="stat-n" id="re-kpi-closed">—</div><div class="stat-l">Закрытых</div></div>
+      <div class="stat-card"><div class="stat-n" id="re-kpi-comm">—</div><div class="stat-l">Комиссия (€)</div></div>
+    </div>
+    <div class="table-wrap">
+      <table class="tbl"><thead><tr>
+        <th>ID</th><th>Клиент</th><th>Адрес / Район</th><th>Тип</th><th>Площадь</th><th>Цена (€)</th><th>Комиссия (€)</th><th>Статус</th><th>Менеджер</th><th>Drive</th><th></th>
+      </tr></thead>
+      <tbody id="re-tbody"></tbody></table>
+    </div>
+  </div>
+
   <!-- =================== CHECKLISTS =================== -->
   <div class="view" id="view-checklists">
     <div class="sec-h">
@@ -4854,7 +4891,7 @@ function restoreSidebarState(){
 // ============================================================
 // NAVIGATION
 // ============================================================
-const VIEW_TITLES = {dashboard:'Дашборд',clients:'Клиенты',kanban:'Kanban Pipeline',aima:'Проверки AIMA',courts:'Суды',citizenship:'Гражданство',rights:'Водительские права',schedule:'Расписание встреч',calendar:'Командный календарь',tasks:'Задачи',integration:'API / Интеграции',users:'Пользователи',filings:'Планируемые подачи','lawyer-tasks':'Дела адвоката','translator-tasks':'Задания переводчика',translations:'Переводы',nocrims:'Справки о несудимости',orders:'Заказы',checklists:'Чеклисты','client-portal':'Кабинет клиента'};
+const VIEW_TITLES = {dashboard:'Дашборд',clients:'Клиенты',kanban:'Kanban Pipeline',aima:'Проверки AIMA',courts:'Суды',citizenship:'Гражданство',rights:'Водительские права',schedule:'Расписание встреч',calendar:'Командный календарь',tasks:'Задачи',integration:'API / Интеграции',users:'Пользователи',filings:'Планируемые подачи','lawyer-tasks':'Дела адвоката','translator-tasks':'Задания переводчика',translations:'Переводы',nocrims:'Справки о несудимости',orders:'Заказы',checklists:'Чеклисты','client-portal':'Кабинет клиента','realestate':'Real Estate 🏢'};
 function showView(id,el){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
@@ -4865,6 +4902,7 @@ function showView(id,el){
   if(id==='clients') applyClientsFilter();
   if(id==='checklists'){ populateChecklistClientFilter(); renderChecklists(); loadChecklists().then(()=>{ populateChecklistClientFilter(); renderChecklists(); }); }
   if(id==='client-portal') { renderClientPortal(); loadChecklists().then(()=>renderClientPortal()); }
+  if(id==='realestate') { loadREDeals(); }
   if(id==='aima') filterAIMA(_aimaCurrentFilter||'all', document.querySelector('#aima-filter-chips .chip.active'));
   if(id==='courts') filterCourts(_courtsCurrentFilter||'all', document.querySelector('#courts-chips .chip.active'));
   if(id==='translator') { renderTranslatorCabinet(); loadSpecTasks(); }
@@ -9249,7 +9287,8 @@ function switchClientTab(btn, paneId){
 function applyRoleUI(role) {
   var isLawyer     = role === 'lawyer';
   var isTranslator = role === 'translator';
-  var isExternal   = isLawyer || isTranslator;
+  var isRE         = role === 'realestate' || role === 're_manager';
+  var isExternal   = isLawyer || isTranslator || isRE;
   var isAdmin      = role === 'admin';
   var isManager    = role === 'manager' || isAdmin;
 
@@ -9304,6 +9343,12 @@ function applyRoleUI(role) {
       if(sbT) sbT.classList.add('active');
       showView('translator-tasks');
       loadSpecTasks();
+    }, 150);
+  } else if(isRE) {
+    setTimeout(function(){
+      document.querySelectorAll('.ni').forEach(function(n){ n.classList.remove('active'); });
+      showView('realestate');
+      loadREDeals();
     }, 150);
   }
 }
@@ -9663,6 +9708,7 @@ function renderDashFilings() {
 // SPEC TASKS — Адвокат (Мои дела) и Переводчик (Мои задания)
 // ═══════════════════════════════════════════════════════════
 var specTasks = [];
+var reDeals = [];
 var specTaskRole = 'lawyer';
 var _lawyerStageFilter = 'all';
 var _transStageFilter = 'all';
@@ -11821,5 +11867,216 @@ loadChecklists();
     <div id="sd-stages" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px"></div>
   </div>
 </div>
+
+<!-- =================== REAL ESTATE MODAL =================== -->
+<div id="re-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(13,20,38,.45);z-index:2000;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeREModal()">
+  <div style="background:var(--surface);border-radius:16px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:15px;font-weight:800" id="re-modal-title">Новая сделка RE</div>
+      <button onclick="closeREModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3);line-height:1">&#x2715;</button>
+    </div>
+    <div style="padding:18px 20px">
+      <input type="hidden" id="re-mid">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div><div class="mi-label">Клиент *</div><input class="mi" id="re-mclient" placeholder="Имя клиента"></div>
+        <div><div class="mi-label">Тип</div>
+          <select class="mi" id="re-mtype"><option>Аренда</option><option>Покупка</option></select>
+        </div>
+      </div>
+      <div style="margin-bottom:12px"><div class="mi-label">Адрес объекта</div><input class="mi" id="re-maddress" placeholder="Улица, дом"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div><div class="mi-label">Район</div><input class="mi" id="re-mdistrict" placeholder="Район"></div>
+        <div><div class="mi-label">Площадь (м²)</div><input class="mi" id="re-marea" type="number" placeholder="65"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div><div class="mi-label">Комнат</div><input class="mi" id="re-mrooms" type="number" placeholder="2"></div>
+        <div><div class="mi-label">Цена (€)</div><input class="mi" id="re-mprice" type="number" placeholder="150000"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div><div class="mi-label">Комиссия (€)</div><input class="mi" id="re-mcomm" type="number" placeholder="3000"></div>
+        <div><div class="mi-label">Статус</div>
+          <select class="mi" id="re-mstatus">
+            <option>Новый запрос</option><option>В подборе</option><option>Показ</option><option>Сделка закрыта</option><option>Отказ</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div><div class="mi-label">Менеджер</div><input class="mi" id="re-mmanager" placeholder="ФИО"></div>
+        <div><div class="mi-label">Дата сделки</div><input class="mi mi-date" id="re-mdealdate" placeholder="ДД.ММ.ГГГГ"></div>
+      </div>
+      <div style="margin-bottom:12px"><div class="mi-label">Ссылка Drive</div><input class="mi" id="re-mdrive" placeholder="https://drive.google.com/..."></div>
+      <div><div class="mi-label">Комментарий</div><textarea class="mi" id="re-mcomment" rows="3" style="resize:vertical" placeholder="Заметки..."></textarea></div>
+    </div>
+    <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn btn-g" onclick="closeREModal()">Отмена</button>
+      <button class="btn btn-p" onclick="saveREDeal()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// REAL ESTATE — функции
+// ═══════════════════════════════════════════════════════════
+
+const RE_STATUSES = ['Новый запрос','В подборе','Показ','Сделка закрыта','Отказ'];
+const RE_STATUS_BDG = {
+  'Новый запрос':   'bdg blu',
+  'В подборе':      'bdg',
+  'Показ':          'bdg y',
+  'Сделка закрыта': 'bdg g',
+  'Отказ':          'bdg r',
+};
+
+async function loadREDeals() {
+  try {
+    const res = await apiGet('/realestate');
+    reDeals = Array.isArray(res) ? res : [];
+    renderRE();
+    updateREBadge();
+  } catch(e) {
+    console.warn('RE load error:', e);
+    reDeals = [];
+    renderRE();
+  }
+}
+
+function updateREBadge() {
+  const el = document.getElementById('bdg-re');
+  if(!el) return;
+  const active = reDeals.filter(d => d.status && d.status !== 'Сделка закрыта' && d.status !== 'Отказ').length;
+  el.textContent = active || '';
+  el.style.display = active ? '' : 'none';
+}
+
+function renderRE() {
+  const q    = (g('re-search') && g('re-search').value || '').toLowerCase();
+  const fSt  = g('re-status') ? g('re-status').value : '';
+  const fTy  = g('re-type')   ? g('re-type').value   : '';
+
+  let list = reDeals.filter(d => {
+    if(fSt && d.status !== fSt) return false;
+    if(fTy && d.type   !== fTy) return false;
+    if(q && !(
+      (d.client||'').toLowerCase().includes(q) ||
+      (d.address||'').toLowerCase().includes(q) ||
+      (d.district||'').toLowerCase().includes(q) ||
+      (d.id||'').toLowerCase().includes(q)
+    )) return false;
+    return true;
+  });
+
+  // KPI
+  const kpiTotal  = g('re-kpi-total');
+  const kpiActive = g('re-kpi-active');
+  const kpiClosed = g('re-kpi-closed');
+  const kpiComm   = g('re-kpi-comm');
+  if(kpiTotal)  kpiTotal.textContent  = reDeals.length;
+  if(kpiActive) kpiActive.textContent = reDeals.filter(d => d.status && d.status !== 'Сделка закрыта' && d.status !== 'Отказ').length;
+  if(kpiClosed) kpiClosed.textContent = reDeals.filter(d => d.status === 'Сделка закрыта').length;
+  if(kpiComm)   kpiComm.textContent   = fmtRENum(reDeals.reduce((s,d) => s+(parseFloat(d.commission)||0), 0)) + ' €';
+
+  const tbody = g('re-tbody');
+  if(!tbody) return;
+  if(!list.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="padding:24px;text-align:center;color:var(--t3)">Нет сделок</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(function(d) {
+    const stCls = RE_STATUS_BDG[d.status] || 'bdg';
+    const tyCls = d.type === 'Покупка' ? 'bdg p' : 'bdg';
+    const drBtn = d.driveLink
+      ? '<a href="' + esc(d.driveLink) + '" target="_blank" class="bdg blu" style="text-decoration:none" onclick="event.stopPropagation()">📁</a>'
+      : '<span style="color:var(--t4)">—</span>';
+    return '<tr style="cursor:pointer" onclick="openREModal(\'' + esc(d.id) + '\')">'      + '<td class="mono" style="font-size:11px;color:var(--acc)">' + esc(d.id) + '</td>'      + '<td style="font-weight:600">' + esc(d.client||'—') + '</td>'      + '<td><div style="font-weight:500">' + esc(d.address||'—') + '</div>' + (d.district?'<div style="font-size:11px;color:var(--t3)">' + esc(d.district) + '</div>':'') + '</td>'      + '<td><span class="' + tyCls + '">' + esc(d.type||'—') + '</span></td>'      + '<td class="mono">' + (d.area ? d.area+'м²' : '—') + '</td>'      + '<td class="mono" style="font-weight:600">' + (d.price ? fmtRENum(d.price)+'€' : '—') + '</td>'      + '<td class="mono" style="color:var(--gre);font-weight:600">' + (d.commission ? fmtRENum(d.commission)+'€' : '—') + '</td>'      + '<td><span class="' + stCls + '">' + esc(d.status||'—') + '</span></td>'      + '<td style="font-size:12px">' + esc(d.manager||'—') + '</td>'      + '<td>' + drBtn + '</td>'      + '<td><button class="edit-btn" onclick="event.stopPropagation();openREModal(\'' + esc(d.id) + '\')">✏</button></td>'      + '</tr>';
+  }).join('');
+}
+
+function openREModal(id) {
+  const d = id ? reDeals.find(function(x){ return x.id === id; }) : null;
+  g('re-modal-title').textContent = d ? 'Редактировать сделку' : 'Новая сделка RE';
+  g('re-mid').value        = d ? d.id         : '';
+  g('re-mclient').value    = d ? d.client      : '';
+  g('re-mtype').value      = d ? (d.type||'Аренда')    : 'Аренда';
+  g('re-maddress').value   = d ? d.address     : '';
+  g('re-mdistrict').value  = d ? d.district    : '';
+  g('re-marea').value      = d ? d.area        : '';
+  g('re-mrooms').value     = d ? d.rooms       : '';
+  g('re-mprice').value     = d ? d.price       : '';
+  g('re-mcomm').value      = d ? d.commission  : '';
+  g('re-mstatus').value    = d ? (d.status||'Новый запрос') : 'Новый запрос';
+  g('re-mmanager').value   = d ? d.manager     : (currentUser ? currentUser.name||'' : '');
+  g('re-mdealdate').value  = d ? (d.dealDate||'')  : '';
+  g('re-mdrive').value     = d ? (d.driveLink||'')  : '';
+  g('re-mcomment').value   = d ? (d.comment||'')    : '';
+  g('re-modal-overlay').style.display = 'flex';
+}
+
+function closeREModal() {
+  g('re-modal-overlay').style.display = 'none';
+}
+
+async function saveREDeal() {
+  const id = g('re-mid').value;
+  const client = g('re-mclient').value.trim();
+  if(!client) { showToast('⚠️ Укажите клиента'); return; }
+  const data = {
+    id:         id || '',
+    client:     client,
+    type:       g('re-mtype').value,
+    address:    g('re-maddress').value.trim(),
+    district:   g('re-mdistrict').value.trim(),
+    area:       g('re-marea').value,
+    rooms:      g('re-mrooms').value,
+    price:      g('re-mprice').value,
+    commission: g('re-mcomm').value,
+    status:     g('re-mstatus').value,
+    manager:    g('re-mmanager').value.trim(),
+    dealDate:   g('re-mdealdate').value,
+    driveLink:  g('re-mdrive').value.trim(),
+    comment:    g('re-mcomment').value.trim(),
+  };
+  closeREModal();
+  // Optimistic update
+  if(id) {
+    var idx = reDeals.findIndex(function(d){ return d.id === id; });
+    if(idx >= 0) reDeals[idx] = Object.assign({}, reDeals[idx], data);
+  } else {
+    data.id = 'RE-' + Date.now();
+    reDeals.unshift(data);
+  }
+  renderRE();
+  updateREBadge();
+  showToast(id ? '✅ Сделка обновлена' : '✅ Сделка RE добавлена');
+
+  try {
+    await apiPost('/realestate', data);
+    await loadREDeals();
+  } catch(e) {
+    showToast('⚠️ Ошибка сохранения RE');
+    console.error(e);
+  }
+}
+
+function fmtRENum(n) {
+  return Number(n).toLocaleString('ru-RU');
+}
+
+// Открыть внешний кабинет в новой вкладке
+function openPortalLink(portal) {
+  var base = (window.location.origin + window.location.pathname)
+    .replace(/index\.html$/, '')
+    .replace(/\/+$/, '');
+  var urls = {
+    lawyer:     base + '/lawyer',
+    translator: base + '/translator',
+    realestate: base + '/realestate',
+    client:     base + '/client',
+  };
+  var url = urls[portal];
+  if(url) window.open(url, '_blank');
+}
+</script>
 </body>
 </html>
