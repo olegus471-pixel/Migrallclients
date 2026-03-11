@@ -4668,7 +4668,10 @@ function getVisibleTasks(){
   // Не показывать удалённые и архивированные задачи
   var alive = tasks.filter(function(t){ return t.stage !== 'deleted' && t.deleted !== '1' && !t._archived && t.archived !== '1'; });
   if(!currentUser) return alive;
-  if(currentUser.role==='admin'||currentUser.canSeeAll) return alive;
+  if(currentUser.role==='admin'||currentUser.canSeeAll){
+    if(taskScope==='mine') return alive.filter(t=>!t.assignee||t.assignee==='—'||t.assignee===currentUser.name);
+    return alive;
+  }
   if(currentUser.role==='lawyer'){
     const myIds=new Set(clients.filter(c=>c.lawyer===currentUser.name).map(c=>c.id));
     if(taskScope==='all') return alive.filter(t=>myIds.has(t.client)||t.assignee===currentUser.name||!t.assignee||t.assignee==='—');
@@ -11295,6 +11298,9 @@ function getClStatusCls(key){
 function renderChecklists(){
   const wrap = document.getElementById('cl-list');
   if(!wrap) return;
+  // Сохраняем открытые карточки перед перерисовкой
+  const openClients = new Set([...wrap.querySelectorAll('.cl-client-body')].filter(el=>el.style.display==='block').map(el=>el.id.replace('cl-client-body-','')));
+  const openCards   = new Set([...wrap.querySelectorAll('.cl-card-body')].filter(el=>el.style.display==='block').map(el=>el.id.replace('cl-body-','')));
   const fclient = (document.getElementById('cl-filter-client')||{}).value||'';
   const fstatus = (document.getElementById('cl-filter-status')||{}).value||'';
   let data = window.checklistsData||[];
@@ -11316,6 +11322,7 @@ function renderChecklists(){
 
   const canEdit = currentUser&&(currentUser.role==='manager'||currentUser.role==='admin');
 
+  // Build and set HTML, then restore open state
   wrap.innerHTML = Object.entries(byClient).map(([cid, cls])=>{
     const client = clients.find(c=>c.id===cid);
     const clientName = client?(client.name||'Без имени'):'Неизвестный клиент';
@@ -11381,6 +11388,17 @@ function renderChecklists(){
       </div>
     </div>`;
   }).join('');
+  // Восстанавливаем открытые карточки после перерисовки
+  openClients.forEach(cid=>{
+    var body=document.getElementById('cl-client-body-'+cid);
+    var arr=document.getElementById('cl-client-arr-'+cid);
+    if(body){body.style.display='block';if(arr)arr.textContent='▾';}
+  });
+  openCards.forEach(id=>{
+    var body=document.getElementById('cl-body-'+id);
+    var arr=document.getElementById('cl-arr-'+id);
+    if(body){body.style.display='block';if(arr)arr.textContent='▾';}
+  });
 }
 
 function toggleClClient(cid){
