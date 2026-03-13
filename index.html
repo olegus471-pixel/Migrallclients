@@ -11995,7 +11995,7 @@ async function saveStaffPass(uid) {
   closeModal();
   showToast('💾 Сохраняю...');
   try {
-    var res = await apiPut('/users/' + encodeURIComponent(u.email||u.id), { password: pass });
+    var res = await apiPut('/users/' + encodeURIComponent(u.email||u.id), { email: u.email||u.id, id: u.email||u.id, password: pass });
     if(res && res.ok) {
       u.password = pass;
       showToast('✅ Пароль для ' + (u.name||u.email) + ' обновлён');
