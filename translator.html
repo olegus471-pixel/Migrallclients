@@ -104,6 +104,11 @@ button:active{transform:scale(.97)}
 #toast.show{opacity:1;transform:translateY(0)}
 
 @media(max-width:600px){.content{padding:16px 12px 60px}.kpi-grid{grid-template-columns:1fr 1fr}.task-card{flex-direction:column;align-items:flex-start}}
+
+/* Lang switcher */
+.lang-switcher{display:flex;align-items:center;gap:4px;margin-left:8px}
+.lang-btn{background:none;border:1.5px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;color:var(--t3);font-family:'IBM Plex Mono',monospace;transition:all .15s}
+.lang-btn.active,.lang-btn:hover{background:var(--acc);color:#fff;border-color:var(--acc)}
 </style>
 </head>
 <body>
@@ -147,7 +152,7 @@ button:active{transform:scale(.97)}
       <div><div class="top-logo-text">MigrAll</div><div class="top-logo-sub">Кабинет переводчика</div></div>
     </div>
     <div class="top-user">
-      <div class="user-badge">🌐 <span id="user-name">Переводчик</span></div>
+      <div class="user-badge">🌐 <div class="lang-switcher"><button class="lang-btn active" data-lang="ru" onclick="setLang('ru')">RU</button><button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button></div><span id="user-name">Переводчик</span></div>
       <button class="logout-btn" onclick="doLogout()">Выйти</button>
     </div>
   </div>
@@ -519,6 +524,136 @@ function toast(msg) {
 }
 
 init();
+
+// ── i18n ─────────────────────────────────────────────────────────────────
+const TRANSLATIONS = {
+  ru: {}, // ru = source, no translation needed
+  en: {
+    // Common
+    'Войти': 'Sign In', 'Выйти': 'Log Out', 'Загрузка...': 'Loading...',
+    'Нет данных': 'No data', 'Нет заданий': 'No tasks', 'Ошибка': 'Error',
+    'Сохранить': 'Save', 'Отмена': 'Cancel', 'Закрыть': 'Close',
+    'Поиск': 'Search', 'Фильтр': 'Filter', 'Всего': 'Total',
+    // Login
+    'Войдите в кабинет': 'Sign In to Portal',
+    'Введите ваш email и пароль от системы MigrAll': 'Enter your MigrAll email and password',
+    'Введите ваш Telegram ID и пароль, которые предоставил менеджер': 'Enter your Telegram ID and password provided by your manager',
+    'Кабинет адвоката': 'Lawyer Portal', 'Кабинет переводчика': 'Translator Portal',
+    'Кабинет клиента': 'Client Portal', 'Кабинет менеджера Real Estate': 'Real Estate Manager Portal',
+    'EMAIL': 'EMAIL', 'ПАРОЛЬ': 'PASSWORD', 'TELEGRAM ID': 'TELEGRAM ID',
+    'Введите email': 'Enter email', 'Введите пароль': 'Enter password',
+    'Заполните все поля': 'Please fill all fields', 'Проверка...': 'Checking...',
+    'Не знаете данные для входа?': 'Don\'t have login credentials?',
+    'Обратитесь к вашему менеджеру.': 'Please contact your manager.',
+    // Lawyer
+    '👥 Клиенты': '👥 Clients', '📅 Подачи': '📅 Submissions', '⚖️ Суды': '⚖️ Courts',
+    '🏛 Гражданство': '🏛 Citizenship', '📋 Подачи AIMA': '📋 AIMA Filings',
+    '✅ Задачи': '✅ Tasks', '📊 Статистика': '📊 Statistics',
+    'Мои клиенты': 'My Clients', 'Планируемые подачи': 'Planned Submissions',
+    'Судебные дела': 'Court Cases', 'Мои задачи': 'My Tasks',
+    '№': 'No.', 'Клиент': 'Client', 'Услуга': 'Service', 'Этап': 'Stage',
+    'Подача': 'Filing', 'Документы': 'Documents', 'Статья': 'Article',
+    'Место': 'Location', 'Дата': 'Date', 'Статус': 'Status',
+    'Загрузка...': 'Loading...', 'Нет назначенных клиентов': 'No assigned clients',
+    'Нет дат подачи': 'No filing dates', 'Нет дел': 'No cases',
+    'Нет открытых задач 🎉': 'No open tasks 🎉', 'клиентов': 'clients',
+    'дел': 'cases', 'задач': 'tasks', 'подач': 'filings',
+    // Translator
+    'Новых заданий': 'New Tasks', 'В работе': 'In Progress',
+    'Готово к выдаче': 'Ready for Delivery', 'Завершено': 'Completed',
+    '🔔 Новые задания': '🔔 New Tasks', 'НОВЫЕ': 'NEW',
+    'В РАБОТЕ': 'IN PROGRESS', 'ГОТОВО К ВЫДАЧЕ': 'READY TO DELIVER',
+    'ЗАВЕРШЁННЫЕ': 'COMPLETED',
+    '✅ Принять в работу': '✅ Accept', '📤 Готово': '📤 Done',
+    // Stats
+    'Сводка': 'Summary', 'Всего клиентов': 'Total clients',
+    'Документы готовы': 'Docs ready', 'Документы в процессе': 'Docs in progress',
+    'Подач в этом месяце': 'Filings this month',
+    'Подач в ближайшие 30 дней': 'Filings in next 30 days',
+    'Активных судебных дел': 'Active court cases',
+    'Дел по гражданству': 'Citizenship cases',
+    'Открытых задач': 'Open tasks',
+    'Клиенты по услуге': 'Clients by service',
+    'Клиенты по этапу': 'Clients by stage',
+    'Суды по статусу': 'Courts by status',
+    'Ближайшие подачи (30 дней)': 'Upcoming filings (30 days)',
+    'Осталось': 'Left', 'Сегодня': 'Today',
+    // Client portal
+    'Привет': 'Hello', 'Документы для подачи': 'Documents for filing',
+    'Этап не указан': 'Stage not specified', 'Услуга не указана': 'Service not specified',
+    'Нет документов': 'No documents', 'Открыть папку Google Drive': 'Open Google Drive folder',
+    'Папка Google Drive': 'Google Drive Folder', 'Чеклисты': 'Checklists',
+    'выполнено': 'completed', 'документов': 'documents',
+  }
+};
+
+let currentLang = localStorage.getItem('crm_lang') || 'ru';
+
+function t(text) {
+  if (currentLang === 'ru' || !text) return text;
+  return TRANSLATIONS.en[text] || text;
+}
+
+function translateDOM() {
+  if (currentLang === 'ru') return;
+  // Translate all elements with data-i18n attribute
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+  // Also translate text nodes in common elements
+  translateTextNodes(document.body);
+}
+
+function translateTextNodes(root) {
+  if (!root || currentLang === 'ru') return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const parent = node.parentElement;
+      if (!parent) return NodeFilter.FILTER_REJECT;
+      const tag = parent.tagName;
+      if (['SCRIPT','STYLE','CODE','PRE'].includes(tag)) return NodeFilter.FILTER_REJECT;
+      if (parent.classList.contains('no-translate')) return NodeFilter.FILTER_REJECT;
+      return node.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+    }
+  });
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(node => {
+    const orig = node.textContent;
+    const translated = TRANSLATIONS.en[orig.trim()];
+    if (translated && translated !== orig.trim()) {
+      node.textContent = orig.replace(orig.trim(), translated);
+    }
+  });
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  try { localStorage.setItem('crm_lang', lang); } catch(e) {}
+  // Update lang buttons
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.lang === lang);
+  });
+  if (lang === 'ru') {
+    location.reload(); // Simplest way to restore Russian
+  } else {
+    translateDOM();
+  }
+}
+
+// Auto-translate on page load
+// Re-translate after dynamic renders
+function renderAndTranslate() { if(currentLang==='en') setTimeout(translateDOM, 50); }
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (currentLang === 'en') setTimeout(translateDOM, 100);
+});
+
+// Auto-translate after dynamic renders
+const _origRenderAll = typeof renderAll !== 'undefined' ? renderAll : null;
+// ── end i18n ──────────────────────────────────────────────────────────────
+
 </script>
 </body>
 </html>
