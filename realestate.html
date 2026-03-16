@@ -335,7 +335,11 @@ button:active{transform:scale(.97)}
     <div class="modal-body">
       <input type="hidden" id="dm-id">
       <div class="field-row">
-        <div class="field"><label>Клиент</label><input class="inp" id="dm-client" placeholder="Имя клиента"></div>
+        <div class="field" style="position:relative"><label>Клиент</label>
+          <input class="inp" id="dm-client" placeholder="🔍 Введите имя клиента..." 
+            oninput="filterClientSuggestions(this.value)" autocomplete="off">
+          <div id="client-suggestions" style="position:absolute;background:#fff;border:1.5px solid var(--border);border-radius:8px;z-index:999;max-height:180px;overflow-y:auto;width:calc(100% - 2px);display:none;box-shadow:0 4px 16px rgba(0,0,0,.1);font-size:13px"></div>
+        </div>
         <div class="field"><label>Тип</label>
           <select class="inp" id="dm-type">
             <option>Аренда</option>
@@ -400,6 +404,7 @@ const STATUS_COLORS = {
 
 // ── INIT ─────────────────────────────────────────────────────
 async function init() {
+  loadClientsForDropdown(); // preload for autocomplete
   document.getElementById('screen-loading').style.display = 'none';
   document.getElementById('screen-login').style.display   = 'flex';
   document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
@@ -716,6 +721,52 @@ function toast(msg){
   el.textContent=msg; el.classList.add('show');
   clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'), 2800);
 }
+
+// ── Client autocomplete ──────────────────────────────────
+let _allClientsCache = [];
+async function loadClientsForDropdown() {
+  if (_allClientsCache.length) return;
+  try {
+    const res = await gasAPI('/clients');
+    if (Array.isArray(res)) _allClientsCache = res;
+  } catch(e) { console.warn('clients load:', e); }
+}
+
+function filterClientSuggestions(val) {
+  const box = document.getElementById('client-suggestions');
+  if (!box) return;
+  if (!val || val.length < 1) { box.style.display = 'none'; return; }
+  const q = val.toLowerCase();
+  const matches = _allClientsCache.filter(c =>
+    (c.name||'').toLowerCase().includes(q) ||
+    (c.tg||'').toLowerCase().includes(q) ||
+    (c.phone||'').includes(q)
+  ).slice(0, 8);
+  if (!matches.length) { box.style.display = 'none'; return; }
+  box.innerHTML = matches.map(c =>
+    `<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s"
+      onmouseenter="this.style.background='var(--s2)'" onmouseleave="this.style.background=''"
+      onclick="selectClient('${(c.name||'').replace(/'/g,"\'")}')"
+    ><b>${c.name||'—'}</b><span style="color:var(--t3);font-size:11px;margin-left:8px">${c.tg||''} ${c.phone||''}</span></div>`
+  ).join('');
+  box.style.display = 'block';
+}
+
+function selectClient(name) {
+  const inp = document.getElementById('dm-client');
+  const box = document.getElementById('client-suggestions');
+  if (inp) inp.value = name;
+  if (box) box.style.display = 'none';
+}
+
+// Hide suggestions on outside click
+document.addEventListener('click', (e) => {
+  const box = document.getElementById('client-suggestions');
+  const inp = document.getElementById('dm-client');
+  if (box && inp && !inp.contains(e.target) && !box.contains(e.target)) {
+    box.style.display = 'none';
+  }
+});
 
 init();
 </script>
