@@ -458,8 +458,11 @@ async function doLogin() {
         return;
       }
       const storedPass = String(clientData.clientPass || '').trim();
+      console.log('[Login] clientData.clientPass raw:', JSON.stringify(clientData.clientPass));
+      console.log('[Login] storedPass:', storedPass ? '(set, len=' + storedPass.length + ')' : '(empty)');
       if (!storedPass) {
-        showLoginError('Пароль не установлен. Обратитесь к менеджеру.');
+        showLoginError('Пароль не установлен. Менеджер должен задать пароль в разделе «Кабинет клиента» и нажать «Сохранить».');
+        console.warn('[Login] All pass fields empty. clientData keys:', Object.keys(clientData).join(', '));
         return;
       }
       if (storedPass !== pass) {
