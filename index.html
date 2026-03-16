@@ -9764,7 +9764,7 @@ var SPEC_STAGES = {
   translator: ['Новое', 'В работе', 'Готово к выдаче', 'Завершено']
 };
 var SPEC_TYPES = {
-  lawyer:     ['Суд', 'Гражданство', 'ВНЖ', 'AIMA', 'Другое'],
+  lawyer:     ['ВНЖ', 'AIMA', 'Консультация', 'Другое'],
   translator: ['Перевод', 'Справка о несудимости', 'Права', 'Другая услуга']
 };
 var STAGE_COLORS = {
@@ -9855,8 +9855,9 @@ function renderLawyerTasks() {
   search = search.toLowerCase().trim();
   var saved = (function(){ try{ return JSON.parse(localStorage.getItem('crm_user')||'{}'); }catch(e){ return {}; } })();
   var myRole = saved.role || ''; var myName = saved.name || '';
-
   var hideDoneLawyer = document.getElementById('lawyer-hide-done') ? document.getElementById('lawyer-hide-done').checked : false;
+
+  // Spec-tasks (ВНЖ, AIMA, etc - NOT Суд/Гражданство)
   var tasks = specTasks.filter(function(t) {
     if (t.role !== 'lawyer') return false;
     if (myRole === 'lawyer') {
@@ -9868,6 +9869,42 @@ function renderLawyerTasks() {
     if (search && !(t.client||'').toLowerCase().includes(search) && !(t.type||'').toLowerCase().includes(search)) return false;
     return true;
   });
+
+  // Add courts as virtual tasks
+  var courtTasks = courts.filter(function(c) {
+    if (myRole === 'lawyer' && c.lawyer !== myName) return false;
+    if (hideDoneLawyer && c.status === 'Завершено') return false;
+    if (_lawyerStageFilter !== 'all') {
+      var cStage = c.stage || c.status || '';
+      if (cStage !== _lawyerStageFilter) return false;
+    }
+    if (search && !(c.name||'').toLowerCase().includes(search) && !('суд').includes(search)) return false;
+    return true;
+  }).map(function(c) {
+    return { _isCourt: true, id: c.num, role: 'lawyer', type: 'Суд',
+      client: c.name||'', assignee: c.lawyer||'', due: c.date||'',
+      stage: c.stage||c.status||'', description: c.article||c.comment||'',
+      driveUrl: c.driveLink||'', _raw: c };
+  });
+
+  // Add citizenship as virtual tasks
+  var citTasks = citizenship.filter(function(c) {
+    if (myRole === 'lawyer' && c.lawyer !== myName) return false;
+    if (hideDoneLawyer && c.status === 'Завершено') return false;
+    if (_lawyerStageFilter !== 'all') {
+      var cStage = c.stage || c.status || '';
+      if (cStage !== _lawyerStageFilter) return false;
+    }
+    if (search && !(c.name||'').toLowerCase().includes(search) && !('гражданство').includes(search)) return false;
+    return true;
+  }).map(function(c) {
+    return { _isCitizenship: true, id: c.num, role: 'lawyer', type: 'Гражданство',
+      client: c.name||'', assignee: c.lawyer||'', due: c.date||'',
+      stage: c.stage||c.status||'', description: c.comment||'',
+      driveUrl: c.driveLink||'', _raw: c };
+  });
+
+  tasks = tasks.concat(courtTasks).concat(citTasks);
 
   // Статистика для адвоката
   var _su = (function(){ try{ return JSON.parse(localStorage.getItem('crm_user')||'{}'); }catch(e){ return {}; } })();
@@ -9893,19 +9930,35 @@ function renderLawyerTasks() {
     var tg = getClientTg(t.clientId, t.client);
     var tgHtml = tg !== '—' ? '<a href="tg://resolve?domain='+tg.replace('@','')+'" onclick="event.stopPropagation()">'+tg+'</a>' : '—';
     var _ltsn = t.clientId ? getClientSeqNum(t.clientId) : '—';
-    return '<tr style="cursor:pointer" onclick="openSpecDetail(\''+t.id+'\',\'lawyer\')">'
-      + '<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_ltsn+'</td>'
-      + '<td class="mono" style="color:var(--pur);font-size:12px">'+cNum+'</td>'
-      + '<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgHtml+'</td>'
-      + '<td style="font-weight:600">'+(t.client||'—')+'</td>'
-      + '<td style="font-size:12px">'+(t.type||'—')+'</td>'
-      + '<td style="font-size:12px;color:var(--acc)">'+(t.assignee ? '⚖ '+t.assignee : '<span style="color:var(--t3)">—</span>')+'</td>'
-      + '<td style="font-size:12px'+(overdue?';color:#dc2626;font-weight:600':'')+'">📅 '+(t.due||'—')+'</td>'
-      + '<td>'+badge+'</td>'
-      + '<td>'+drive+'</td>'
-      + '<td onclick="event.stopPropagation()"><button class="btn-ghost" style="font-size:11px;padding:2px 6px" onclick="openSpecDetail(\''+t.id+'\',\'lawyer\')">Изменить</button></td>'
+    // Court/citizenship rows → open their own modals
+    var _rowClick, _editBtn;
+    if (t._isCourt) {
+      var _ci = courts.indexOf(t._raw);
+      _rowClick = 'openCourtDetailModal(' + _ci + ')';
+      _editBtn = '<button class="btn-ghost" style="font-size:11px;padding:2px 6px" onclick="event.stopPropagation();editCourt(' + _ci + ',event)">✏ Изменить</button>';
+    } else if (t._isCitizenship) {
+      var _cii = citizenship.indexOf(t._raw);
+      _rowClick = 'openCitizenshipDetailModal(' + _cii + ')';
+      _editBtn = '<button class="btn-ghost" style="font-size:11px;padding:2px 6px" onclick="event.stopPropagation();editCitizenship(' + _cii + ',event)">✏ Изменить</button>';
+    } else {
+      _rowClick = "openSpecDetail('" + t.id + "','lawyer')";
+      _editBtn = '<button class="btn-ghost" style="font-size:11px;padding:2px 6px" onclick="openSpecDetail(\'' + t.id + '\',\'lawyer\')">✏ Изменить</button>';
+    }
+    return '<tr style="cursor:pointer" onclick="' + _rowClick + '">'
+      + '<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">' + _ltsn + '</td>'
+      + '<td class="mono" style="color:var(--pur);font-size:12px">' + cNum + '</td>'
+      + '<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">' + tgHtml + '</td>'
+      + '<td style="font-weight:600">' + (t.client||'—') + '</td>'
+      + '<td style="font-size:12px">' + (t.type||'—') + '</td>'
+      + '<td style="font-size:12px;color:var(--acc)">' + (t.assignee ? '⚖ ' + t.assignee : '<span style="color:var(--t3)">—</span>') + '</td>'
+      + '<td style="font-size:12px' + (overdue ? ';color:#dc2626;font-weight:600' : '') + '">📅 ' + (t.due||'—') + '</td>'
+      + '<td>' + badge + '</td>'
+      + '<td>' + drive + '</td>'
+      + '<td onclick="event.stopPropagation()">' + _editBtn + '</td>'
       + '</tr>';
   }).join('');
+}
+
 }
 
 function renderTranslatorTasks() {
@@ -10108,6 +10161,7 @@ async function saveSpecTask() {
     document.getElementById('modal-spec-task').style.display = 'none';
     toast((role==='lawyer'?'Дело':'Задание') + ' создано ✓');
     loadSpecTasks();
+
     // Создать папку на Drive
     if(task.clientId) {
       var _stc = clients.find(function(c){ return c.id === task.clientId; });
