@@ -184,6 +184,13 @@ button:active{transform:scale(.97)}
       <div class="section-title">✅ Завершённые <span class="section-cnt" id="cnt-done">0</span></div>
       <div id="list-done"></div>
     </div>
+
+    <!-- Stats section -->
+    <div style="margin-top:24px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);font-family:'IBM Plex Mono',monospace;margin-bottom:12px">📊 Статистика</div>
+      <div id="translator-stats"></div>
+    </div>
+
   </div>
 </div>
 
@@ -275,15 +282,23 @@ const STAGE_COLORS = {
 
 function renderAll() {
   const isTranslator = currentUser.role === 'translator';
-  const myName = currentUser.name || '';
+  const myName  = (currentUser.name  || '').trim();
+  const myEmail = (currentUser.email || '').trim().toLowerCase();
+
+  function matchesMe(val) {
+    if (!val) return false;
+    const v = String(val).trim();
+    return v === myName || v.toLowerCase() === myEmail ||
+           (myName && v.toLowerCase() === myName.toLowerCase());
+  }
 
   let myTasks = isTranslator
-    ? allTasks.filter(t => t.role === 'translator' && t.assignee === myName)
+    ? allTasks.filter(t => t.role === 'translator' && matchesMe(t.assignee))
     : allTasks.filter(t => t.role === 'translator');
 
   // Also include orders assigned to this translator
   let myOrders = isTranslator
-    ? allOrders.filter(o => o.svcType === 'Переводы' && o.translator === myName)
+    ? allOrders.filter(o => o.svcType === 'Переводы' && matchesMe(o.translator))
     : allOrders.filter(o => o.svcType === 'Переводы');
 
   // Convert orders to task-like objects and merge
@@ -332,6 +347,9 @@ function renderAll() {
   renderTaskList('list-active',  'cnt-active',  activeTasks,  'active');
   renderTaskList('list-pending', 'cnt-pending', pendingTasks, 'pending');
   renderTaskList('list-done',    'cnt-done',    doneTasks.slice().reverse(), 'done');
+
+  // Stats
+  renderTranslatorStats(allMyTasks);
 }
 
 function renderTaskList(listId, cntId, tasks, mode) {
@@ -415,6 +433,60 @@ async function markReady(taskId) {
       await api('/spectasks/' + taskId, { method:'PUT', body: JSON.stringify({stage: 'Готово к выдаче'}) });
     }
   } catch(e) { console.warn(e); }
+}
+
+// ── STATS ───────────────────────────────────────────────────
+function renderTranslatorStats(tasks) {
+  const el = document.getElementById('translator-stats');
+  if (!el) return;
+
+  const total    = tasks.length;
+  const done     = tasks.filter(t => t.stage === 'Завершено').length;
+  const active   = tasks.filter(t => t.stage === 'В работе').length;
+  const pending  = tasks.filter(t => t.stage === 'Готово к выдаче').length;
+  const newTasks = tasks.filter(t => t.stage === 'Новое').length;
+
+  // By client
+  const byClient = {};
+  tasks.forEach(t => {
+    const cl = allClients.find(c => c.id === t.client || c.name === t.client);
+    const name = cl ? cl.name : (t.client || 'Без клиента');
+    if (!byClient[name]) byClient[name] = { total:0, done:0 };
+    byClient[name].total++;
+    if (t.stage === 'Завершено') byClient[name].done++;
+  });
+
+  const clientRows = Object.entries(byClient)
+    .sort((a,b) => b[1].total - a[1].total)
+    .map(([name, s]) => `<tr>
+      <td style="font-weight:600">${esc(name)}</td>
+      <td class="mono" style="color:var(--acc)">${s.total}</td>
+      <td class="mono" style="color:var(--gre)">${s.done}</td>
+    </tr>`).join('');
+
+  const statCard = (icon, label, val, color) =>
+    `<div style="background:var(--surface);border-radius:10px;padding:12px 16px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-size:13px;color:var(--t2)">${icon} ${label}</span>
+      <span style="font-size:16px;font-weight:800;color:${color};font-family:'IBM Plex Mono',monospace">${val}</span>
+    </div>`;
+
+  el.innerHTML =
+    statCard('📋', 'Всего заданий', total, 'var(--t1)') +
+    statCard('🆕', 'Новых', newTasks, 'var(--ora)') +
+    statCard('⚙️', 'В работе', active, 'var(--acc)') +
+    statCard('📤', 'Готово к выдаче', pending, 'var(--yel)') +
+    statCard('✅', 'Завершено', done, 'var(--gre)') +
+    (total > 0 ? `<div style="background:var(--surface);border-radius:10px;padding:14px 16px;border:1px solid var(--border);margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:10px;font-family:'IBM Plex Mono',monospace">📊 По клиентам</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr>
+          <th style="text-align:left;padding:4px 8px;color:var(--t3);font-weight:600;font-size:11px">Клиент</th>
+          <th style="padding:4px 8px;color:var(--t3);font-weight:600;font-size:11px">Всего</th>
+          <th style="padding:4px 8px;color:var(--t3);font-weight:600;font-size:11px">Готово</th>
+        </tr></thead>
+        <tbody>${clientRows}</tbody>
+      </table>
+    </div>` : '');
 }
 
 // ── API ─────────────────────────────────────────────────────
