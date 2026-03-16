@@ -10795,11 +10795,22 @@ async function saveClientPass(cid){
   if(!c) return;
   const pass = (document.getElementById('cp-pass-input').value||'').trim();
   if(!pass){ toast('⚠ Введите пароль'); return; }
-  c.clientPass = pass;
   closeModal();
-  renderClientPortal();
-  await apiPut('/clients/'+cid, {clientPass: pass}).catch(()=>{});
-  toast('🔑 Пароль установлен ✓');
+  toast('💾 Сохраняю пароль...');
+  try {
+    const res = await apiPut('/clients/'+cid, {clientPass: pass, tg: c.tg, id: c.id||c.tg});
+    if(res && res.ok) {
+      c.clientPass = pass;
+      renderClientPortal();
+      toast('🔑 Пароль клиента установлен ✓');
+    } else {
+      toast('⚠ Ошибка сохранения: ' + (res&&res.error?res.error:'нет ответа'));
+      console.error('[saveClientPass] failed:', res);
+    }
+  } catch(e) {
+    toast('⚠ Ошибка сети при сохранении пароля');
+    console.error('[saveClientPass] error:', e);
+  }
 }
 async function saveSubmitInfo(cid){
   const c = clients.find(x=>x.id===cid);
@@ -11814,7 +11825,7 @@ function closeREModal() {
 async function saveREDeal() {
   const id = g('re-mid').value;
   const client = g('re-mclient').value.trim();
-  if(!client) { showToast('⚠️ Укажите клиента'); return; }
+  if(!client) { toast('⚠️ Укажите клиента'); return; }
   const data = {
     id:         id || '',
     client:     client,
@@ -11842,13 +11853,13 @@ async function saveREDeal() {
   }
   renderRE();
   updateREBadge();
-  showToast(id ? '✅ Сделка обновлена' : '✅ Сделка RE добавлена');
+  toast(id ? '✅ Сделка обновлена' : '✅ Сделка RE добавлена');
 
   try {
     await apiPost('/realestate', data);
     await loadREDeals();
   } catch(e) {
-    showToast('⚠️ Ошибка сохранения RE');
+    toast('⚠️ Ошибка сохранения RE');
     console.error(e);
   }
 }
@@ -11952,7 +11963,7 @@ function toggleSpCard(uid) {
 
 function copyStaffPortalLink(url) {
   navigator.clipboard.writeText(url).then(function(){
-    showToast('✅ Ссылка скопирована');
+    toast('✅ Ссылка скопирована');
   }).catch(function(){
     prompt('Скопируйте ссылку вручную:', url);
   });
@@ -11991,22 +12002,24 @@ async function saveStaffPass(uid) {
   var u = (window.usersData||[]).find(function(x){ return (x.email||x.id) === uid; });
   if(!u) return;
   var pass = (document.getElementById('sp-m-pass')||{}).value||'';
-  if(!pass || pass.length < 4) { showToast('⚠️ Пароль слишком короткий (минимум 4 символа)'); return; }
+  if(!pass || pass.length < 4) { toast('⚠️ Пароль слишком короткий (минимум 4 символа)'); return; }
   closeModal();
-  showToast('💾 Сохраняю...');
+  toast('💾 Сохраняю...');
   try {
     var res = await apiPut('/users/' + encodeURIComponent(u.email||u.id), { email: u.email||u.id, id: u.email||u.id, password: pass });
+    console.log('[saveStaffPass] res:', JSON.stringify(res));
     if(res && res.ok) {
       u.password = pass;
-      showToast('✅ Пароль для ' + (u.name||u.email) + ' обновлён');
+      toast('✅ Пароль для ' + (u.name||u.email) + ' обновлён');
       // Update hint
       var hint = document.getElementById('sp-pass-hint-' + uid);
       if(hint) hint.innerHTML = '🟢 Пароль установлен · Email: ' + esc(u.email||'—');
     } else {
-      showToast('⚠️ ' + (res&&res.error?res.error:'Ошибка сохранения'));
+      toast('⚠️ ' + (res&&res.error?res.error:'Ошибка сохранения'));
+      console.error('[saveStaffPass] FAILED:', res);
     }
   } catch(e) {
-    showToast('⚠️ Ошибка сети');
+    toast('⚠️ Ошибка сети');
     console.error(e);
   }
 }
