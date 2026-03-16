@@ -252,11 +252,12 @@ function doLogout() {
 // ── DATA ────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const [tasksRes, ordersRes] = await Promise.all([
-      api('/spectasks'), api('/orders')
+    const [tasksRes, ordersRes, clientsRes] = await Promise.all([
+      api('/spectasks'), api('/orders'), api('/clients')
     ]);
-    allTasks  = Array.isArray(tasksRes)  ? tasksRes  : [];
-    allOrders = Array.isArray(ordersRes) ? ordersRes : [];
+    allTasks   = Array.isArray(tasksRes)   ? tasksRes   : [];
+    allOrders  = Array.isArray(ordersRes)  ? ordersRes  : [];
+    allClients = Array.isArray(clientsRes) ? clientsRes : [];
     renderAll();
   } catch(e) {
     toast('⚠️ Ошибка загрузки данных');
@@ -318,6 +319,8 @@ function renderTaskList(listId, cntId, tasks, mode) {
   }
 
   list.innerHTML = tasks.map(t => {
+    const clientObj = allClients.find(c => c.id === t.client || c.name === t.client || c.tg === t.client);
+    const clientName = clientObj ? clientObj.name : (t.client || '');
     const stageColor = STAGE_COLORS[t.stage] || 'var(--t3)';
     const stageBg    = t.stage === 'Новое' ? 'var(--ora-d)' : t.stage === 'В работе' ? 'var(--acc-d)' : t.stage === 'Готово к выдаче' ? 'var(--yel-d)' : 'var(--gre-d)';
     const driveBtn   = t.driveUrl
@@ -333,7 +336,7 @@ function renderTaskList(listId, cntId, tasks, mode) {
 
     return `<div class="task-card ${cardCls}">
       <div class="task-body">
-        <div class="task-client">${esc(t.client || '—')}</div>
+        <div class="task-client">${esc(clientName || '—')}</div>
         <div class="task-type">${esc(t.type || 'Перевод')}${t.due ? ' · 📅 ' + esc(t.due) : ''}</div>
         <span class="task-badge" style="background:${stageBg};color:${stageColor}">${esc(t.stage)}</span>
       </div>
