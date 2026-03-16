@@ -294,9 +294,12 @@ const API_BASE = (window.__ENV && window.__ENV.GAS_URL)
   : 'https://script.google.com/macros/s/AKfycbwDvmzX8V2fy2Qojrf8k4vq-t0GctFPhXywdp-7SnRuwDAu3h2NdvAwOVXzr3mXgObB/exec';
 
 let currentUser = null;
-let allClients  = [];
-let allCourts   = [];
-let allTasks    = [];
+let allClients     = [];
+let allCourts      = [];
+let allTasks       = [];
+let allSpecTasks   = [];
+let allCitizenship = [];
+let allFilings     = [];
 let allUsers    = [];
 
 // ── INIT ────────────────────────────────────────────────────
@@ -353,12 +356,13 @@ function doLogout() {
 // ── DATA ────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const [clientsRes, courtsRes, tasksRes, citizenshipRes, filingsRes] = await Promise.all([
-      api('/clients'), api('/courts'), api('/tasks'), api('/citizenship'), api('/filings')
+    const [clientsRes, courtsRes, tasksRes, citizenshipRes, filingsRes, specTasksRes] = await Promise.all([
+      api('/clients'), api('/courts'), api('/tasks'), api('/citizenship'), api('/filings'), api('/spec-tasks')
     ]);
     allClients     = Array.isArray(clientsRes)     ? clientsRes     : [];
     allCourts      = Array.isArray(courtsRes)      ? courtsRes      : [];
     allTasks       = Array.isArray(tasksRes)       ? tasksRes       : [];
+    allSpecTasks   = Array.isArray(specTasksRes)   ? specTasksRes   : [];
     allCitizenship = Array.isArray(citizenshipRes) ? citizenshipRes : [];
     allFilings     = Array.isArray(filingsRes)     ? filingsRes     : [];
     renderAll();
@@ -380,12 +384,21 @@ function renderAll() {
   const myClientIds = new Set(myClients.map(c => c.id));
 
   const myCourts = isLawyer
-    ? allCourts.filter(c => myClientIds.has(c.num) || myClientIds.has(c.clientId))
+    ? allCourts.filter(c => c.lawyer === myName || myClientIds.has(c.num) || myClientIds.has(c.clientId))
     : allCourts;
 
-  const myTasks = isLawyer
-    ? allTasks.filter(t => (t.assignee === myName || myClientIds.has(t.client)) && t.stage !== 'done')
+  // General tasks assigned to this lawyer
+  const myGeneralTasks = isLawyer
+    ? allTasks.filter(t => (t.assignee === myName || myClientIds.has(t.client) || 
+        allClients.find(c => c.id === t.client && c.lawyer === myName)) && t.stage !== 'done')
     : allTasks.filter(t => t.stage !== 'done');
+
+  // Spec-tasks (role=lawyer) assigned to this lawyer
+  const mySpecTasks = isLawyer
+    ? allSpecTasks.filter(t => t.role === 'lawyer' && t.assignee === myName && t.stage !== 'Завершено')
+    : allSpecTasks.filter(t => t.role === 'lawyer' && t.stage !== 'Завершено');
+
+  const myTasks = [...myGeneralTasks, ...mySpecTasks];
 
   // KPI
   const now = new Date(); now.setHours(0,0,0,0);
@@ -453,7 +466,7 @@ function renderAll() {
 
   // Citizenship
   const myCitizenship = isLawyer
-    ? allCitizenship.filter(c => myClientIds.has(c.num) || myClientIds.has(c.clientId) || myClients.some(cl => cl.num === c.num))
+    ? allCitizenship.filter(c => c.lawyer === myName || myClients.some(cl => cl.num === c.num || cl.name === c.name))
     : allCitizenship;
   document.getElementById('cnt-citizenship').textContent = myCitizenship.length + ' дел';
   document.getElementById('tb-citizenship').innerHTML = myCitizenship.length
@@ -470,7 +483,7 @@ function renderAll() {
 
   // Filings
   const myFilings = isLawyer
-    ? allFilings.filter(f => myClientIds.has(f.client) || myClients.some(cl => cl.tg === f.tg || cl.name === f.name))
+    ? allFilings.filter(f => f.lawyer === myName || myClients.some(cl => cl.name === f.client || cl.name === f.name))
     : allFilings;
   document.getElementById('cnt-filings').textContent = myFilings.length + ' подач';
   document.getElementById('tb-filings').innerHTML = myFilings.length
@@ -489,11 +502,15 @@ function renderAll() {
     ? myTasks.map(t => {
         const client = allClients.find(c => c.id === t.client);
         const prioColor = t.prio==='high' ? 'var(--red)' : t.prio==='mid' ? 'var(--yel)' : 'var(--t4)';
+        const taskTitle = t.text || t.title || t.description || t.type || 'Задача';
+        const taskClient = client ? client.name : (t.client || '—');
+        const taskType = t.type ? `<span style="font-size:11px;color:var(--pur);font-weight:600;margin-left:6px">${esc(t.type)}</span>` : '';
+        const driveLink = t.driveUrl ? `<a href="${esc(t.driveUrl)}" target="_blank" style="font-size:11px;color:var(--acc);margin-left:8px">📁 Drive</a>` : '';
         return `<div class="task-item">
           <div class="task-prio" style="background:${prioColor}"></div>
           <div class="task-body">
-            <div class="task-title">${esc(t.text||t.title||'Задача')}</div>
-            <div class="task-meta">${client?esc(client.name):'—'}${t.due?' · 📅 '+t.due:''}</div>
+            <div class="task-title">${esc(taskTitle)}${taskType}</div>
+            <div class="task-meta">${esc(taskClient)}${t.due?' · 📅 '+t.due:''}${driveLink}</div>
           </div>
           ${statusBdg(t.stage)}
         </div>`;
