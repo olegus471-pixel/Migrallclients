@@ -286,16 +286,43 @@ function renderAll() {
     ? allOrders.filter(o => o.svcType === 'Переводы' && o.translator === myName)
     : allOrders.filter(o => o.svcType === 'Переводы');
 
-  const newTasks     = myTasks.filter(t => t.stage === 'Новое');
-  const activeTasks  = myTasks.filter(t => t.stage === 'В работе');
-  const pendingTasks = myTasks.filter(t => t.stage === 'Готово к выдаче');
-  const doneTasks    = myTasks.filter(t => t.stage === 'Завершено');
+  // Convert orders to task-like objects and merge
+  const orderTasks = myOrders.map(o => {
+    const stageMap = { 'Новый': 'Новое', 'new': 'Новое', 'Новое': 'Новое',
+                       'В работе': 'В работе', 'active': 'В работе',
+                       'Готово': 'Готово к выдаче', 'Готово к выдаче': 'Готово к выдаче', 'ready': 'Готово к выдаче',
+                       'Завершено': 'Завершено', 'done': 'Завершено', 'Выдано': 'Завершено' };
+    const client = allClients.find(c => c.id === o.clientId || c.tg === o.clientId);
+    return {
+      id:       o.id,
+      _isOrder: true,
+      client:   client ? client.name : (o.clientId || ''),
+      type:     o.svcType || 'Перевод',
+      role:     'translator',
+      assignee: o.translator || myName,
+      stage:    stageMap[o.status] || o.status || 'Новое',
+      due:      o.due || '',
+      description: o.comment || '',
+      driveUrl: o.driveLink || '',
+    };
+  });
+
+  // Merge spec-tasks and orders
+  const allMyTasks = [...myTasks, ...orderTasks];
+
+  const newTasks     = allMyTasks.filter(t => t.stage === 'Новое');
+  const activeTasks  = allMyTasks.filter(t => t.stage === 'В работе');
+  const pendingTasks = allMyTasks.filter(t => t.stage === 'Готово к выдаче');
+  const doneTasks    = allMyTasks.filter(t => t.stage === 'Завершено');
 
   // KPI
   document.getElementById('kpi-new').textContent     = newTasks.length;
   document.getElementById('kpi-active').textContent  = activeTasks.length;
   document.getElementById('kpi-pending').textContent = pendingTasks.length;
   document.getElementById('kpi-done').textContent    = doneTasks.length;
+  // Update KPI labels to include orders count
+  const totalActive = activeTasks.length;
+  const ordersCount = orderTasks.filter(t => t.stage !== 'Завершено').length;
 
   // New section visibility
   document.getElementById('new-section').style.display = newTasks.length ? '' : 'none';
@@ -350,24 +377,43 @@ function renderTaskList(listId, cntId, tasks, mode) {
 
 // ── ACTIONS ─────────────────────────────────────────────────
 async function acceptTask(taskId) {
-  const t = allTasks.find(x => x.id === taskId);
+  // Find in spec-tasks or orders
+  let t = allTasks.find(x => x.id === taskId);
+  let isOrder = false;
+  if (!t) {
+    t = allOrders.find(x => x.id === taskId);
+    isOrder = !!t;
+  }
   if(!t) return;
-  t.stage = 'В работе';
+  if(isOrder) t.status = 'В работе'; else t.stage = 'В работе';
   renderAll();
   toast('✅ Задание принято в работу');
   try {
-    await api('/spectasks/' + taskId, { method:'PUT', body: JSON.stringify({stage: 'В работе'}) });
+    if(isOrder) {
+      await api('/orders/' + taskId, { method:'PUT', body: JSON.stringify({status: 'В работе'}) });
+    } else {
+      await api('/spectasks/' + taskId, { method:'PUT', body: JSON.stringify({stage: 'В работе'}) });
+    }
   } catch(e) { console.warn(e); }
 }
 
 async function markReady(taskId) {
-  const t = allTasks.find(x => x.id === taskId);
+  let t = allTasks.find(x => x.id === taskId);
+  let isOrder = false;
+  if (!t) {
+    t = allOrders.find(x => x.id === taskId);
+    isOrder = !!t;
+  }
   if(!t) return;
-  t.stage = 'Готово к выдаче';
+  if(isOrder) t.status = 'Готово'; else t.stage = 'Готово к выдаче';
   renderAll();
   toast('📤 Статус обновлён: Готово к выдаче');
   try {
-    await api('/spectasks/' + taskId, { method:'PUT', body: JSON.stringify({stage: 'Готово к выдаче'}) });
+    if(isOrder) {
+      await api('/orders/' + taskId, { method:'PUT', body: JSON.stringify({status: 'Готово'}) });
+    } else {
+      await api('/spectasks/' + taskId, { method:'PUT', body: JSON.stringify({stage: 'Готово к выдаче'}) });
+    }
   } catch(e) { console.warn(e); }
 }
 
