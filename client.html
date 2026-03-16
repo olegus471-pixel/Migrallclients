@@ -462,12 +462,11 @@ async function doLogin() {
       console.log('[Login] storedPass:', storedPass ? '(set, len=' + storedPass.length + ')' : '(empty)');
       if (!storedPass) {
         const keys = Object.keys(clientData).join(', ');
-        console.warn('[Login] clientPass not found. Keys:', keys);
-        // Check if gas.gs needs redeployment
+        console.warn('[Login] clientPass not found. Client found:', clientData.name, '| tg:', clientData.tg, '| Keys:', keys);
         if (!keys.includes('clientPass')) {
-          showLoginError('Пароль ещё не сохранён в базе. Администратор должен: 1) задеплоить обновлённый gas.gs, 2) заново задать пароль в CRM → Кабинет клиента.');
+          showLoginError('Найден клиент: ' + (clientData.name||'?') + '. Но пароль недоступен — требуется задеплоить обновлённый gas.gs. Обратитесь к администратору.');
         } else {
-          showLoginError('Пароль не установлен. Менеджер должен задать пароль в разделе «Кабинет клиента» и нажать «Сохранить».');
+          showLoginError('Пароль не установлен для: ' + (clientData.name||'?') + '. Менеджер должен задать пароль в разделе «Кабинет клиента».');
         }
         return;
       }
