@@ -265,7 +265,7 @@ function doLogout() {
 async function loadData() {
   try {
     const [tasksRes, ordersRes, clientsRes] = await Promise.all([
-      api('/spectasks'), api('/orders'), api('/clients')
+      api('/spec-tasks'), api('/orders'), api('/clients')
     ]);
     allTasks   = Array.isArray(tasksRes)   ? tasksRes   : [];
     allOrders  = Array.isArray(ordersRes)  ? ordersRes  : [];
@@ -415,7 +415,7 @@ async function acceptTask(taskId) {
     if(isOrder) {
       await api('/orders/' + taskId, { method:'PUT', body: JSON.stringify({status: 'В работе'}) });
     } else {
-      await api('/spectasks/' + taskId, { method:'PUT', body: JSON.stringify({stage: 'В работе'}) });
+      await api('/spec-tasks/' + taskId, { method:'PUT', body: JSON.stringify({stage: 'В работе'}) });
     }
   } catch(e) { console.warn(e); }
 }
@@ -435,7 +435,7 @@ async function markReady(taskId) {
     if(isOrder) {
       await api('/orders/' + taskId, { method:'PUT', body: JSON.stringify({status: 'Готово'}) });
     } else {
-      await api('/spectasks/' + taskId, { method:'PUT', body: JSON.stringify({stage: 'Готово к выдаче'}) });
+      await api('/spec-tasks/' + taskId, { method:'PUT', body: JSON.stringify({stage: 'Готово к выдаче'}) });
     }
   } catch(e) { console.warn(e); }
 }
