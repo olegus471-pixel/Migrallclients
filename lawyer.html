@@ -186,6 +186,7 @@ button:active{transform:scale(.97)}
       <button class="tab" onclick="switchTab('tab-citizenship',this)">🏛 Гражданство</button>
       <button class="tab" onclick="switchTab('tab-filings',this)">📋 Подачи AIMA</button>
       <button class="tab" onclick="switchTab('tab-tasks',this)">✅ Задачи</button>
+      <button class="tab" onclick="switchTab('tab-stats',this)">📊 Статистика</button>
     </div>
 
     <!-- Clients tab -->
@@ -270,6 +271,16 @@ button:active{transform:scale(.97)}
           <tbody id="tb-filings"><tr><td colspan="5" style="padding:24px;text-align:center;color:var(--t3)">Загрузка...</td></tr></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- Stats tab -->
+    <div id="tab-stats" style="display:none">
+      <div class="panel">
+        <div class="panel-hdr">
+          <div class="panel-title">📊 Сверка и статистика</div>
+        </div>
+        <div id="stats-content" style="padding:8px 0"></div>
       </div>
     </div>
 
@@ -375,27 +386,35 @@ async function loadData() {
 // ── RENDER ──────────────────────────────────────────────────
 function renderAll() {
   const isLawyer = currentUser.role === 'lawyer';
-  const myName   = currentUser.name || '';
+  const myName   = (currentUser.name  || '').trim();
+  const myEmail  = (currentUser.email || '').trim().toLowerCase();
+
+  function matchesMe(val) {
+    if (!val) return false;
+    const v = String(val).trim();
+    return v === myName || v.toLowerCase() === myEmail ||
+           (myName && v.toLowerCase() === myName.toLowerCase());
+  }
 
   const myClients = isLawyer
-    ? allClients.filter(c => c.lawyer === myName)
+    ? allClients.filter(c => matchesMe(c.lawyer))
     : allClients;
 
   const myClientIds = new Set(myClients.map(c => c.id));
 
   const myCourts = isLawyer
-    ? allCourts.filter(c => c.lawyer === myName || myClientIds.has(c.num) || myClientIds.has(c.clientId))
+    ? allCourts.filter(c => matchesMe(c.lawyer) || myClientIds.has(c.num) || myClientIds.has(c.clientId))
     : allCourts;
 
   // General tasks assigned to this lawyer
   const myGeneralTasks = isLawyer
-    ? allTasks.filter(t => (t.assignee === myName || myClientIds.has(t.client) || 
-        allClients.find(c => c.id === t.client && c.lawyer === myName)) && t.stage !== 'done')
+    ? allTasks.filter(t => (matchesMe(t.assignee) || myClientIds.has(t.client) || 
+        allClients.find(c => c.id === t.client && matchesMe(c.lawyer))) && t.stage !== 'done')
     : allTasks.filter(t => t.stage !== 'done');
 
   // Spec-tasks (role=lawyer) assigned to this lawyer
   const mySpecTasks = isLawyer
-    ? allSpecTasks.filter(t => t.role === 'lawyer' && t.assignee === myName && t.stage !== 'Завершено')
+    ? allSpecTasks.filter(t => t.role === 'lawyer' && matchesMe(t.assignee) && t.stage !== 'Завершено')
     : allSpecTasks.filter(t => t.role === 'lawyer' && t.stage !== 'Завершено');
 
   const myTasks = [...myGeneralTasks, ...mySpecTasks];
@@ -466,7 +485,7 @@ function renderAll() {
 
   // Citizenship
   const myCitizenship = isLawyer
-    ? allCitizenship.filter(c => c.lawyer === myName || myClients.some(cl => cl.num === c.num || cl.name === c.name))
+    ? allCitizenship.filter(c => matchesMe(c.lawyer) || myClients.some(cl => cl.num === c.num || cl.name === c.name))
     : allCitizenship;
   document.getElementById('cnt-citizenship').textContent = myCitizenship.length + ' дел';
   document.getElementById('tb-citizenship').innerHTML = myCitizenship.length
@@ -483,7 +502,7 @@ function renderAll() {
 
   // Filings
   const myFilings = isLawyer
-    ? allFilings.filter(f => f.lawyer === myName || myClients.some(cl => cl.name === f.client || cl.name === f.name))
+    ? allFilings.filter(f => matchesMe(f.lawyer) || myClients.some(cl => cl.name === f.client || cl.name === f.name))
     : allFilings;
   document.getElementById('cnt-filings').textContent = myFilings.length + ' подач';
   document.getElementById('tb-filings').innerHTML = myFilings.length
@@ -498,6 +517,9 @@ function renderAll() {
 
   // Tasks
   document.getElementById('cnt-tasks').textContent = myTasks.length + ' задач';
+
+  // Render stats
+  renderStats(myClients, myCourts, myCitizenship, myFilings, myTasks);
   document.getElementById('tasks-list').innerHTML = myTasks.length
     ? myTasks.map(t => {
         const client = allClients.find(c => c.id === t.client);
@@ -518,9 +540,101 @@ function renderAll() {
     : '<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Нет открытых задач 🎉</div>';
 }
 
+// ── STATS ───────────────────────────────────────────────────
+function renderStats(clients, courts, citizenship, filings, tasks) {
+  const el = document.getElementById('stats-content');
+  if (!el) return;
+
+  const now = new Date(); now.setHours(0,0,0,0);
+  const thisMonth = now.getMonth();
+  const thisYear  = now.getFullYear();
+
+  // Clients by service
+  const svcCount = {};
+  clients.forEach(c => { const s = c.serviceType||'Не указана'; svcCount[s] = (svcCount[s]||0)+1; });
+  const svcRows = Object.entries(svcCount).sort((a,b)=>b[1]-a[1])
+    .map(([s,n]) => `<tr><td>${esc(s)}</td><td class="mono" style="font-weight:700;color:var(--acc)">${n}</td></tr>`).join('');
+
+  // Clients by stage
+  const stageCount = {};
+  clients.forEach(c => { const s = c.stage||'Не указан'; stageCount[s] = (stageCount[s]||0)+1; });
+  const stageRows = Object.entries(stageCount).sort((a,b)=>b[1]-a[1])
+    .map(([s,n]) => `<tr><td>${esc(s)}</td><td class="mono" style="font-weight:700;color:var(--pur)">${n}</td></tr>`).join('');
+
+  // Submits this month / upcoming 30 days
+  const submitsMonth = clients.filter(c => {
+    const d = parseDate(c.submitDate);
+    return d && d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+  });
+  const submitsNext30 = clients.filter(c => {
+    const d = parseDate(c.submitDate);
+    if (!d) return false;
+    const diff = Math.round((d - now) / 86400000);
+    return diff >= 0 && diff <= 30;
+  });
+
+  // Courts by status
+  const courtStatus = {};
+  courts.forEach(c => { const s = c.status||'Без статуса'; courtStatus[s] = (courtStatus[s]||0)+1; });
+  const courtRows = Object.entries(courtStatus)
+    .map(([s,n]) => `<tr><td>${esc(s)}</td><td class="mono" style="font-weight:700;color:var(--red)">${n}</td></tr>`).join('');
+
+  // Docs ready
+  const docsReady = clients.filter(c => c.docsReady === 'TRUE' || c.docsReady === true || c.docsReady === '1').length;
+  const docsPending = clients.length - docsReady;
+
+  const card = (title, content) => `
+    <div style="background:var(--surface);border-radius:12px;padding:16px;margin-bottom:12px;border:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:10px;font-family:'IBM Plex Mono',monospace">${title}</div>
+      ${content}
+    </div>`;
+
+  const statRow = (label, val, color='var(--acc)') =>
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;color:var(--t2)">${label}</span>
+      <span style="font-size:15px;font-weight:800;color:${color};font-family:'IBM Plex Mono',monospace">${val}</span>
+    </div>`;
+
+  el.innerHTML =
+    card('📋 Сводка', [
+      statRow('Всего клиентов', clients.length),
+      statRow('Документы готовы', docsReady, 'var(--gre)'),
+      statRow('Документы в процессе', docsPending, 'var(--yel)'),
+      statRow('Подач в этом месяце', submitsMonth.length, 'var(--pur)'),
+      statRow('Подач в ближайшие 30 дней', submitsNext30.length, 'var(--ora)'),
+      statRow('Активных судебных дел', courts.filter(c=>c.status!=='Завершено').length, 'var(--red)'),
+      statRow('Дел по гражданству', citizenship.length, 'var(--pur)'),
+      statRow('Открытых задач', tasks.length),
+    ].join('')) +
+
+    card('👥 Клиенты по услуге',
+      `<table class="dt"><tbody>${svcRows||'<tr><td colspan="2" style="color:var(--t3)">Нет данных</td></tr>'}</tbody></table>`) +
+
+    card('🔄 Клиенты по этапу',
+      `<table class="dt"><tbody>${stageRows||'<tr><td colspan="2" style="color:var(--t3)">Нет данных</td></tr>'}</tbody></table>`) +
+
+    (courts.length ? card('⚖️ Суды по статусу',
+      `<table class="dt"><tbody>${courtRows}</tbody></table>`) : '') +
+
+    card('📅 Ближайшие подачи (30 дней)',
+      submitsNext30.length
+        ? `<table class="dt"><thead><tr><th>Клиент</th><th>Дата</th><th>Осталось</th></tr></thead><tbody>${
+            submitsNext30.sort((a,b)=>(parseDate(a.submitDate)||0)-(parseDate(b.submitDate)||0))
+              .map(c => {
+                const d = parseDate(c.submitDate);
+                const days = d ? Math.round((d-now)/86400000) : null;
+                return `<tr><td>${esc(c.name)}</td><td class="mono">${c.submitDate}</td>
+                  <td style="font-weight:700;color:${days===0?'var(--red)':days<=7?'var(--yel)':'var(--acc)'}">
+                    ${days===0?'Сегодня':days+'д.'}
+                  </td></tr>`;
+              }).join('')
+          }</tbody></table>`
+        : '<div style="color:var(--t3);font-size:13px;text-align:center;padding:12px">Нет подач в ближайшие 30 дней</div>');
+}
+
 // ── TABS ────────────────────────────────────────────────────
 function switchTab(tabId, btn) {
-  ['tab-clients','tab-submits','tab-courts','tab-citizenship','tab-filings','tab-tasks'].forEach(id => {
+  ['tab-clients','tab-submits','tab-courts','tab-citizenship','tab-filings','tab-tasks','tab-stats'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = id === tabId ? 'block' : 'none';
   });
