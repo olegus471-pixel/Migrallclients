@@ -336,7 +336,7 @@ async function doLogin() {
 
   btn.disabled = true; btn.textContent = 'Проверка...';
   try {
-    const res = await api('/auth/login', { method:'POST', body: JSON.stringify({email, password: pass}) });
+    const res = await api('/auth/login', { method:'POST', body: JSON.stringify({action:'login', email, password: pass}) });
     if(!res || !res.ok) {
       errEl.textContent = res?.error || 'Неверный email или пароль';
       errEl.style.display = 'block';
