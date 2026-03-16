@@ -10701,7 +10701,7 @@ function renderClientPortal(){
             <div class="cp-drive-title">Личный кабинет клиента</div>
             <div style="font-size:11px;color:var(--t3)" id="cp-pass-hint-${c.id}">${c.clientPass ? '🟢 Пароль установлен · Логин: '+esc(c.tg||'—') : '🔴 Пароль не установлен'}</div>
           </div>
-          <button class="cp-edit-drive" onclick="copyClientLink('${c.id}')">📋 Ссылка</button>
+          <button class="cp-edit-drive" onclick="copySimpleClientLink('${c.id}')">📋 Ссылка</button>
           <button class="cp-edit-drive" style="margin-left:2px" onclick="openSetPassModal('${c.id}')">🔑 ${c.clientPass?'Сменить пароль':'Задать пароль'}</button>
         </div>
         <div class="cp-section-lbl">☑ Чеклисты по делу</div>
@@ -10849,6 +10849,17 @@ async function saveSubmitInfo(cid){
   }
 }
 
+
+function copySimpleClientLink(cid){
+  const c = clients.find(x=>x.id===cid);
+  if(!c) return;
+  if(!c.clientPass){ toast('⚠ Сначала задайте пароль клиенту'); return; }
+  const link = getClientPageBase();
+  const info = link + '\n\nЛогин: ' + (c.tg||c.id) + '\nПароль: ' + c.clientPass;
+  navigator.clipboard.writeText(link).then(()=>{
+    toast('✅ Ссылка скопирована:\n' + link);
+  }).catch(()=>{ prompt('Ссылка на кабинет:', link); });
+}
 
 function copyClientLink(cid){
   const link = (window.location.origin + window.location.pathname).replace('index.html','').replace(/\/$/,'') + '/client.html';
@@ -11904,7 +11915,7 @@ function renderStaffPortals() {
 
   wrap.innerHTML = staffList.map(function(u) {
     const ri = STAFF_ROLES[u.role] || { label: u.role, icon: '👤', portal: '', color: 'var(--acc)' };
-    const hasPass = !!(u.password || u.pass);
+    const hasPass = !!(u.hasPassword || u.password || u.pass);
     const portalUrl = ri.portal ? baseUrl + ri.portal : '';
     const initials  = (u.name||'?').split(' ').map(function(w){ return w[0]||''; }).slice(0,2).join('').toUpperCase();
 
