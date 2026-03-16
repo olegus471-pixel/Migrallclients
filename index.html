@@ -4371,7 +4371,7 @@ async function doLogin(){
       return (u.email||'').toLowerCase()===email || (u.login||'').toLowerCase()===email;
     });
     if(found && (found.password===pass || !found.password)){
-      loginAs(found); return;
+      loginAs._fromForm = true; loginAs(found); return;
     } else if(found){
       showAuthErr('Неверный пароль'); return;
     }
@@ -4386,6 +4386,7 @@ async function doLogin(){
   }).then(function(r){ return r.json(); }).then(function(data){
     btn.disabled=false; btn.textContent='Войти →';
     if(data.ok && data.user){
+      loginAs._fromForm = true;
       loginAs(data.user);
     } else if(data.blocked){
       g('auth-attempts').style.display='none';
@@ -4530,14 +4531,12 @@ function loginAs(userOrLogin){
   const un = g('um-name'); if(un) un.textContent=user.name||user.login||'';
   const ur = g('um-role'); if(ur) ur.textContent=user.role==='admin'?'Администратор':user.role==='manager'?'Менеджер':'Просмотр';
 
-  // Redirect specialist roles to their own portals
+  // Redirect specialist roles to their own portals (only on active login, not auto-restore)
   const specialRoles = { lawyer: '/lawyer', translator: '/translator', realestate: '/realestate', re_manager: '/realestate' };
-  if (specialRoles[user.role]) {
+  if (specialRoles[user.role] && loginAs._fromForm) {
+    loginAs._fromForm = false;
     const base = location.origin + location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
-    const targetUrl = base + specialRoles[user.role];
-    // Store credentials for auto-login in portal
-    try { sessionStorage.setItem('portal_autoload', JSON.stringify({email: user.email||user.login, name: user.name, role: user.role})); } catch(e){}
-    window.location.href = targetUrl;
+    window.location.href = base + specialRoles[user.role];
     return;
   }
 
