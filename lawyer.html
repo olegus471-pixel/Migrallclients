@@ -183,6 +183,8 @@ button:active{transform:scale(.97)}
       <button class="tab active" onclick="switchTab('tab-clients',this)">👥 Клиенты</button>
       <button class="tab" onclick="switchTab('tab-submits',this)">📅 Подачи</button>
       <button class="tab" onclick="switchTab('tab-courts',this)">⚖️ Суды</button>
+      <button class="tab" onclick="switchTab('tab-citizenship',this)">🏛 Гражданство</button>
+      <button class="tab" onclick="switchTab('tab-filings',this)">📋 Подачи AIMA</button>
       <button class="tab" onclick="switchTab('tab-tasks',this)">✅ Задачи</button>
     </div>
 
@@ -232,6 +234,40 @@ button:active{transform:scale(.97)}
             <th>№</th><th>Клиент</th><th>Статья</th><th>Место</th><th>Дата</th><th>Статус</th><th>Drive</th>
           </tr></thead>
           <tbody id="tb-courts"><tr><td colspan="7" style="padding:24px;text-align:center;color:var(--t3)">Загрузка...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Citizenship tab -->
+    <div id="tab-citizenship" style="display:none">
+      <div class="panel">
+        <div class="panel-hdr">
+          <div class="panel-title">🏛 Гражданство</div>
+          <div class="panel-cnt" id="cnt-citizenship">—</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="dt"><thead><tr>
+            <th>№</th><th>Клиент</th><th>Этап</th><th>Дата подачи</th><th>Статус</th><th>Комментарий</th><th>Drive</th>
+          </tr></thead>
+          <tbody id="tb-citizenship"><tr><td colspan="7" style="padding:24px;text-align:center;color:var(--t3)">Загрузка...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filings tab -->
+    <div id="tab-filings" style="display:none">
+      <div class="panel">
+        <div class="panel-hdr">
+          <div class="panel-title">📋 Подачи AIMA</div>
+          <div class="panel-cnt" id="cnt-filings">—</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="dt"><thead><tr>
+            <th>Клиент</th><th>Тип</th><th>Место</th><th>Дата</th><th>Статус</th>
+          </tr></thead>
+          <tbody id="tb-filings"><tr><td colspan="5" style="padding:24px;text-align:center;color:var(--t3)">Загрузка...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -317,12 +353,14 @@ function doLogout() {
 // ── DATA ────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const [clientsRes, courtsRes, tasksRes] = await Promise.all([
-      api('/clients'), api('/courts'), api('/tasks')
+    const [clientsRes, courtsRes, tasksRes, citizenshipRes, filingsRes] = await Promise.all([
+      api('/clients'), api('/courts'), api('/tasks'), api('/citizenship'), api('/filings')
     ]);
-    allClients = Array.isArray(clientsRes) ? clientsRes : [];
-    allCourts  = Array.isArray(courtsRes)  ? courtsRes  : [];
-    allTasks   = Array.isArray(tasksRes)   ? tasksRes   : [];
+    allClients     = Array.isArray(clientsRes)     ? clientsRes     : [];
+    allCourts      = Array.isArray(courtsRes)      ? courtsRes      : [];
+    allTasks       = Array.isArray(tasksRes)       ? tasksRes       : [];
+    allCitizenship = Array.isArray(citizenshipRes) ? citizenshipRes : [];
+    allFilings     = Array.isArray(filingsRes)     ? filingsRes     : [];
     renderAll();
   } catch(e) {
     toast('⚠️ Ошибка загрузки данных');
@@ -413,6 +451,38 @@ function renderAll() {
       </tr>`).join('')
     : '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--t3)">Нет дел</td></tr>';
 
+  // Citizenship
+  const myCitizenship = isLawyer
+    ? allCitizenship.filter(c => myClientIds.has(c.num) || myClientIds.has(c.clientId) || myClients.some(cl => cl.num === c.num))
+    : allCitizenship;
+  document.getElementById('cnt-citizenship').textContent = myCitizenship.length + ' дел';
+  document.getElementById('tb-citizenship').innerHTML = myCitizenship.length
+    ? myCitizenship.map(c => `<tr>
+        <td class="mono" style="color:var(--pur);font-weight:700">${esc(c.num||'—')}</td>
+        <td style="font-weight:600">${esc(c.name||c.client||'—')}</td>
+        <td>${esc(c.stage||'—')}</td>
+        <td class="mono">${c.submitDate||c.date||'—'}</td>
+        <td>${statusBdg(c.status||c.substage)}</td>
+        <td style="color:var(--t3);font-size:12px">${esc(c.comment||'—')}</td>
+        <td>${c.driveLink?`<a href="${esc(c.driveLink)}" target="_blank" class="bdg blu" style="text-decoration:none">📁 Drive</a>`:'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--t3)">Нет дел по гражданству</td></tr>';
+
+  // Filings
+  const myFilings = isLawyer
+    ? allFilings.filter(f => myClientIds.has(f.client) || myClients.some(cl => cl.tg === f.tg || cl.name === f.name))
+    : allFilings;
+  document.getElementById('cnt-filings').textContent = myFilings.length + ' подач';
+  document.getElementById('tb-filings').innerHTML = myFilings.length
+    ? myFilings.map(f => `<tr>
+        <td style="font-weight:600">${esc(f.name||f.client||'—')}</td>
+        <td>${esc(f.type||'—')}</td>
+        <td style="color:var(--t2)">${esc(f.place||'—')}</td>
+        <td class="mono" style="color:var(--acc);font-weight:700">${f.date||'—'}</td>
+        <td>${statusBdg(f.status)}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--t3)">Нет подач AIMA</td></tr>';
+
   // Tasks
   document.getElementById('cnt-tasks').textContent = myTasks.length + ' задач';
   document.getElementById('tasks-list').innerHTML = myTasks.length
@@ -433,7 +503,7 @@ function renderAll() {
 
 // ── TABS ────────────────────────────────────────────────────
 function switchTab(tabId, btn) {
-  ['tab-clients','tab-submits','tab-courts','tab-tasks'].forEach(id => {
+  ['tab-clients','tab-submits','tab-courts','tab-citizenship','tab-filings','tab-tasks'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = id === tabId ? 'block' : 'none';
   });
