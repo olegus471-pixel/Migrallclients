@@ -298,13 +298,18 @@ function renderAll() {
   }
 
   let myTasks = isTranslator
-    ? allTasks.filter(t => t.role === 'translator' && matchesMe(t.assignee))
+    ? allTasks.filter(t => t.role === 'translator' && (matchesMe(t.assignee) || !t.assignee || t.assignee === ''))
     : allTasks.filter(t => t.role === 'translator');
 
   // Also include orders assigned to this translator
+  // Show orders that are either assigned to me, or unassigned Переводы (so translator can accept)
+  const isTranslationOrder = o => {
+    const svc = (o.svcType||'').trim();
+    return svc === 'Переводы' || svc === 'Перевод' || svc === 'Translations' || svc === 'Translation';
+  };
   let myOrders = isTranslator
-    ? allOrders.filter(o => o.svcType === 'Переводы' && matchesMe(o.translator))
-    : allOrders.filter(o => o.svcType === 'Переводы');
+    ? allOrders.filter(o => isTranslationOrder(o) && (matchesMe(o.translator) || !o.translator))
+    : allOrders.filter(o => isTranslationOrder(o));
 
   // Convert orders to task-like objects and merge
   const orderTasks = myOrders.map(o => {
