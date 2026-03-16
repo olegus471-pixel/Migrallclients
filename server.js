@@ -1,18 +1,10 @@
 // ═══════════════════════════════════════════════════════════════
 // CRM MigrAll — Render.com Node.js сервер
-// • Раздаёт index.html и client.html с инжекцией window.__ENV
-// • Проксирует /api/* запросы к Google Apps Script
-//
-// Деплой на Render:
-// 1. Build command:  npm install
-// 2. Start command:  node server.js
-// 3. Environment variables:
-//    GAS_URL     = https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
-//    (остальные опционально — передаются в window.__ENV фронтенду)
 // ═══════════════════════════════════════════════════════════════
 
 const express = require('express');
 const https   = require('https');
+const http    = require('http');
 const url     = require('url');
 const path    = require('path');
 const fs      = require('fs');
@@ -38,9 +30,25 @@ const ENV = {
   CALENDAR_ID:       process.env.CALENDAR_ID        || '',
 };
 
-if (!GAS_URL) {
-  console.warn('WARNING: GAS_URL is not set! API calls will fail.');
+if (!GAS_URL) console.warn('WARNING: GAS_URL is not set! API calls will fail.');
+
+// ── Keep-alive: self-ping every 10 minutes to prevent sleep ──
+const RENDER_URL = process.env.RENDER_EXTERNAL_URL || '';
+function selfPing() {
+  if (!RENDER_URL) return;
+  const pingUrl = RENDER_URL + '/ping';
+  const parsed = url.parse(pingUrl);
+  const mod = parsed.protocol === 'https:' ? https : http;
+  const req = mod.get({ hostname: parsed.hostname, path: parsed.path || '/ping', headers: { 'User-Agent': 'MigrAll-KeepAlive' } }, (res) => {
+    console.log('[keepalive] ping', res.statusCode);
+  });
+  req.on('error', (e) => console.warn('[keepalive] ping error:', e.message));
+  req.end();
 }
+// Ping every 10 minutes
+setInterval(selfPing, 10 * 60 * 1000);
+// First ping after 1 minute
+setTimeout(selfPing, 60 * 1000);
 
 // ── GAS прокси ────────────────────────────────────────────────
 function proxyToGAS(method, apiPath, body, callback) {
@@ -76,10 +84,7 @@ function proxyToGAS(method, apiPath, body, callback) {
       res.on('end', () => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           const redir = url.parse(res.headers.location);
-          doRequest({
-            hostname: redir.hostname, path: redir.path,
-            method: 'GET', headers: {},
-          }, '', cb);
+          doRequest({ hostname: redir.hostname, path: redir.path, method: 'GET', headers: {} }, '', cb);
           return;
         }
         try { cb(null, JSON.parse(data)); }
@@ -109,14 +114,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── Health/ping endpoint ──────────────────────────────────────
+app.get('/ping', (req, res) => res.json({ ok: true, ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
+
 // ── API прокси: /api/* → GAS ──────────────────────────────────
 app.all('/api/*', (req, res) => {
   const apiPath = req.path.replace('/api', '') || '/';
   let body = req.body || '';
   if (typeof body === 'object') body = JSON.stringify(body);
-  proxyToGAS(req.method, apiPath, body, (data) => {
-    res.json(data);
-  });
+  proxyToGAS(req.method, apiPath, body, (data) => res.json(data));
 });
 
 // ── HTML с инжекцией __ENV ────────────────────────────────────
@@ -133,31 +140,25 @@ function serveHtml(file, res) {
   });
 }
 
-// Статика (js, css, изображения — не HTML)
+// Статика
 app.use(express.static(__dirname, { index: false }));
 
-// Клиентский портал
-app.get('/client.html', (req, res) => serveHtml('client.html', res));
-app.get('/client',      (req, res) => serveHtml('client.html', res));
-
-// Кабинет адвоката
-app.get('/lawyer.html', (req, res) => serveHtml('lawyer.html', res));
-app.get('/lawyer',      (req, res) => serveHtml('lawyer.html', res));
-
-// Кабинет переводчика
+// Маршруты порталов
+app.get('/client.html',     (req, res) => serveHtml('client.html', res));
+app.get('/client',          (req, res) => serveHtml('client.html', res));
+app.get('/lawyer.html',     (req, res) => serveHtml('lawyer.html', res));
+app.get('/lawyer',          (req, res) => serveHtml('lawyer.html', res));
 app.get('/translator.html', (req, res) => serveHtml('translator.html', res));
 app.get('/translator',      (req, res) => serveHtml('translator.html', res));
-
-// Кабинет менеджера Real Estate
 app.get('/realestate.html', (req, res) => serveHtml('realestate.html', res));
 app.get('/realestate',      (req, res) => serveHtml('realestate.html', res));
-
-// Всё остальное → index.html
-app.get('*', (req, res) => serveHtml('index.html', res));
+app.get('*',                (req, res) => serveHtml('index.html', res));
 
 // ── Старт ─────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log('MigrAll CRM running on port ' + PORT);
   console.log('ENV:', Object.entries(ENV).map(([k,v]) => k + '=' + (v ? 'OK' : 'MISSING')).join(' | '));
+  if (RENDER_URL) console.log('[keepalive] Self-ping enabled:', RENDER_URL + '/ping');
+  else console.log('[keepalive] Set RENDER_EXTERNAL_URL env var to enable self-ping');
 });
