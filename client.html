@@ -334,9 +334,19 @@ button:active{transform:scale(.97)}
 // CONFIG — URL берётся из window.__ENV (инжектируется server.js)
 // Fallback: прямой GAS URL (используется при локальной разработке)
 // ═══════════════════════════════════════════════════════════════
-const API_BASE = (window.__ENV && window.__ENV.GAS_URL)
+// Use server.js proxy (/api/*) so only Render env GAS_URL matters
+// This avoids stale hardcoded GAS URLs
+const _directGAS = (window.__ENV && window.__ENV.GAS_URL)
   ? window.__ENV.GAS_URL
-  : 'https://script.google.com/macros/s/AKfycbwDvmzX8V2fy2Qojrf8k4vq-t0GctFPhXywdp-7SnRuwDAu3h2NdvAwOVXzr3mXgObB/exec';
+  : '';
+
+// Determine API base: prefer proxy path (works on Render), fallback to direct
+const API_BASE = (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && window.location.protocol !== 'file:')
+  ? '' // Use relative /api/* path - goes through server.js → correct GAS_URL
+  : _directGAS;
+
+// Override api() to use proxy when available
+const _proxyBase = (API_BASE === '') ? '/api' : API_BASE;
 
 // ═══════════════════════════════════════════════════════════════
 // STATE
@@ -419,7 +429,8 @@ async function doLogin() {
     // Логин через API (новый gas.gs с client_login)
     let loginOk = false;
 
-    const res = await api('/auth/login', {
+    // Send action both in URL path AND body to ensure gas.gs receives it
+    const res = await api('/auth/client_login', {
       method: 'POST',
       body: JSON.stringify({ tg: tgRaw, password: pass, action: 'client_login' })
     });
@@ -430,9 +441,9 @@ async function doLogin() {
       clientId   = String(clientData.id || clientData.tg || '').trim();
       loginOk = true;
 
-    } else if (res && res.error && res.error.includes('Неизвестное действие')) {
-      // Старый gas.gs — используем локальную проверку
-      console.log('[Login] Falling back to local auth (old gas.gs)');
+    } else if (!res || (res && res.error && (res.error.includes('Неизвестное действие') || res.error.includes('Unknown')))) {
+      // Старый gas.gs или нет ответа — используем локальную проверку
+      console.log('[Login] Falling back to local auth (old gas.gs)', res?.error);
       const allClientsRes = await api('/clients');
       if (!allClientsRes || !Array.isArray(allClientsRes)) throw new Error('no data');
 
@@ -784,21 +795,39 @@ async function saveDoc() {
 // API
 // ═══════════════════════════════════════════════════════════════
 async function api(path, opts = {}) {
-  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+  const encodedPath = path.split('/').filter(p => p !== '').map(encodeURIComponent).join('/');
   let url, fetchOpts;
 
-  if (!opts.method || opts.method === 'GET') {
-    url = API_BASE + '?path=' + encodedPath;
-    fetchOpts = { method: 'GET' };
+  if (API_BASE === '') {
+    // Proxy mode: /api/path
+    if (!opts.method || opts.method === 'GET') {
+      url = '/api/' + encodedPath;
+      fetchOpts = { method: 'GET' };
+    } else {
+      url = '/api/' + encodedPath;
+      const body = opts.body ? JSON.parse(opts.body) : {};
+      // Keep original method for proxy (server.js handles PUT/DELETE)
+      fetchOpts = {
+        method: opts.method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      };
+    }
   } else {
-    url = API_BASE + '?path=' + encodedPath;
-    const body = opts.body ? JSON.parse(opts.body) : {};
-    if (opts.method !== 'POST') body._method = opts.method;
-    fetchOpts = {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(body),
-    };
+    // Direct GAS mode
+    if (!opts.method || opts.method === 'GET') {
+      url = API_BASE + '?path=' + encodedPath;
+      fetchOpts = { method: 'GET' };
+    } else {
+      url = API_BASE + '?path=' + encodedPath;
+      const body = opts.body ? JSON.parse(opts.body) : {};
+      if (opts.method !== 'POST') body._method = opts.method;
+      fetchOpts = {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(body),
+      };
+    }
   }
 
   const res  = await fetch(url, fetchOpts);
