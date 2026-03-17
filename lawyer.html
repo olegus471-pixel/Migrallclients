@@ -186,7 +186,7 @@ button:active{transform:scale(.97)}
     <!-- Tabs -->
     <div class="tabs">
       <button class="tab active" onclick="switchTab('tab-deals',this)">⚖️ Дела адвоката</button>
-      <button class="tab" onclick="switchTab('tab-submits',this)">📅 Подачи</button>
+      <button class="tab" onclick="switchTab('tab-submits',this)">📅 Дата подачи</button>
       <button class="tab" onclick="switchTab('tab-citizenship',this)">🏛 Гражданство</button>
       <button class="tab" onclick="switchTab('tab-courts',this)">⚖️ Суды</button>
       <button class="tab" onclick="switchTab('tab-filings',this)">📋 AIMA</button>
@@ -233,7 +233,7 @@ button:active{transform:scale(.97)}
     <div id="tab-submits" style="display:none">
       <div class="panel">
         <div class="panel-hdr">
-          <div class="panel-title">📅 Планируемые подачи</div>
+          <div class="panel-title">📅 Клиенты — дата подачи</div>
           <div class="panel-cnt" id="cnt-submits">—</div>
         </div>
         <div style="overflow-x:auto">
@@ -289,7 +289,7 @@ button:active{transform:scale(.97)}
         </div>
         <div style="overflow-x:auto">
           <table class="dt"><thead><tr>
-            <th>Клиент</th><th>Тип</th><th>Место</th><th>Дата</th><th>Статус</th>
+            <th>Клиент</th><th>Дата</th><th>Время</th><th>Место</th><th>Адвокат</th><th>Статус</th>
           </tr></thead>
           <tbody id="tb-filings"><tr><td colspan="5" style="padding:24px;text-align:center;color:var(--t3)">Загрузка...</td></tr></tbody>
           </table>
@@ -414,9 +414,21 @@ function renderAll() {
 
   function matchesMe(val) {
     if (!val) return false;
-    const v = String(val).trim();
-    return v === myName || v.toLowerCase() === myEmail ||
-           (myName && v.toLowerCase() === myName.toLowerCase());
+    const v = String(val).trim().toLowerCase();
+    const n = myName.toLowerCase();
+    const e = myEmail.toLowerCase();
+    // Exact match
+    if (v === n || v === e) return true;
+    // Partial: sheet stores 'Paula', user.name is 'Paula Gonzalez' or vice versa
+    if (n && (n.startsWith(v + ' ') || n === v)) return true;
+    if (n && (v.startsWith(n + ' ') || v === n)) return true;
+    // Email local part: 'paula@gmail.com' → 'paula'
+    const emailLocal = e.split('@')[0];
+    if (emailLocal && v === emailLocal) return true;
+    // First word of name
+    const firstWord = n.split(' ')[0];
+    if (firstWord && firstWord.length > 2 && v === firstWord) return true;
+    return false;
   }
 
   const myClients = isLawyer
@@ -531,15 +543,21 @@ function renderAll() {
     ? allFilings.filter(f => matchesMe(f.lawyer) || myClients.some(cl => cl.name === f.client || cl.name === f.name))
     : allFilings;
   document.getElementById('cnt-filings').textContent = myFilings.length + ' подач';
-  document.getElementById('tb-filings').innerHTML = myFilings.length
-    ? myFilings.map(f => `<tr>
-        <td style="font-weight:600">${esc(f.name||f.client||'—')}</td>
-        <td>${esc(f.type||'—')}</td>
-        <td style="color:var(--t2)">${esc(f.place||'—')}</td>
+  const sortedFilings = [...myFilings].sort((a,b) => {
+    const da = parseDate(a.date), db = parseDate(b.date);
+    if (!da && !db) return 0; if (!da) return 1; if (!db) return -1;
+    return da - db;
+  });
+  document.getElementById('tb-filings').innerHTML = sortedFilings.length
+    ? sortedFilings.map(f => `<tr>
+        <td style="font-weight:600">${esc(f.client||f.name||'—')}</td>
         <td class="mono" style="color:var(--acc);font-weight:700">${f.date||'—'}</td>
+        <td class="mono" style="color:var(--t2)">${f.time||'—'}</td>
+        <td style="color:var(--t2)">${esc(f.place||'—')}</td>
+        <td style="color:var(--t2)">${esc(f.lawyer||'—')}</td>
         <td>${statusBdg(f.status)}</td>
       </tr>`).join('')
-    : '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--t3)">Нет подач AIMA</td></tr>';
+    : '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--t3)">Нет подач AIMA</td></tr>';
 
   // ── Deals (spec-tasks assigned to this lawyer) ──────────
   const myDeals = isLawyer
