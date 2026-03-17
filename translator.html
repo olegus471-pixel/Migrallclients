@@ -202,9 +202,8 @@ button:active{transform:scale(.97)}
 <div id="toast"></div>
 
 <script>
-const API_BASE = (window.__ENV && window.__ENV.GAS_URL)
-  ? window.__ENV.GAS_URL
-  : 'https://script.google.com/macros/s/AKfycbwDvmzX8V2fy2Qojrf8k4vq-t0GctFPhXywdp-7SnRuwDAu3h2NdvAwOVXzr3mXgObB/exec';
+const _directGAS = (window.__ENV && window.__ENV.GAS_URL) ? window.__ENV.GAS_URL : '';
+const API_BASE = (window.location.protocol !== 'file:') ? '' : _directGAS;
 
 let currentUser = null;
 let allTasks    = [];
@@ -228,7 +227,7 @@ async function doLogin() {
 
   btn.disabled = true; btn.textContent = 'Проверка...';
   try {
-    const res = await api('/auth/login', { method:'POST', body: JSON.stringify({email, password: pass}) });
+    const res = await api('/auth/login', { method:'POST', body: JSON.stringify({action:'login', email, password: pass}) });
     if(!res || !res.ok) {
       errEl.textContent = res?.error || 'Неверный email или пароль';
       errEl.style.display = 'block';
@@ -501,16 +500,26 @@ function renderTranslatorStats(tasks) {
 
 // ── API ─────────────────────────────────────────────────────
 async function api(path, opts = {}) {
-  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+  const parts = path.split('/').filter(p => p !== '');
+  const encodedPath = parts.map(encodeURIComponent).join('/');
   let url, fetchOpts;
-  if(!opts.method || opts.method === 'GET') {
-    url = API_BASE + '?path=' + encodedPath;
-    fetchOpts = { method: 'GET' };
+  if (API_BASE === '') {
+    if(!opts.method || opts.method === 'GET') {
+      url = '/api/' + encodedPath; fetchOpts = { method: 'GET' };
+    } else {
+      url = '/api/' + encodedPath;
+      const body = opts.body ? JSON.parse(opts.body) : {};
+      fetchOpts = { method: opts.method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) };
+    }
   } else {
-    url = API_BASE + '?path=' + encodedPath;
-    const body = opts.body ? JSON.parse(opts.body) : {};
-    if(opts.method !== 'POST') body._method = opts.method;
-    fetchOpts = { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(body) };
+    if(!opts.method || opts.method === 'GET') {
+      url = API_BASE + '?path=' + encodedPath; fetchOpts = { method: 'GET' };
+    } else {
+      url = API_BASE + '?path=' + encodedPath;
+      const body = opts.body ? JSON.parse(opts.body) : {};
+      if(opts.method !== 'POST') body._method = opts.method;
+      fetchOpts = { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(body) };
+    }
   }
   const res = await fetch(url, fetchOpts);
   if(!res.ok) throw new Error('HTTP ' + res.status);
