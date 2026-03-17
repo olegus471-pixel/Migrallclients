@@ -209,12 +209,10 @@ button:active{transform:scale(.97)}
 
     <!-- Tabs -->
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('tab-deals',this)">⚖️ Дела адвоката</button>
-      <button class="tab" onclick="switchTab('tab-submits',this)">📅 Дата подачи</button>
+      <button class="tab active" onclick="switchTab('tab-deals',this)">⚖️ Дела</button>
       <button class="tab" onclick="switchTab('tab-citizenship',this)">🏛 Гражданство</button>
       <button class="tab" onclick="switchTab('tab-courts',this)">⚖️ Суды</button>
       <button class="tab" onclick="switchTab('tab-filings',this)">📋 AIMA</button>
-      <button class="tab" onclick="switchTab('tab-clients',this)">👥 Клиенты</button>
       <button class="tab" onclick="switchTab('tab-tasks',this)">✅ Задачи</button>
       <button class="tab" onclick="switchTab('tab-stats',this)">📊 Статистика</button>
     </div>
@@ -628,30 +626,66 @@ function renderAll() {
     : '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--t3)">Нет подач AIMA</td></tr>';
 
   // ── Deals (spec-tasks assigned to this lawyer) ──────────
-  const myDeals = isLawyer
+  // Spec-tasks (ВНЖ, AIMA, Консультация etc.)
+  const mySpecDeals = isLawyer
     ? allSpecTasks.filter(t => t.role === 'lawyer' && matchesMe(t.assignee))
     : allSpecTasks.filter(t => t.role === 'lawyer');
+
+  // Add courts as deal-like items
+  const courtDeals = myCourts.map(c => ({
+    id: 'ct_' + c.num,
+    _isCourt: true, _raw: c,
+    client: c.name || '',
+    type: 'Суд',
+    stage: c.stage || c.status || '—',
+    due: c.date || '',
+    description: c.article ? 'Статья: ' + c.article + (c.comment ? ' · ' + c.comment : '') : (c.comment || ''),
+    driveUrl: c.driveLink || '',
+  }));
+
+  // Add citizenship as deal-like items
+  const citDeals = myCitizenship.map(c => ({
+    id: 'ci_' + c.num,
+    _isCitizenship: true, _raw: c,
+    client: c.name || c.client || '',
+    type: 'Гражданство',
+    stage: c.stage || c.status || '—',
+    due: c.date || c.submitDate || '',
+    description: c.comment || '',
+    driveUrl: c.driveLink || '',
+  }));
+
+  // Merge all: spec-tasks first, then courts, then citizenship
+  const myDeals = [...mySpecDeals, ...courtDeals, ...citDeals];
 
   document.getElementById('cnt-deals').textContent = myDeals.length + ' дел';
   document.getElementById('tb-deals').innerHTML = myDeals.length
     ? myDeals.map(d => {
-        const stageColor = {
+        const stageColorMap = {
           'Новое': 'var(--t3)', 'В работе': 'var(--acc)', 'Ожидает документов': 'var(--yel)',
-          'На проверке': 'var(--pur)', 'Завершено': 'var(--gre)'
-        }[d.stage] || 'var(--t3)';
-        const stageBg = {
+          'На проверке': 'var(--pur)', 'Завершено': 'var(--gre)',
+          'В процессе': 'var(--acc)', 'Ожидание решения': 'var(--yel)', 'Перенесено': 'var(--yel)',
+          'Апелляция': 'var(--red)', 'В обработке': 'var(--acc)', 'Заявка подана': 'var(--pur)',
+          'Документы собраны': 'var(--acc)', 'Слушание назначено': 'var(--yel)'
+        };
+        const stageBgMap = {
           'Новое': 'var(--s3)', 'В работе': 'var(--acc-d)', 'Ожидает документов': 'var(--yel-d)',
-          'На проверке': 'var(--pur-d)', 'Завершено': 'var(--gre-d)'
-        }[d.stage] || 'var(--s3)';
+          'На проверке': 'var(--pur-d)', 'Завершено': 'var(--gre-d)',
+          'В процессе': 'var(--acc-d)', 'Ожидание решения': 'var(--yel-d)', 'Перенесено': 'var(--yel-d)',
+          'Апелляция': 'var(--red-d)', 'В обработке': 'var(--acc-d)', 'Заявка подана': 'var(--pur-d)',
+          'Документы собраны': 'var(--acc-d)', 'Слушание назначено': 'var(--yel-d)'
+        };
+        const stageColor = stageColorMap[d.stage] || 'var(--t3)';
+        const stageBg    = stageBgMap[d.stage]    || 'var(--s3)';
         const clientObj2 = allClients.find(cl => cl.name === d.client || cl.id === d.clientId);
         const dealDrive = d.driveUrl || (clientObj2 && clientObj2.driveLink) || '';
         return `<tr style="cursor:pointer" onclick="openDealEdit('${esc(d.id)}')">
           <td style="font-weight:600">${esc(d.client||'—')}</td>
-          <td><span class="bdg pur">${esc(d.type||'—')}</span></td>
+          <td>${d.type === 'Суд' ? '<span class="bdg red">' + esc(d.type) + '</span>' : d.type === 'Гражданство' ? '<span class="bdg acc">' + esc(d.type) + '</span>' : '<span class="bdg pur">' + esc(d.type||'—') + '</span>'}</td>
           <td onclick="event.stopPropagation()">
             <span class="status-click" style="background:${stageBg};color:${stageColor};font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;font-family:'IBM Plex Mono',monospace" onclick="openDealEdit('${esc(d.id)}')">${esc(d.stage||'—')}</span>
           </td>
-          <td class="mono" style="color:${d.due ? 'var(--acc)' : 'var(--t3)'}">${d.due||'—'}</td>
+          <td class="mono" style="color:${d.due ? 'var(--acc)' : 'var(--t3)'}">${fmtDate(d.due)}</td>
           <td style="color:var(--t2);font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.description||d.comment||'—')}</td>
           <td onclick="event.stopPropagation()">${dealDrive?`<a href="${esc(dealDrive)}" target="_blank" class="drive-btn">📁 Drive</a>`:'—'}</td>
         </tr>`;
@@ -777,7 +811,7 @@ function renderStats(clients, courts, citizenship, filings, tasks) {
 
 // ── TABS ────────────────────────────────────────────────────
 function switchTab(tabId, btn) {
-  ['tab-deals','tab-clients','tab-submits','tab-courts','tab-citizenship','tab-filings','tab-tasks','tab-stats'].forEach(id => {
+  ['tab-deals','tab-citizenship','tab-courts','tab-filings','tab-tasks','tab-stats'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = id === tabId ? 'block' : 'none';
   });
@@ -829,6 +863,17 @@ function parseDate(s) {
   if(m) return new Date(+m[3], +m[2]-1, +m[1]);
   const d = new Date(str);
   return isNaN(d) ? null : d;
+}
+
+function fmtDate(s) {
+  if (!s) return '—';
+  // Already formatted DD.MM.YYYY
+  if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(String(s).trim())) return String(s).trim();
+  const d = parseDate(s);
+  if (!d || isNaN(d)) return String(s).slice(0, 10) || '—';
+  return d.getDate().toString().padStart(2,'0') + '.' +
+         (d.getMonth()+1).toString().padStart(2,'0') + '.' +
+         d.getFullYear();
 }
 
 function daysUntil(s) {
@@ -917,7 +962,7 @@ function openCourtEdit(idx) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="lw-field">
         <label class="lw-label">Дата слушания</label>
-        <input class="lw-select" id="lw-court-date" value="${esc(c.date||'')}" placeholder="ДД.ММ.ГГГГ">
+        <input class="lw-select" id="lw-court-date" value="${esc(fmtDate(c.date))}" placeholder="ДД.ММ.ГГГГ">
       </div>
       <div class="lw-field">
         <label class="lw-label">Место</label>
@@ -971,7 +1016,7 @@ function openCitEdit(idx) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="lw-field">
         <label class="lw-label">Дата подачи</label>
-        <input class="lw-select" id="lw-cit-date" value="${esc(c.date||c.submitDate||'')}" placeholder="ДД.ММ.ГГГГ">
+        <input class="lw-select" id="lw-cit-date" value="${esc(fmtDate(c.date||c.submitDate))}" placeholder="ДД.ММ.ГГГГ">
       </div>
       <div class="lw-field">
         <label class="lw-label">Трек-номер</label>
@@ -1002,6 +1047,15 @@ function openCitEdit(idx) {
 
 // ── DEAL EDIT ────────────────────────────────────────────────
 function openDealEdit(id) {
+  // Handle court/citizenship items from merged Deals tab
+  if (id.startsWith('ct_')) {
+    const idx = myCourts_cache.findIndex(c => 'ct_' + c.num === id);
+    if (idx >= 0) { openCourtEdit(idx); return; }
+  }
+  if (id.startsWith('ci_')) {
+    const idx = myCit_cache.findIndex(c => 'ci_' + c.num === id);
+    if (idx >= 0) { openCitEdit(idx); return; }
+  }
   const d = allSpecTasks.find(t => t.id === id);
   if (!d) return;
   const clientObj = allClients.find(cl => cl.name === d.client || cl.id === d.clientId);
@@ -1018,7 +1072,7 @@ function openDealEdit(id) {
     </div>
     <div class="lw-field">
       <label class="lw-label">Срок</label>
-      <input class="lw-select" id="lw-deal-due" value="${esc(d.due||'')}" placeholder="ДД.ММ.ГГГГ">
+      <input class="lw-select" id="lw-deal-due" value="${esc(fmtDate(d.due))}" placeholder="ДД.ММ.ГГГГ">
     </div>
     <div class="lw-field">
       <label class="lw-label">Описание / Комментарий</label>
