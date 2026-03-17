@@ -179,23 +179,41 @@ button:active{transform:scale(.97)}
     <div class="kpi-grid">
       <div class="kpi-card accent"><div class="kpi-val" id="kpi-clients">—</div><div class="kpi-lbl">Моих клиентов</div></div>
       <div class="kpi-card urgent"><div class="kpi-val" id="kpi-submits">—</div><div class="kpi-lbl">Подач до 90 дней</div></div>
-      <div class="kpi-card"><div class="kpi-val" id="kpi-courts">—</div><div class="kpi-lbl">Активных дел</div></div>
-      <div class="kpi-card"><div class="kpi-val" id="kpi-tasks">—</div><div class="kpi-lbl">Открытых задач</div></div>
+      <div class="kpi-card"><div class="kpi-val" id="kpi-courts">—</div><div class="kpi-lbl">Дел в работе</div></div>
+      <div class="kpi-card"><div class="kpi-val" id="kpi-tasks">—</div><div class="kpi-lbl">Судебных дел</div></div>
     </div>
 
     <!-- Tabs -->
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('tab-clients',this)">👥 Клиенты</button>
+      <button class="tab active" onclick="switchTab('tab-deals',this)">⚖️ Дела адвоката</button>
       <button class="tab" onclick="switchTab('tab-submits',this)">📅 Подачи</button>
-      <button class="tab" onclick="switchTab('tab-courts',this)">⚖️ Суды</button>
       <button class="tab" onclick="switchTab('tab-citizenship',this)">🏛 Гражданство</button>
-      <button class="tab" onclick="switchTab('tab-filings',this)">📋 Подачи AIMA</button>
+      <button class="tab" onclick="switchTab('tab-courts',this)">⚖️ Суды</button>
+      <button class="tab" onclick="switchTab('tab-filings',this)">📋 AIMA</button>
+      <button class="tab" onclick="switchTab('tab-clients',this)">👥 Клиенты</button>
       <button class="tab" onclick="switchTab('tab-tasks',this)">✅ Задачи</button>
       <button class="tab" onclick="switchTab('tab-stats',this)">📊 Статистика</button>
     </div>
 
+    <!-- Deals tab - spec-tasks assigned to this lawyer -->
+    <div id="tab-deals">
+      <div class="panel">
+        <div class="panel-hdr">
+          <div class="panel-title">⚖️ Дела адвоката</div>
+          <div class="panel-cnt" id="cnt-deals">—</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="dt"><thead><tr>
+            <th>Клиент</th><th>Тип дела</th><th>Этап</th><th>Срок</th><th>Описание</th><th>Drive</th>
+          </tr></thead>
+          <tbody id="tb-deals"><tr><td colspan="6" style="padding:24px;text-align:center;color:var(--t3)">Загрузка...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Clients tab -->
-    <div id="tab-clients">
+    <div id="tab-clients" style="display:none">
       <div class="panel">
         <div class="panel-hdr">
           <div class="panel-title">Мои клиенты</div>
@@ -431,10 +449,13 @@ function renderAll() {
     const d = parseDate(c.submitDate);
     return d && d >= now && (d - now) / 86400000 <= 90;
   });
+  const myDealsForKpi = isLawyer
+    ? allSpecTasks.filter(t => t.role === 'lawyer' && matchesMe(t.assignee) && t.stage !== 'Завершено')
+    : allSpecTasks.filter(t => t.role === 'lawyer' && t.stage !== 'Завершено');
   document.getElementById('kpi-clients').textContent = myClients.length;
   document.getElementById('kpi-submits').textContent = submits.length;
-  document.getElementById('kpi-courts').textContent  = myCourts.filter(c => c.status !== 'Завершено').length;
-  document.getElementById('kpi-tasks').textContent   = myTasks.length;
+  document.getElementById('kpi-courts').textContent  = myDealsForKpi.length;
+  document.getElementById('kpi-tasks').textContent   = myCourts.filter(c => c.status !== 'Завершено').length;
 
   // Clients table
   document.getElementById('cnt-clients').textContent = myClients.length + ' клиентов';
@@ -519,6 +540,33 @@ function renderAll() {
         <td>${statusBdg(f.status)}</td>
       </tr>`).join('')
     : '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--t3)">Нет подач AIMA</td></tr>';
+
+  // ── Deals (spec-tasks assigned to this lawyer) ──────────
+  const myDeals = isLawyer
+    ? allSpecTasks.filter(t => t.role === 'lawyer' && matchesMe(t.assignee))
+    : allSpecTasks.filter(t => t.role === 'lawyer');
+
+  document.getElementById('cnt-deals').textContent = myDeals.length + ' дел';
+  document.getElementById('tb-deals').innerHTML = myDeals.length
+    ? myDeals.map(d => {
+        const stageColor = {
+          'Новое': 'var(--t3)', 'В работе': 'var(--acc)', 'Ожидает документов': 'var(--yel)',
+          'На проверке': 'var(--pur)', 'Завершено': 'var(--gre)'
+        }[d.stage] || 'var(--t3)';
+        const stageBg = {
+          'Новое': 'var(--s3)', 'В работе': 'var(--acc-d)', 'Ожидает документов': 'var(--yel-d)',
+          'На проверке': 'var(--pur-d)', 'Завершено': 'var(--gre-d)'
+        }[d.stage] || 'var(--s3)';
+        return `<tr>
+          <td style="font-weight:600">${esc(d.client||'—')}</td>
+          <td><span class="bdg pur">${esc(d.type||'—')}</span></td>
+          <td><span class="bdg" style="background:${stageBg};color:${stageColor}">${esc(d.stage||'—')}</span></td>
+          <td class="mono" style="color:${d.due ? 'var(--acc)' : 'var(--t3)'}">${d.due||'—'}</td>
+          <td style="color:var(--t2);font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.description||d.comment||'—')}</td>
+          <td>${d.driveUrl?`<a href="${esc(d.driveUrl)}" target="_blank" class="bdg blu" style="text-decoration:none">📁 Drive</a>`:'—'}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--t3)">Нет назначенных дел</td></tr>';
 
   // Tasks
   document.getElementById('cnt-tasks').textContent = myTasks.length + ' задач';
@@ -639,7 +687,7 @@ function renderStats(clients, courts, citizenship, filings, tasks) {
 
 // ── TABS ────────────────────────────────────────────────────
 function switchTab(tabId, btn) {
-  ['tab-clients','tab-submits','tab-courts','tab-citizenship','tab-filings','tab-tasks','tab-stats'].forEach(id => {
+  ['tab-deals','tab-clients','tab-submits','tab-courts','tab-citizenship','tab-filings','tab-tasks','tab-stats'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = id === tabId ? 'block' : 'none';
   });
