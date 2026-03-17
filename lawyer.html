@@ -323,9 +323,9 @@ button:active{transform:scale(.97)}
 <div id="toast"></div>
 
 <script>
-const API_BASE = (window.__ENV && window.__ENV.GAS_URL)
-  ? window.__ENV.GAS_URL
-  : 'https://script.google.com/macros/s/AKfycbwDvmzX8V2fy2Qojrf8k4vq-t0GctFPhXywdp-7SnRuwDAu3h2NdvAwOVXzr3mXgObB/exec';
+// Prefer server.js proxy so only Render GAS_URL env var matters
+const _directGAS = (window.__ENV && window.__ENV.GAS_URL) ? window.__ENV.GAS_URL : '';
+const API_BASE = (window.location.protocol !== 'file:') ? '' : _directGAS;
 
 let currentUser = null;
 let allClients     = [];
@@ -399,10 +399,25 @@ async function loadData() {
     allSpecTasks   = Array.isArray(specTasksRes)   ? specTasksRes   : [];
     allCitizenship = Array.isArray(citizenshipRes) ? citizenshipRes : [];
     allFilings     = Array.isArray(filingsRes)     ? filingsRes     : [];
+
+    // Debug: log what lawyer field values exist in each table
+    const myN = (currentUser.name||'').trim();
+    console.log('[lawyer] user:', myN, currentUser.email);
+    console.log('[lawyer] clients total:', allClients.length,
+      '| with lawyer field:', allClients.filter(c=>c.lawyer).length,
+      '| mine:', allClients.filter(c=>(c.lawyer||'').toLowerCase().includes(myN.split(' ')[0].toLowerCase())).length);
+    console.log('[lawyer] courts total:', allCourts.length,
+      '| lawyer values:', [...new Set(allCourts.map(c=>c.lawyer))].filter(Boolean).slice(0,5));
+    console.log('[lawyer] citizenship total:', allCitizenship.length,
+      '| lawyer values:', [...new Set(allCitizenship.map(c=>c.lawyer))].filter(Boolean).slice(0,5));
+    console.log('[lawyer] filings total:', allFilings.length,
+      '| lawyer values:', [...new Set(allFilings.map(f=>f.lawyer))].filter(Boolean).slice(0,5));
+    console.log('[lawyer] specTasks:', allSpecTasks.length);
+
     renderAll();
   } catch(e) {
-    toast('⚠️ Ошибка загрузки данных');
-    console.error(e);
+    toast('⚠️ Ошибка загрузки данных: ' + e.message);
+    console.error('[lawyer] loadData error:', e);
   }
 }
 
@@ -715,16 +730,31 @@ function switchTab(tabId, btn) {
 
 // ── API ─────────────────────────────────────────────────────
 async function api(path, opts = {}) {
-  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+  const parts = path.split('/').filter(p => p !== '');
+  const encodedPath = parts.map(encodeURIComponent).join('/');
   let url, fetchOpts;
-  if(!opts.method || opts.method === 'GET') {
-    url = API_BASE + '?path=' + encodedPath;
-    fetchOpts = { method: 'GET' };
+
+  if (API_BASE === '') {
+    // Proxy mode: route through server.js
+    if(!opts.method || opts.method === 'GET') {
+      url = '/api/' + encodedPath;
+      fetchOpts = { method: 'GET' };
+    } else {
+      url = '/api/' + encodedPath;
+      const body = opts.body ? JSON.parse(opts.body) : {};
+      fetchOpts = { method: opts.method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) };
+    }
   } else {
-    url = API_BASE + '?path=' + encodedPath;
-    const body = opts.body ? JSON.parse(opts.body) : {};
-    if(opts.method !== 'POST') body._method = opts.method;
-    fetchOpts = { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(body) };
+    // Direct GAS mode
+    if(!opts.method || opts.method === 'GET') {
+      url = API_BASE + '?path=' + encodedPath;
+      fetchOpts = { method: 'GET' };
+    } else {
+      url = API_BASE + '?path=' + encodedPath;
+      const body = opts.body ? JSON.parse(opts.body) : {};
+      if(opts.method !== 'POST') body._method = opts.method;
+      fetchOpts = { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(body) };
+    }
   }
   const res = await fetch(url, fetchOpts);
   if(!res.ok) throw new Error('HTTP ' + res.status);
