@@ -921,7 +921,7 @@ button:active{transform:scale(.97)}
         <input type="checkbox" id="rights-hide-done" checked onchange="renderRights()">
         Скрыть завершённых
       </label>
-      <button class="btn btn-p btn-sm" onclick="openNewOrderModal()"><span data-i18n="ord_new">+ Новый заказ</span></button>
+      <button class="btn btn-p btn-sm" onclick="openNewOrderModal('','Права')">+ Добавить</button>
     </div></div>
     <div class="chips" id="rights-status-chips" style="margin-bottom:8px">
       <div class="chip active" onclick="filterRightsStatus('all',this)">Все</div>
@@ -934,7 +934,7 @@ button:active{transform:scale(.97)}
     </div>
     <div class="panel">
       <div class="dt-wrap"><div class="dt-wrap"><table class="dt">
-        <thead><tr><th style="width:36px;text-align:center;color:var(--t3)">#</th><th>№</th><th>Telegram</th><th>ФИО</th><th>Страна прав</th><th>Дата подачи</th><th>Этап</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
+        <thead><tr><th style="width:36px;text-align:center;color:var(--t3)">#</th><th>№ заказа</th><th>Telegram</th><th>Клиент</th><th>Переводчик</th><th>Создан</th><th>Статус</th><th>Обновлён</th><th>Комментарий</th><th></th></tr></thead>
         <tbody id="rights-tbody"></tbody>
       </table></div></div>
       </div>
@@ -7498,46 +7498,481 @@ async function saveCitizenship(idx){
 // ============================================================
 function renderRights(){
   var _u = _myUser();
-  var _rightsArr = rights;
-  if(typeof _rightsStatusFilter !== 'undefined' && _rightsStatusFilter !== 'all') {
-    _rightsArr = _rightsArr.filter(function(r){ return r.status === _rightsStatusFilter; });
-  }
+  // Use orders table filtered by svcType='Права' — single source of truth
+  var _rightsArr = orders.filter(function(o){ return o.svcType === 'Права'; });
+
   if(_u.role === 'translator') {
-    _rightsArr = rights.filter(function(r){
-      if((r.translator||'') === _u.name) return true;
-      // Также проверить через orders — если есть заказ 'Права' назначенный этому переводчику
-      var matchOrd = orders.find(function(ord){ return ord.svcType==='Права' && ord.id===r.num && (ord.translator||'')=== _u.name; });
-      return !!matchOrd;
-    });
+    _rightsArr = _rightsArr.filter(function(o){ return (o.translator||'') === _u.name; });
   }
-  // Фильтр: скрыть завершённых + поиск
+
+  // Status filter
+  if(typeof _rightsStatusFilter !== 'undefined' && _rightsStatusFilter !== 'all') {
+    _rightsArr = _rightsArr.filter(function(o){ return o.status === _rightsStatusFilter; });
+  }
+
   var hideDone = document.getElementById('rights-hide-done') ? document.getElementById('rights-hide-done').checked : false;
   var q = (document.getElementById('rights-search') ? document.getElementById('rights-search').value : '').toLowerCase().trim();
-  _rightsArr = _rightsArr.filter(function(r) {
-    if (hideDone && r.status === 'Завершено') return false;
-    if (q) { var hay = ((r.name||'') + ' ' + (r.num||'') + ' ' + (r.country||'')).toLowerCase(); if (!hay.includes(q)) return false; }
+  _rightsArr = _rightsArr.filter(function(o) {
+    if (hideDone && o.status === 'Завершено') return false;
+    const client = clients.find(function(c){ return c.id === o.clientId; });
+    const name = client ? client.name : (o.clientId||'');
+    if (q) {
+      var hay = (name + ' ' + (o.id||'') + ' ' + (o.comment||'')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
     return true;
   });
-  g('rights-tbody').innerHTML=_rightsArr.length?_rightsArr.map((r,i)=>{
-    const _rtssn=getClientSeqNum(r.num);
-    return '<tr style="cursor:pointer" onclick="openRightsDetailModal('+i+')">'
-      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_rtssn+'</td>'
-      +'<td class="mono" style="color:var(--gre)">'+r.num+'</td>'
-      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+(getClientTg(r.num,r.name)!='—'?'<a href="tg://resolve?domain='+getClientTg(r.num,r.name).replace('@','')+'">'+getClientTg(r.num,r.name)+'</a>':'—')+'</td>'
-      +'<td style="font-weight:600">'+r.name+'</td>'
-      +'<td><span class="bdg gre">'+(r.country||'—')+'</span></td>'
-      +'<td class="mono" style="font-size:12.5px">'+fmtDate(r.date)+'</td>'
-      +'<td style="font-size:12.5px;color:var(--gre)">'+r.stage+'</td>'
-      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-status" onclick="openStatusDropdown(event,\'rights\','+i+',\''+r.status+'\',RIGHTS_STATUSES,\'/rights\',\'num\')" title="'+_t('inline_status_tip')+'">'+bdg(r.status)+'</span></td>'
-      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-date" onclick="openDatePopup(event,\'rights\','+i+',\''+(r.updated||'')+'\',\'/rights\',\'num\')" title="'+_t('inline_date_tip')+'">'+fmtDate(r.updated)+'</span></td>'
-      +'<td style="font-size:12.5px;color:var(--t2)">'+(r.comment||'—')+'</td>'
+
+  var tbody = g('rights-tbody');
+  if (!tbody) return;
+
+  if (!_rightsArr.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px">'+_t('no_data_rights')+'</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = _rightsArr.map(function(o, i) {
+    const client = clients.find(function(c){ return c.id === o.clientId; });
+    const cName  = client ? client.name : (o.clientId||'—');
+    const cTg    = client ? (client.tg||'') : '';
+    const cNum   = client ? (client.num||'') : '';
+    const _rtssn = cNum || '—';
+    const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
+    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(''+o.id+'')">'      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_rtssn+'</td>'      +'<td class="mono" style="color:var(--gre)">'+esc(o.id||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td><span class="bdg gre">'+(o.translator||'—')+'</span></td>'      +'<td class="mono" style="font-size:12.5px">'+fmtDate(o.created)+'</td>'      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-status" onclick="openStatusDropdown(event,'orders',''+o.id+'',''+o.status+'',ORD_STATUSES['Права'],'/orders','id')" title="'+_t('inline_status_tip')+'">'+bdg(o.status)+'</span></td>'      +'<td class="mono" style="font-size:12px;color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+esc(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁</a>':'')        +'<button class="edit-btn" onclick="editOrder(''+o.id+'',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(''+o.id+'',event)">🗑</button>'      +'</td>'      +'</tr>';
+  }).join('');
+}
+
+
+function editRights(idx, e) {
+  // Rights are now stored in orders - redirect to order modal
+  if (e) e.stopPropagation();
+  const rightsOrders = orders.filter(function(o){ return o.svcType === 'Права'; });
+  if (idx < 0) {
+    openNewOrderModal('', 'Права');
+  } else {
+    const ord = rightsOrders[idx];
+    if (ord) openOrderDetailModal(ord.id);
+  }
+}
+
+
+
+
+function filterCourts(f, el) {
+  if (el) { document.querySelectorAll('#courts-chips .chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); }
+  _courtsCurrentFilter = f || 'all';
+  var hideDone = document.getElementById('courts-hide-done') ? document.getElementById('courts-hide-done').checked : false;
+  var q = (document.getElementById('courts-search') ? document.getElementById('courts-search').value : '').toLowerCase().trim();
+  var data = courts.filter(function(c) {
+    if (hideDone && c.status === 'Завершено') return false;
+    if (_courtsCurrentFilter !== 'all' && c.article !== _courtsCurrentFilter) return false;
+    if (q) { var hay = ((c.name||'') + ' ' + (c.num||'')).toLowerCase(); if (!hay.includes(q)) return false; }
+    return true;
+  });
+  renderCourts(data);
+}
+function editCourt(idx,e){
+  e&&e.stopPropagation();
+  const c=idx<0?{num:'',name:'',lawyer:'',article:'90.2',date:nowDMY(),place:'',stage:'Принят в работу',status:'В процессе',updated:nowDMY(),comment:''}:courts[idx];
+  const lawyerOpts = '<option value="">— Не назначен —</option>' + roleOptions('lawyer', c.lawyer||'');
+  openModal(`
+    <div class="mhdr">
+      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700">${idx<0?'Новое дело':'Изменить дело'} — Суд</div>
+      <button class="mcls" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:2">
+        <label class="mfl">Клиент</label>
+        ${clientPickerSearchHTML('ct-client', c.num, c.name, '_fillFromClientSearch_ct')}
+      </div>
+      <div class="mf"><label class="mfl">№ клиента</label><input class="mi" id="ct-num" value="${c.num}"></div>
+      <div class="mf"><label class="mfl">ФИО</label><input class="mi" id="ct-name" value="${c.name}"></div>
+    </div>
+    <div class="mrow">
+      <div class="mf">
+        <label class="mfl">Адвокат</label>
+        <select class="ms" id="ct-lawyer" data-role="lawyer">${lawyerOpts}</select>
+      </div>
+      <div class="mf"><label class="mfl">Статья</label><input class="mi" id="ct-art" value="${c.article}" placeholder="90.2, 98.2..."></div>
+    </div>
+    <div class="mrow">
+      <div class="mf"><label class="mfl">Дата суда</label><input class="mi" id="ct-date" value="${c.date}" placeholder="DD/MM/YYYY"></div>
+      <div class="mf"><label class="mfl">Место</label><input class="mi" id="ct-place" value="${c.place}"></div>
+    </div>
+    <div class="mrow">
+      <div class="mf">
+        <label class="mfl">Этап</label>
+        <select class="ms" id="ct-stage">${COURT_STAGES.map(s=>`<option ${c.stage===s?'selected':''}>${s}</option>`).join('')}</select>
+      </div>
+      <div class="mf">
+        <label class="mfl">Статус <span style="color:var(--gre);font-size:8px">← дата обновится</span></label>
+        <input class="mi" id="ct-status" value="${c.status}" placeholder="В процессе, Ожидание решения...">
+      </div>
+    </div>
+    <div class="msec"><label class="mfl">Комментарий</label><textarea class="mta" id="ct-comment">${c.comment}</textarea></div>
+    ${idx<0?`<div class="msec" style="background:var(--gre-d);border-radius:8px;padding:10px 14px;font-size:12px;color:#065f46">📁 <b>Google Drive:</b> После сохранения автоматически создастся папка <b>Суд</b> внутри папки клиента</div>`:`<div class="msec"><label class="mfl">Ссылка Drive</label><input class="mi" id="ct-drive" value="${c.driveLink||''}" placeholder="https://drive.google.com/..."></div>`}
+    <div class="mft">
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-p" onclick="saveCourt(${idx})">${idx<0?'Добавить':'Сохранить'}</button>
+    </div>`);
+  // Async-заполнение адвоката если usersData ещё не загружен
+  fillLawyerSelect('ct-lawyer', c.lawyer||'');
+}
+
+// ── Создать папку услуги на Google Drive клиента ─────────────
+// clientNum — номер клиента (c.num), serviceType — название услуги
+async function _createOrderDriveFolder(orderId, client, folderName) {
+  if(!API_BASE || !client) return;
+  try {
+    var res = await apiPost('/drive/createServiceFolder', { clientId: client.id, serviceType: folderName });
+    if(res && res.folderUrl) {
+      var ord = orders.find(function(o){ return o.id === orderId; });
+      if(ord) { ord.driveLink = res.folderUrl; await apiPut('/orders/'+orderId, {driveLink: res.folderUrl}).catch(()=>{}); }
+      toast('📁 Папка «'+folderName+'» создана на Drive ✓');
+    }
+  } catch(e) {}
+}
+async function _createServiceDriveFolder(clientNum, serviceType) {
+  if(!API_BASE || !clientNum) return null;
+  var c = clients.find(function(x){ return (x.num||x.id) === clientNum || x.num === clientNum; });
+  if(!c) { c = clients.find(function(x){ return x.name === clientNum; }); }
+  if(!c) return null;
+  try {
+    var res = await apiPost('/drive/createServiceFolder', { clientId: c.id, serviceType: serviceType });
+    if(res && res.folderUrl) {
+      toast('📁 Папка «' + serviceType + '» создана на Drive ✓');
+      return res.folderUrl;
+    }
+  } catch(e) {}
+  return null;
+}
+async function saveCourt(idx){
+  if(_isSaving)return; _isSaving=true;
+  const _ctDrive=g('ct-drive'); const obj={num:g('ct-num').value,name:g('ct-name').value,lawyer:g('ct-lawyer').value,article:g('ct-art').value,date:g('ct-date').value,place:g('ct-place').value,stage:g('ct-stage').value,status:g('ct-status').value,updated:nowDMY(),comment:g('ct-comment').value,driveLink:_ctDrive?_ctDrive.value:undefined};
+  if(idx<0)courts.push(obj);else courts[idx]=obj;
+  _isSaving=false; closeModal();renderCourts();renderDash();toast(idx<0?'Дело добавлено ✓':'Суд обновлён ✓');
+  await (idx<0?apiPost('/courts',obj):apiPut('/courts/'+obj.num,obj));
+  if(idx<0) _createServiceDriveFolder(obj.num, 'Суд');
+}
+
+// ============================================================
+// CITIZENSHIP
+// ============================================================
+
+// ─── ПЕРЕВОДЫ ────────────────────────────────────────────────
+function renderTranslations(filter){
+  var _u = _myUser();
+  var arr = orders.filter(function(o){ return o.svcType === 'Переводы'; });
+  if(_u.role === 'translator') arr = arr.filter(function(o){ return (o.translator||'') === _u.name; });
+  const filtered = filter && filter !== 'all' ? arr.filter(o=>o.status===filter) : arr;
+  const tbody = g('trans-tbody');
+  if(!tbody) return;
+  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:24px">Нет переводов</td></tr>'; return; }
+  tbody.innerHTML = filtered.map(o => {
+    const client = clients.find(c=>c.id===o.clientId);
+    const cName  = client ? client.name : (o.clientId||'—');
+    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'
+      +'<td style="font-weight:600">'+cName+'</td>'
+      +'<td>'+(o.translator||'—')+'</td>'
+      +'<td>'+bdg(o.status)+'</td>'
+      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'
+      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'
+      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'
+      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'
       +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'
-        +'<button class="edit-btn" onclick="editRights('+i+',event)">✏</button>'
-        +'<button class="del-btn" data-mod="rights" data-idx="'+i+'" data-lbl="'+encodeURIComponent(r.num+' '+r.name)+'" onclick="handleDelBtn(this,event)">🗑</button>'
+        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)" title="Редактировать">✏</button>'
+        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)" title="Удалить">🗑</button>'
       +'</td>'
       +'</tr>';
-  }).join(''):'<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px">'+_t('no_data_rights')+'</td></tr>';
+  }).join('');
 }
+
+function filterTranslations(val, el){
+  document.querySelectorAll('#trans-filter-chips .chip').forEach(c=>c.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderTranslations(val);
+}
+
+// ─── СПРАВКИ О НЕСУДИМОСТИ ───────────────────────────────────
+function renderNocrims(filter){
+  var _u = _myUser();
+  var arr = orders.filter(function(o){ return o.svcType === 'Справка о несудимости'; });
+  if(_u.role === 'translator') arr = arr.filter(function(o){ return (o.translator||'') === _u.name; });
+  const filtered = filter && filter !== 'all' ? arr.filter(o=>o.status===filter) : arr;
+  const tbody = g('nocrims-tbody');
+  if(!tbody) return;
+  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:24px">Нет справок</td></tr>'; return; }
+  tbody.innerHTML = filtered.map(o => {
+    const client = clients.find(c=>c.id===o.clientId);
+    const cName  = client ? client.name : (o.clientId||'—');
+    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'
+      +'<td style="font-weight:600">'+cName+'</td>'
+      +'<td>'+(o.translator||'—')+'</td>'
+      +'<td>'+bdg(o.status)+'</td>'
+      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'
+      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'
+      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'
+      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'
+      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'
+        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)" title="Редактировать">✏</button>'
+        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)" title="Удалить">🗑</button>'
+      +'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function filterNocrims(val, el){
+  document.querySelectorAll('#nocrims-filter-chips .chip').forEach(c=>c.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderNocrims(val);
+}
+
+function editOrder(ordId, e) {
+  if(e) e.stopPropagation();
+  const o = orders.find(x => x.id === ordId);
+  if(!o) return;
+  const c = clients.find(x => x.id === o.clientId);
+  const translators = getUsersByRole('translator');
+  const stepsForType = ORD_STATUSES[o.svcType] || [];
+  openModal(`
+    <div class="mhdr">
+      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700">✏ Редактировать заказ</div>
+      <button class="mcls" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:2"><label class="mfl">Клиент</label>
+        <input class="mi" value="${c?c.name:o.clientId}" disabled style="opacity:.6"></div>
+      <div class="mf" style="flex:2"><label class="mfl">Тип услуги</label>
+        <input class="mi" value="${o.svcType}" disabled style="opacity:.6"></div>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:2"><label class="mfl">Статус</label>
+        <select class="ms" id="eo-status">
+          ${stepsForType.map(s=>`<option value="${s}"${o.status===s?' selected':''}>${s}</option>`).join('')}
+        </select></div>
+      <div class="mf" style="flex:2"><label class="mfl">Переводчик</label>
+        <select class="ms" id="eo-trans">
+          <option value="">— не назначен —</option>
+          ${translators.map(t=>`<option value="${t.name}"${o.translator===t.name?' selected':''}>${t.name}</option>`).join('')}
+        </select></div>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:3"><label class="mfl">Ссылка на Drive</label>
+        <input class="mi" id="eo-drive" value="${o.driveLink||''}"></div>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:3"><label class="mfl">Комментарий</label>
+        <input class="mi" id="eo-comment" value="${o.comment||''}"></div>
+    </div>
+    <div class="mft">
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-p" onclick="saveOrderEdit('${ordId}')">Сохранить</button>
+    </div>`,'narrow');
+}
+
+async function saveOrderEdit(ordId) {
+  const o = orders.find(x => x.id === ordId);
+  if(!o) return;
+  o.status    = document.getElementById('eo-status').value;
+  o.translator= document.getElementById('eo-trans').value;
+  o.driveLink = document.getElementById('eo-drive').value.trim();
+  o.comment   = document.getElementById('eo-comment').value.trim();
+  o.updated   = nowDMY();
+  closeModal();
+  renderTranslations(); renderNocrims(); renderOrders(); renderDash();
+  toast('Заказ обновлён ✓');
+  if(API_BASE) await apiPut('/orders/'+ordId, o).catch(()=>{});
+}
+
+function applyOrderStatus(ordId, e) {
+  e.stopPropagation();
+  closeAllDropdowns();
+  const o = orders.find(x => x.id === ordId);
+  if(!o) return;
+  const steps = ORD_STATUSES[o.svcType] || ['В работе','Готово'];
+  const rect = e.currentTarget.getBoundingClientRect();
+  const dd = document.createElement('div');
+  dd.className = 'status-dropdown';
+  dd.style.top = (rect.bottom + 4) + 'px';
+  dd.style.left = rect.left + 'px';
+  dd.innerHTML = steps.map(s =>
+    `<div class="status-dropdown-item ${s===o.status?'current':''}" onclick="confirmOrderStatus('${ordId}','${s.replace(/'/g,"\\'")}',this)">
+      ${s===o.status?'✓ ':''}<span>${s}</span>
+    </div>`
+  ).join('');
+  document.body.appendChild(dd);
+  _openDropdown = dd;
+  requestAnimationFrame(() => {
+    const r = dd.getBoundingClientRect();
+    if(r.right > window.innerWidth - 8) dd.style.left = (window.innerWidth - r.width - 8) + 'px';
+    if(r.bottom > window.innerHeight - 8) dd.style.top = (rect.top - r.height - 4) + 'px';
+  });
+}
+
+async function confirmOrderStatus(ordId, newStatus, el) {
+  closeAllDropdowns();
+  const o = orders.find(x => x.id === ordId);
+  if(!o) return;
+  o.status = newStatus;
+  o.updated = nowDMY();
+  renderTranslations(); renderNocrims(); renderOrders(); renderDash();
+  toast('Статус: ' + newStatus + ' ✓');
+  if(API_BASE) await apiPut('/orders/' + ordId, {status: newStatus, updated: o.updated}).catch(()=>{});
+}
+
+async function deleteOrder(ordId, e){
+  if(e) e.stopPropagation();
+  if(!confirm('Удалить запись?')) return;
+  orders = orders.filter(o => o.id !== ordId);
+  renderTranslations(); renderNocrims(); renderDash();
+  if(API_BASE) await apiFetch('/orders/'+ordId, {
+    method: 'POST',
+    body: JSON.stringify({ _delete: true, id: ordId })
+  }).catch(()=>{});
+  toast('Запись удалена ✓');
+}
+
+function renderCitizenship(){
+  var _u = _myUser();
+  var _src = citizenship;
+  if(_u.role === 'lawyer') _src = citizenship.filter(function(c){ return (c.lawyer||'') === _u.name; });
+  // Фильтр: скрыть завершённых + поиск
+  var hideDone = document.getElementById('cit-hide-done') ? document.getElementById('cit-hide-done').checked : false;
+  var q = (document.getElementById('cit-search') ? document.getElementById('cit-search').value : '').toLowerCase().trim();
+  _src = _src.filter(function(c) {
+    if (hideDone && c.status === 'Завершено') return false;
+    if (typeof _citStatusFilter !== 'undefined' && _citStatusFilter !== 'all' && c.status !== _citStatusFilter) return false;
+    if (q) { var hay = ((c.name||'') + ' ' + (c.nipc||'') + ' ' + (c.num||'')).toLowerCase(); if (!hay.includes(q)) return false; }
+    return true;
+  });
+  g('cit-tbody').innerHTML=_src.length?_src.map((c,i)=>{
+    const _citsn=getClientSeqNum(c.num);
+    return '<tr style="cursor:pointer" onclick="openCitizenshipDetailModal('+i+')">'
+      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_citsn+'</td>'
+      +'<td class="mono" style="color:var(--ora)">'+c.num+'</td>'
+      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+(function(){var tg=getClientTg(c.num,c.name);return tg!=='—'?'<a href="tg://resolve?domain='+tg.replace('@','')+'">'+tg+'</a>':'—';})()+'</td>'
+      +'<td style="font-weight:600">'+c.name+'</td>'
+      +'<td>'+(c.lawyer?'<span style="font-size:11px;color:#db2777;font-weight:600">⚖ '+c.lawyer+'</span>':'<span style="color:var(--t3);font-size:11px">—</span>')+'</td>'
+      +'<td><span class="bdg ora">'+(c.type||'—')+'</span></td>'
+      +'<td class="mono" style="font-size:12.5px">'+fmtDate(c.date)+'</td>'
+      +'<td class="mono" style="font-size:12.5px">'+(c.track||'—')+'</td>'
+      +'<td style="font-size:12.5px;color:var(--ora)">'+c.stage+'</td>'
+      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-status" onclick="openStatusDropdown(event,\'citizenship\','+i+',\''+c.status+'\',CIT_STATUSES,\'/citizenship\',\'num\')" title="'+_t('inline_status_tip')+'">'+bdg(c.status)+'</span></td>'
+      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-date" onclick="openDatePopup(event,\'citizenship\','+i+',\''+(c.updated||'')+'\',\'/citizenship\',\'num\')" title="'+_t('inline_date_tip')+'">'+fmtDate(c.updated)+'</span></td>'
+      +'<td style="font-size:12.5px;color:var(--t2)">'+(c.comment||'—')+'</td>'
+      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'
+        +'<button class="edit-btn" onclick="editCitizenship('+i+',event)">✏</button>'
+        +'<button class="del-btn" data-mod="citizenship" data-idx="'+i+'" data-lbl="'+encodeURIComponent(c.num+' '+c.name)+'" onclick="handleDelBtn(this,event)">🗑</button>'
+      +'</td>'
+      +'</tr>';
+  }).join(''):'<tr><td colspan="12" style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px">'+_t('no_data_cit')+'</td></tr>';
+}
+function editCitizenship(idx,e){
+  e&&e.stopPropagation();
+  const c=idx<0?{num:'',name:'',lawyer:'',type:'',date:nowDMY(),track:'',stage:'Документы собраны',status:'В обработке',updated:nowDMY(),comment:''}:citizenship[idx];
+  openModal(`
+    <div class="mhdr">
+      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700">${idx<0?'Добавить':'Изменить'} — Гражданство</div>
+      <button class="mcls" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mrow">
+      <div class="mf" style="flex:2">
+        <label class="mfl">Клиент</label>
+        ${clientPickerSearchHTML('ci-client', c.num, c.name, '_fillFromClientSearch_ci')}
+      </div>
+      <div class="mf"><label class="mfl">№ клиента</label><input class="mi" id="ci-num" value="${c.num}"></div>
+      <div class="mf"><label class="mfl">ФИО</label><input class="mi" id="ci-name" value="${c.name}"></div>
+      <div class="mf"><label class="mfl">Тип</label><input class="mi" id="ci-type" value="${c.type}" placeholder="Португалия, ЕС..."></div>
+    </div>
+    <div class="mrow">
+      <div class="mf">
+        <label class="mfl">Адвокат</label>
+        <select class="ms" id="ci-lawyer" data-role="lawyer">
+          <option value="">— Не назначен —</option>
+          ${userOptsByRole('lawyer', c.lawyer||'')}
+        </select>
+      </div>
+      <div class="mf"><label class="mfl">Дата подачи</label><input class="mi" id="ci-date" value="${c.date}" placeholder="DD/MM/YYYY"></div>
+      <div class="mf"><label class="mfl">Трек-номер</label><input class="mi" id="ci-track" value="${c.track||''}"></div>
+    </div>
+    <div class="mrow">
+      <div class="mf">
+        <label class="mfl">Этап</label>
+        <select class="ms" id="ci-stage">${CIT_STAGES.map(s=>`<option ${c.stage===s?'selected':''}>${s}</option>`).join('')}</select>
+      </div>
+      <div class="mf">
+        <label class="mfl">Статус <span style="color:var(--gre);font-size:8px">← дата обновится</span></label>
+        <input class="mi" id="ci-status" value="${c.status}">
+      </div>
+    </div>
+    <div class="msec"><label class="mfl">Комментарий</label><textarea class="mta" id="ci-comment">${c.comment}</textarea></div>
+    ${idx<0?`<div class="msec" style="background:var(--gre-d);border-radius:8px;padding:10px 14px;font-size:12px;color:#065f46">📁 <b>Google Drive:</b> После сохранения автоматически создастся папка <b>Гражданство</b> внутри папки клиента</div>`:`<div class="msec"><label class="mfl">Ссылка Drive</label><input class="mi" id="ci-drive" value="${c.driveLink||''}" placeholder="https://drive.google.com/..."></div>`}
+    <div class="mft">
+      <button class="btn btn-g" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-p" onclick="saveCitizenship(${idx})">${idx<0?'Добавить':'Сохранить'}</button>
+    </div>`);
+  // Async-заполнение адвоката если usersData ещё не загружен
+  fillLawyerSelect('ci-lawyer', c.lawyer||'');
+}
+async function saveCitizenship(idx){
+  if(_isSaving)return; _isSaving=true;
+  const _ciDrive=g('ci-drive'); const obj={num:g('ci-num').value,name:g('ci-name').value,lawyer:g('ci-lawyer').value,type:g('ci-type').value,date:g('ci-date').value,track:g('ci-track').value,stage:g('ci-stage').value,status:g('ci-status').value,updated:nowDMY(),comment:g('ci-comment').value,driveLink:_ciDrive?_ciDrive.value:undefined};
+  if(idx<0)citizenship.push(obj);else citizenship[idx]=obj;
+  _isSaving=false; closeModal();renderCitizenship();renderDash();toast(idx<0?'Добавлено ✓':'Гражданство обновлено ✓');
+  await (idx<0?apiPost('/citizenship',obj):apiPut('/citizenship/'+obj.num,obj));
+  if(idx<0) _createServiceDriveFolder(obj.num, 'Гражданство');
+}
+
+// ============================================================
+// RIGHTS
+// ============================================================
+function renderRights(){
+  var _u = _myUser();
+  // Use orders table filtered by svcType='Права' — single source of truth
+  var _rightsArr = orders.filter(function(o){ return o.svcType === 'Права'; });
+
+  if(_u.role === 'translator') {
+    _rightsArr = _rightsArr.filter(function(o){ return (o.translator||'') === _u.name; });
+  }
+
+  // Status filter
+  if(typeof _rightsStatusFilter !== 'undefined' && _rightsStatusFilter !== 'all') {
+    _rightsArr = _rightsArr.filter(function(o){ return o.status === _rightsStatusFilter; });
+  }
+
+  var hideDone = document.getElementById('rights-hide-done') ? document.getElementById('rights-hide-done').checked : false;
+  var q = (document.getElementById('rights-search') ? document.getElementById('rights-search').value : '').toLowerCase().trim();
+  _rightsArr = _rightsArr.filter(function(o) {
+    if (hideDone && o.status === 'Завершено') return false;
+    const client = clients.find(function(c){ return c.id === o.clientId; });
+    const name = client ? client.name : (o.clientId||'');
+    if (q) {
+      var hay = (name + ' ' + (o.id||'') + ' ' + (o.comment||'')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  var tbody = g('rights-tbody');
+  if (!tbody) return;
+
+  if (!_rightsArr.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px">'+_t('no_data_rights')+'</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = _rightsArr.map(function(o, i) {
+    const client = clients.find(function(c){ return c.id === o.clientId; });
+    const cName  = client ? client.name : (o.clientId||'—');
+    const cTg    = client ? (client.tg||'') : '';
+    const cNum   = client ? (client.num||'') : '';
+    const _rtssn = cNum || '—';
+    const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
+    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(''+o.id+'')">'      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_rtssn+'</td>'      +'<td class="mono" style="color:var(--gre)">'+esc(o.id||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td><span class="bdg gre">'+(o.translator||'—')+'</span></td>'      +'<td class="mono" style="font-size:12.5px">'+fmtDate(o.created)+'</td>'      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-status" onclick="openStatusDropdown(event,'orders',''+o.id+'',''+o.status+'',ORD_STATUSES['Права'],'/orders','id')" title="'+_t('inline_status_tip')+'">'+bdg(o.status)+'</span></td>'      +'<td class="mono" style="font-size:12px;color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+esc(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁</a>':'')        +'<button class="edit-btn" onclick="editOrder(''+o.id+'',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(''+o.id+'',event)">🗑</button>'      +'</td>'      +'</tr>';
+  }).join('');
+}
+
+
 function editRights(idx,e){
   e&&e.stopPropagation();
   const r=idx<0?{num:'',name:'',country:'',date:'',stage:'Документы приняты',status:'В процессе',updated:'',comment:''}:rights[idx];
@@ -8892,24 +9327,9 @@ async function saveNewOrder(){
     }
   }
 
-  // Если тип услуги 'Права' — добавить запись в таблицу rights
+  // Права отображаются через orders (svcType='Права') — отдельная запись в rights не нужна
   if(svcType === 'Права') {
-    const c = clients.find(x=>x.id===clientId);
-    const rightsEntry = {
-      num: ord.id,
-      name: c ? c.name : clientId,
-      country: '',
-      date: today,
-      stage: 'Документы приняты',
-      status: 'В обработке',
-      translator: trans||'',
-      driveLink: drive||'',
-      comment: comment||'',
-      updated: today,
-    };
-    rights.push(rightsEntry);
-    renderRights();
-    await apiPost('/rights', rightsEntry).catch(()=>{});
+    renderRights(); // re-render to show new order
   }
 }
 
