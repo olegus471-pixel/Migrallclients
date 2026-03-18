@@ -7498,14 +7498,11 @@ async function saveCitizenship(idx){
 // ============================================================
 function renderRights(){
   var _u = _myUser();
-  // Use orders table filtered by svcType='Права' — single source of truth
   var _rightsArr = orders.filter(function(o){ return o.svcType === 'Права'; });
 
   if(_u.role === 'translator') {
     _rightsArr = _rightsArr.filter(function(o){ return (o.translator||'') === _u.name; });
   }
-
-  // Status filter
   if(typeof _rightsStatusFilter !== 'undefined' && _rightsStatusFilter !== 'all') {
     _rightsArr = _rightsArr.filter(function(o){ return o.status === _rightsStatusFilter; });
   }
@@ -7514,8 +7511,8 @@ function renderRights(){
   var q = (document.getElementById('rights-search') ? document.getElementById('rights-search').value : '').toLowerCase().trim();
   _rightsArr = _rightsArr.filter(function(o) {
     if (hideDone && o.status === 'Завершено') return false;
-    const client = clients.find(function(c){ return c.id === o.clientId; });
-    const name = client ? client.name : (o.clientId||'');
+    var client = clients.find(function(c){ return c.id === o.clientId; });
+    var name = client ? client.name : (o.clientId||'');
     if (q) {
       var hay = (name + ' ' + (o.id||'') + ' ' + (o.comment||'')).toLowerCase();
       if (!hay.includes(q)) return false;
@@ -7525,23 +7522,22 @@ function renderRights(){
 
   var tbody = g('rights-tbody');
   if (!tbody) return;
-
   if (!_rightsArr.length) {
     tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px">'+_t('no_data_rights')+'</td></tr>';
     return;
   }
 
-  tbody.innerHTML = _rightsArr.map(function(o, i) {
-    const client = clients.find(function(c){ return c.id === o.clientId; });
-    const cName  = client ? client.name : (o.clientId||'—');
-    const cTg    = client ? (client.tg||'') : '';
-    const cNum   = client ? (client.num||'') : '';
-    const _rtssn = cNum || '—';
-    const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
-    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(''+o.id+'')">'      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_rtssn+'</td>'      +'<td class="mono" style="color:var(--gre)">'+esc(o.id||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td><span class="bdg gre">'+(o.translator||'—')+'</span></td>'      +'<td class="mono" style="font-size:12.5px">'+fmtDate(o.created)+'</td>'      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-status" onclick="openStatusDropdown(event,'orders',''+o.id+'',''+o.status+'',ORD_STATUSES['Права'],'/orders','id')" title="'+_t('inline_status_tip')+'">'+bdg(o.status)+'</span></td>'      +'<td class="mono" style="font-size:12px;color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+esc(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁</a>':'')        +'<button class="edit-btn" onclick="editOrder(''+o.id+'',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(''+o.id+'',event)">🗑</button>'      +'</td>'      +'</tr>';
+  tbody.innerHTML = _rightsArr.map(function(o) {
+    var client = clients.find(function(c){ return c.id === o.clientId; });
+    var cName  = client ? client.name : (o.clientId||'—');
+    var cTg    = client ? (client.tg||'') : '';
+    var cNum   = client ? (client.num||client.id||'') : '';
+    var tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'">'+cTg+'</a>' : '—';
+    var ordId  = (o.id||'').replace(/'/g, "\'");
+    var ordStatus = (o.status||'').replace(/'/g, "\'");
+    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+ ordId +'\')">'      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+(cNum||'—')+'</td>'      +'<td class="mono" style="color:var(--gre)">'+esc(o.id||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td><span class="bdg gre">'+(o.translator||'—')+'</span></td>'      +'<td class="mono" style="font-size:12.5px">'+fmtDate(o.created)+'</td>'      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-status" onclick="openStatusDropdown(event,\'orders\',\''+ ordId +'\',\''+ ordStatus +'\',ORD_STATUSES[\'Права\'],\'/orders\',\'id\')" title="'+_t('inline_status_tip')+'">'+bdg(o.status)+'</span></td>'      +'<td class="mono" style="font-size:12px;color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+esc(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm">📁</a>':'')        +'<button class="edit-btn" onclick="editOrder(\''+ ordId +'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+ ordId +'\',event)">🗑</button>'      +'</td>'      +'</tr>';
   }).join('');
 }
-
 
 function editRights(idx, e) {
   // Rights are now stored in orders - redirect to order modal
@@ -7926,51 +7922,6 @@ async function saveCitizenship(idx){
 // ============================================================
 // RIGHTS
 // ============================================================
-function renderRights(){
-  var _u = _myUser();
-  // Use orders table filtered by svcType='Права' — single source of truth
-  var _rightsArr = orders.filter(function(o){ return o.svcType === 'Права'; });
-
-  if(_u.role === 'translator') {
-    _rightsArr = _rightsArr.filter(function(o){ return (o.translator||'') === _u.name; });
-  }
-
-  // Status filter
-  if(typeof _rightsStatusFilter !== 'undefined' && _rightsStatusFilter !== 'all') {
-    _rightsArr = _rightsArr.filter(function(o){ return o.status === _rightsStatusFilter; });
-  }
-
-  var hideDone = document.getElementById('rights-hide-done') ? document.getElementById('rights-hide-done').checked : false;
-  var q = (document.getElementById('rights-search') ? document.getElementById('rights-search').value : '').toLowerCase().trim();
-  _rightsArr = _rightsArr.filter(function(o) {
-    if (hideDone && o.status === 'Завершено') return false;
-    const client = clients.find(function(c){ return c.id === o.clientId; });
-    const name = client ? client.name : (o.clientId||'');
-    if (q) {
-      var hay = (name + ' ' + (o.id||'') + ' ' + (o.comment||'')).toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    return true;
-  });
-
-  var tbody = g('rights-tbody');
-  if (!tbody) return;
-
-  if (!_rightsArr.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--t3);font-size:12.5px">'+_t('no_data_rights')+'</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = _rightsArr.map(function(o, i) {
-    const client = clients.find(function(c){ return c.id === o.clientId; });
-    const cName  = client ? client.name : (o.clientId||'—');
-    const cTg    = client ? (client.tg||'') : '';
-    const cNum   = client ? (client.num||'') : '';
-    const _rtssn = cNum || '—';
-    const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
-    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(''+o.id+'')">'      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+_rtssn+'</td>'      +'<td class="mono" style="color:var(--gre)">'+esc(o.id||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td><span class="bdg gre">'+(o.translator||'—')+'</span></td>'      +'<td class="mono" style="font-size:12.5px">'+fmtDate(o.created)+'</td>'      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-status" onclick="openStatusDropdown(event,'orders',''+o.id+'',''+o.status+'',ORD_STATUSES['Права'],'/orders','id')" title="'+_t('inline_status_tip')+'">'+bdg(o.status)+'</span></td>'      +'<td class="mono" style="font-size:12px;color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+esc(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁</a>':'')        +'<button class="edit-btn" onclick="editOrder(''+o.id+'',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(''+o.id+'',event)">🗑</button>'      +'</td>'      +'</tr>';
-  }).join('');
-}
 
 
 function editRights(idx,e){
