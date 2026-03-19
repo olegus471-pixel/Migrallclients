@@ -134,7 +134,7 @@ button:active{transform:scale(.97)}
 /* ── MAIN ── */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .content{flex:1;overflow-y:auto;padding:18px 20px}
-.view{display:none}.view.active{display:block;min-height:calc(100vh - 84px);animation:viewIn .2s ease}
+.view{display:none}.view.active{display:block;min-height:calc(100vh - 84px);animation:viewIn .2s ease}#view-messenger.active{display:block !important;min-height:unset !important;height:calc(100vh - 56px);overflow:hidden;padding:0 !important}
 @keyframes viewIn{from{opacity:.6;transform:translateY(5px)}to{opacity:1;transform:none}}
 
 /* ============================================================
@@ -3916,8 +3916,8 @@ CRM ↔ Backend (Render) ↔ Google Sheets
   </div>
 
   <!-- =================== MESSENGER =================== -->
-  <div class="view" id="view-messenger" style="display:none;height:calc(100vh - 56px);overflow:hidden">
-    <div style="display:flex;height:100%;gap:0">
+  <div class="view" id="view-messenger" style="height:calc(100vh - 56px);overflow:hidden;padding:0">
+    <div style="display:flex;height:100%;gap:0;width:100%;min-height:0">
 
       <!-- LEFT: chat list -->
       <div id="tg-sidebar" style="width:300px;flex-shrink:0;border-right:1.5px solid var(--border);display:flex;flex-direction:column;background:var(--surface)">
@@ -5011,7 +5011,7 @@ function restoreSidebarState(){
 // ============================================================
 // NAVIGATION
 // ============================================================
-const VIEW_TITLES = {dashboard:'Дашборд',clients:'Клиенты',kanban:'Kanban Pipeline',aima:'Проверки AIMA',courts:'Суды',citizenship:'Гражданство',rights:'Водительские права',schedule:'Расписание встреч',calendar:'Командный календарь',tasks:'Задачи',integration:'API / Интеграции',users:'Пользователи',filings:'Планируемые подачи','lawyer-tasks':'Дела адвоката','translator-tasks':'Задания переводчика',translations:'Переводы',nocrims:'Справки о несудимости',orders:'Заказы',checklists:'Чеклисты','client-portal':'Кабинет клиента','realestate':'Real Estate 🏢','staff-portals':'Кабинеты сотрудников 👔'};
+const VIEW_TITLES = {dashboard:'Дашборд',messenger:'Мессенджер',clients:'Клиенты',kanban:'Kanban Pipeline',aima:'Проверки AIMA',courts:'Суды',citizenship:'Гражданство',rights:'Водительские права',schedule:'Расписание встреч',calendar:'Командный календарь',tasks:'Задачи',integration:'API / Интеграции',users:'Пользователи',filings:'Планируемые подачи','lawyer-tasks':'Дела адвоката','translator-tasks':'Задания переводчика',translations:'Переводы',nocrims:'Справки о несудимости',orders:'Заказы',checklists:'Чеклисты','client-portal':'Кабинет клиента','realestate':'Real Estate 🏢','staff-portals':'Кабинеты сотрудников 👔'};
 function showView(id,el){
   // TG polling
   if (id === 'messenger') { setTimeout(tgStartPoll, 100); }
