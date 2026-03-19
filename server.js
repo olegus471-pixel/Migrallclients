@@ -349,6 +349,12 @@ function persistTgMessage(chatInfo, msg) {
     ts:           msg.ts            || Date.now(),
     isOutgoing:   msg.isOutgoing ? 'TRUE' : 'FALSE',
     isRead:       msg.isRead    ? 'TRUE' : 'FALSE',
+    mediaType:    msg.mediaType  || '',
+    fileId:       msg.fileId     || '',
+    fileName:     msg.fileName   || '',
+    mimeType:     msg.mimeType   || '',
+    fileSize:     msg.fileSize   || '',
+    fileUrl:      msg.fileUrl    || '',
   };
 
   const body = JSON.stringify(payload);
@@ -407,6 +413,12 @@ function loadTgHistoryFromGAS() {
             fromId:     r.fromId     || '',
             isOutgoing: r.isOutgoing === 'TRUE' || r.isOutgoing === true,
             isRead:     r.isRead     === 'TRUE' || r.isRead     === true,
+            mediaType:  r.mediaType  || null,
+            fileId:     r.fileId     || null,
+            fileName:   r.fileName   || null,
+            mimeType:   r.mimeType   || null,
+            fileSize:   r.fileSize   ? Number(r.fileSize) : null,
+            fileUrl:    r.fileUrl    || null,
           };
           tgChats[chatId].messages.push(msg);
           if (msg.ts > tgChats[chatId].lastTs) tgChats[chatId].lastTs = msg.ts;
@@ -424,6 +436,70 @@ function loadTgHistoryFromGAS() {
     });
   }).on('error', e => console.warn('[TG] History load error:', e.message));
 }
+
+// ── Resolve Telegram file URL ────────────────────────────────
+// Calls getFile API → gets file_path → builds CDN URL
+// Updates message in tgChats in-place after async resolution
+function resolveFileUrl(fileId, msgObj, chatId) {
+  tgCall('getFile', { file_id: fileId }, (err, result) => {
+    if (err || !result || !result.ok) {
+      console.warn('[TG] getFile error:', err || result);
+      return;
+    }
+    const filePath = result.result.file_path;
+    const fileUrl  = `https://api.telegram.org/file/bot${TG_TOKEN}/${filePath}`;
+    msgObj.fileUrl = fileUrl;
+
+    // Also update persisted record in GAS
+    if (GAS_URL && msgObj.id) {
+      const body = JSON.stringify({ ...msgObj, chatId, isUpdate: true });
+      const pu   = url.parse(GAS_URL + '?path=tg-messages');
+      const req  = https.request({
+        hostname: pu.hostname, path: pu.path, method: 'POST',
+        headers: { 'Content-Type': 'text/plain', 'Content-Length': Buffer.byteLength(body) }
+      }, r => r.resume());
+      req.on('error', () => {});
+      req.write(body); req.end();
+    }
+  });
+}
+
+// ── Proxy file download: /api/tg/file/:fileId ─────────────────
+// Browser can't directly access api.telegram.org (CORS)
+// Server proxies the file download
+app.get('/api/tg/file/:fileId', requireAuth, (req, res) => {
+  const fileId = req.params.fileId;
+  if (!TG_TOKEN) return res.status(503).json({ error: 'Bot not configured' });
+
+  // First get the file path
+  tgCall('getFile', { file_id: fileId }, (err, result) => {
+    if (err || !result || !result.ok) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    const filePath = result.result.file_path;
+    const fileUrl  = `https://api.telegram.org/file/bot${TG_TOKEN}/${filePath}`;
+    const parsedUrl = url.parse(fileUrl);
+
+    // Set content-type based on extension
+    const ext = filePath.split('.').pop().toLowerCase();
+    const mimeMap = {
+      jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+      gif: 'image/gif', webp: 'image/webp', mp4: 'video/mp4',
+      ogg: 'audio/ogg', mp3: 'audio/mpeg', pdf: 'application/pdf',
+      doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    };
+    if (mimeMap[ext]) res.setHeader('Content-Type', mimeMap[ext]);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+
+    // Proxy the file
+    https.get({ hostname: parsedUrl.hostname, path: parsedUrl.path }, tgRes => {
+      tgRes.pipe(res);
+    }).on('error', e => {
+      console.warn('[TG file proxy] error:', e.message);
+      res.status(500).json({ error: 'Download failed' });
+    });
+  });
+});
 
 // Load history on startup (with delay to let server fully start)
 setTimeout(loadTgHistoryFromGAS, 3000);
@@ -489,15 +565,85 @@ app.post('/tg/webhook', express.json(), (req, res) => {
     }
 
     const chat = tgChats[chatId];
+    // ── Extract media info ───────────────────────────────────────
+    let mediaType = null;
+    let fileId    = null;
+    let fileName  = null;
+    let mimeType  = null;
+    let fileSize  = null;
+
+    if (msg.photo && msg.photo.length) {
+      // Telegram sends multiple resolutions — take largest
+      const photo = msg.photo[msg.photo.length - 1];
+      mediaType = 'photo';
+      fileId    = photo.file_id;
+      fileName  = 'photo.jpg';
+      mimeType  = 'image/jpeg';
+      fileSize  = photo.file_size;
+    } else if (msg.document) {
+      mediaType = 'document';
+      fileId    = msg.document.file_id;
+      fileName  = msg.document.file_name || 'file';
+      mimeType  = msg.document.mime_type || 'application/octet-stream';
+      fileSize  = msg.document.file_size;
+    } else if (msg.video) {
+      mediaType = 'video';
+      fileId    = msg.video.file_id;
+      fileName  = msg.video.file_name || 'video.mp4';
+      mimeType  = msg.video.mime_type || 'video/mp4';
+      fileSize  = msg.video.file_size;
+    } else if (msg.voice) {
+      mediaType = 'voice';
+      fileId    = msg.voice.file_id;
+      fileName  = 'voice.ogg';
+      mimeType  = 'audio/ogg';
+      fileSize  = msg.voice.file_size;
+    } else if (msg.audio) {
+      mediaType = 'audio';
+      fileId    = msg.audio.file_id;
+      fileName  = msg.audio.file_name || msg.audio.title || 'audio.mp3';
+      mimeType  = msg.audio.mime_type || 'audio/mpeg';
+      fileSize  = msg.audio.file_size;
+    } else if (msg.video_note) {
+      mediaType = 'video_note';
+      fileId    = msg.video_note.file_id;
+      fileName  = 'video_note.mp4';
+      mimeType  = 'video/mp4';
+      fileSize  = msg.video_note.file_size;
+    } else if (msg.animation) {
+      mediaType = 'animation';
+      fileId    = msg.animation.file_id;
+      fileName  = msg.animation.file_name || 'animation.gif';
+      mimeType  = msg.animation.mime_type || 'image/gif';
+      fileSize  = msg.animation.file_size;
+    } else if (msg.sticker) {
+      mediaType = 'sticker';
+      fileId    = msg.sticker.file_id;
+      fileName  = msg.sticker.emoji || '🎯';
+      mimeType  = msg.sticker.is_animated ? 'application/json' : 'image/webp';
+    }
+
     const msgObj = {
-      id:        msg.message_id,
-      ts:        msg.date * 1000,
-      text:      msg.text || msg.caption || '[медиа]',
-      fromName:  from.first_name ? (from.first_name + ' ' + (from.last_name||'')).trim() : 'Business',
-      fromId:    from.id,
+      id:         msg.message_id,
+      ts:         msg.date * 1000,
+      text:       msg.text || msg.caption || '',
+      fromName:   from.first_name ? (from.first_name + ' ' + (from.last_name||'')).trim() : 'Business',
+      fromId:     from.id,
       isOutgoing: isBot || (from.id && String(from.id) === String(msg.chat.id) ? false : isBusinessConn && from.is_bot),
-      isRead:    false,
+      isRead:     false,
+      // Media fields
+      mediaType:  mediaType,
+      fileId:     fileId,
+      fileName:   fileName,
+      mimeType:   mimeType,
+      fileSize:   fileSize,
+      fileUrl:    null,  // resolved asynchronously below
     };
+
+    // Resolve file URL from Telegram (async, non-blocking)
+    if (fileId && TG_TOKEN) {
+      resolveFileUrl(fileId, msgObj, chatId);
+    }
 
     chat.messages.push(msgObj);
     chat.lastTs = msgObj.ts;
