@@ -13,10 +13,9 @@ const app     = express();
 // ── Переменные окружения ──────────────────────────────────────
 const GAS_URL = process.env.GAS_URL || '';
 
-// Only GAS_URL is exposed to frontend — all Sheet IDs stay server-side
-const ENV = {
-  GAS_URL: GAS_URL,
-};
+// Nothing sensitive is exposed to frontend
+// GAS_URL stays on server — browser uses /api/* proxy
+const ENV = {};
 
 // Server-side config (never sent to browser)
 const SERVER_CONFIG = {
