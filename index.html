@@ -610,6 +610,7 @@ button:active{transform:scale(.97)}
     <div class="ni manager-only" id="sb-translator-tasks-mgr" onclick="showView('translator-tasks',this)"><span class="ni-ic">📝</span>Задания переводчиков<span class="ni-bdg" id="bdg-trans-mgr"></span></div>
     <div class="ni admin-only" onclick="showView('integration',this)"><span class="ni-ic">⚡</span>API / Интеграции</div>
     <div class="ni manager-only" onclick="showView('orders',this)"><span class="ni-ic">📦</span><span data-i18n="ni_orders">Заказы</span><span class="ni-bdg y" id="bdg-orders">0</span></div>
+    <div class="ni manager-only" onclick="showView('messenger',this)" id="ni-messenger"><span class="ni-ic">💬</span><span>Мессенджер</span><span class="ni-bdg" id="bdg-tg" style="background:#229ed9;color:#fff;display:none">0</span></div>
     <div class="ni manager-only" onclick="showView('checklists',this)"><span class="ni-ic">☑</span>Чеклисты</div>
     <div class="ni manager-only" onclick="showView('client-portal',this)"><span class="ni-ic">🗂</span>Кабинет клиента</div>
     <div class="ni admin-only" onclick="showView('staff-portals',this)"><span class="ni-ic">👔</span>Кабинеты сотрудников</div>
@@ -3914,6 +3915,88 @@ CRM ↔ Backend (Render) ↔ Google Sheets
     <div id="sp-list"></div>
   </div>
 
+  <!-- =================== MESSENGER =================== -->
+  <div class="view" id="view-messenger" style="display:none;height:calc(100vh - 56px);overflow:hidden">
+    <div style="display:flex;height:100%;gap:0">
+
+      <!-- LEFT: chat list -->
+      <div id="tg-sidebar" style="width:300px;flex-shrink:0;border-right:1.5px solid var(--border);display:flex;flex-direction:column;background:var(--surface)">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:13px;font-weight:700;color:var(--t1)">💬 Telegram</div>
+          <div style="display:flex;gap:6px">
+            <span id="tg-status-dot" style="width:8px;height:8px;border-radius:50%;background:var(--t4);display:inline-block;margin-top:4px" title="Статус подключения"></span>
+            <button class="btn btn-sm" style="font-size:11px;padding:4px 8px" onclick="tgRefreshChats()" title="Обновить">↻</button>
+            <button class="btn btn-sm" style="font-size:11px;padding:4px 8px;background:var(--acc-d);color:var(--acc)" onclick="openTgSettings()">⚙️</button>
+          </div>
+        </div>
+        <input id="tg-search" placeholder="🔍 Поиск чатов..." style="margin:10px 12px;padding:8px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;outline:none;background:var(--s2);color:var(--t1)" oninput="tgFilterChats(this.value)">
+        <div id="tg-chat-list" style="overflow-y:auto;flex:1">
+          <div style="padding:40px 16px;text-align:center;color:var(--t3);font-size:13px">
+            Настройте Telegram-бота для получения сообщений.<br>
+            <button class="btn btn-p" style="margin-top:12px;font-size:12px" onclick="openTgSettings()">⚙️ Настройка</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: chat window -->
+      <div id="tg-main" style="flex:1;display:flex;flex-direction:column;background:var(--bg)">
+        <!-- Empty state -->
+        <div id="tg-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--t3)">
+          <div style="font-size:48px;margin-bottom:16px">💬</div>
+          <div style="font-size:15px;font-weight:600;color:var(--t2)">Выберите чат</div>
+          <div style="font-size:13px;margin-top:6px">Все входящие сообщения будут здесь</div>
+        </div>
+        <!-- Active chat -->
+        <div id="tg-chat-view" style="display:none;flex:1;flex-direction:column">
+          <!-- Chat header -->
+          <div id="tg-chat-header" style="padding:12px 18px;border-bottom:1.5px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:12px">
+            <div id="tg-chat-avatar" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--pur));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0">?</div>
+            <div style="flex:1">
+              <div id="tg-chat-name" style="font-size:14px;font-weight:700;color:var(--t1)">—</div>
+              <div id="tg-chat-username" style="font-size:11px;color:var(--t3)"></div>
+            </div>
+            <a id="tg-chat-link" href="#" target="_blank" class="btn btn-sm" style="font-size:11px;padding:5px 10px;text-decoration:none;background:#229ed9;color:#fff;border:none;display:none">↗ Открыть в TG</a>
+          </div>
+          <!-- Messages -->
+          <div id="tg-messages" style="flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:8px"></div>
+          <!-- Input area -->
+          <div style="padding:12px 16px;border-top:1.5px solid var(--border);background:var(--surface)">
+            <div id="tg-signature-preview" style="font-size:11px;color:var(--t3);margin-bottom:6px;padding:6px 10px;background:var(--s2);border-radius:7px;line-height:1.4"></div>
+            <div style="display:flex;gap:8px;align-items:flex-end">
+              <textarea id="tg-input" rows="2" placeholder="Введите сообщение..." style="flex:1;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;font-family:'Manrope',sans-serif;resize:none;outline:none;background:var(--s2);color:var(--t1);transition:border-color .15s" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();tgSendMessage()}" onfocus="this.style.borderColor='var(--acc)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+              <button onclick="tgSendMessage()" style="background:linear-gradient(135deg,var(--acc),var(--pur));color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;height:44px;white-space:nowrap">Отправить ↗</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TG Settings modal -->
+  <div id="tg-settings-modal" style="display:none;position:fixed;inset:0;background:rgba(13,20,38,.5);z-index:2000;align-items:center;justify-content:center">
+    <div style="background:var(--surface);border-radius:16px;padding:28px;width:480px;max-width:95vw;box-shadow:var(--sh2)">
+      <div style="font-size:17px;font-weight:800;margin-bottom:18px">⚙️ Настройка Telegram</div>
+      <div style="background:var(--acc-d);border-radius:10px;padding:14px;font-size:12.5px;color:var(--t2);margin-bottom:18px;line-height:1.6">
+        <b>Инструкция:</b><br>
+        1. Создайте бота через <a href="https://t.me/BotFather" target="_blank">@BotFather</a> → /newbot<br>
+        2. Подключите бота к бизнес-аккаунту: Telegram → Настройки → <b>Telegram Business</b> → Чат-боты<br>
+        3. Добавьте токен бота в Render: Environment Variables → <b>TG_BOT_TOKEN</b><br>
+        4. Нажмите «Установить Webhook» ниже
+      </div>
+      <div id="tg-status-block" style="background:var(--s2);border-radius:9px;padding:12px;font-size:12px;margin-bottom:14px;font-family:'IBM Plex Mono',monospace;color:var(--t2)">Загрузка статуса...</div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:5px">Webhook URL</div>
+        <input id="tg-webhook-url" class="mi" style="font-family:monospace;font-size:12px" placeholder="https://migrallclients.onrender.com/tg/webhook">
+        <div style="font-size:11px;color:var(--t3);margin-top:4px">Обычно: ваш_домен + /tg/webhook</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-p" onclick="tgSetupWebhook()" style="font-size:13px">🔗 Установить Webhook</button>
+        <button class="btn" onclick="tgCheckStatus()" style="font-size:13px">🔄 Проверить статус</button>
+        <button class="btn btn-g" onclick="document.getElementById('tg-settings-modal').style.display='none'" style="font-size:13px">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
   <!-- =================== REAL ESTATE =================== -->
   <div class="view" id="view-realestate">
     <div class="sec-h">
@@ -4930,6 +5013,9 @@ function restoreSidebarState(){
 // ============================================================
 const VIEW_TITLES = {dashboard:'Дашборд',clients:'Клиенты',kanban:'Kanban Pipeline',aima:'Проверки AIMA',courts:'Суды',citizenship:'Гражданство',rights:'Водительские права',schedule:'Расписание встреч',calendar:'Командный календарь',tasks:'Задачи',integration:'API / Интеграции',users:'Пользователи',filings:'Планируемые подачи','lawyer-tasks':'Дела адвоката','translator-tasks':'Задания переводчика',translations:'Переводы',nocrims:'Справки о несудимости',orders:'Заказы',checklists:'Чеклисты','client-portal':'Кабинет клиента','realestate':'Real Estate 🏢','staff-portals':'Кабинеты сотрудников 👔'};
 function showView(id,el){
+  // TG polling
+  if (id === 'messenger') { setTimeout(tgStartPoll, 100); }
+  else { tgStopPoll(); }
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
   if(!g('view-'+id)) return;
@@ -8441,6 +8527,276 @@ function renderAll(){
   renderOrders();
   renderTranslatorCabinet();
 }
+
+
+// ═══════════════════════════════════════════════════════════════
+// TELEGRAM MESSENGER
+// ═══════════════════════════════════════════════════════════════
+var _tgCurrentChatId = null;
+var _tgAllChats      = [];
+var _tgPollTimer     = null;
+
+// ── Load chats ────────────────────────────────────────────────
+async function tgLoadChats() {
+  try {
+    const res = await fetch('/api/tg/chats');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.error) { tgSetStatus('error'); return; }
+    tgSetStatus('ok');
+    _tgAllChats = data.chats || [];
+    tgRenderChatList(_tgAllChats);
+    // Update badge
+    const unread = _tgAllChats.reduce((s, c) => s + (c.unread||0), 0);
+    var bdg = g('bdg-tg');
+    if (bdg) { bdg.textContent = unread; bdg.style.display = unread > 0 ? '' : 'none'; }
+    // If current chat open, refresh messages
+    if (_tgCurrentChatId) tgOpenChat(_tgCurrentChatId, true);
+  } catch(e) {
+    tgSetStatus('error');
+    console.warn('[TG] loadChats error:', e.message);
+  }
+}
+
+function tgSetStatus(s) {
+  var dot = g('tg-status-dot');
+  if (!dot) return;
+  dot.style.background = s === 'ok' ? 'var(--gre)' : s === 'error' ? 'var(--red)' : 'var(--t4)';
+  dot.title = s === 'ok' ? 'Подключено' : s === 'error' ? 'Ошибка подключения' : 'Нет данных';
+}
+
+function tgRenderChatList(chats) {
+  var el = g('tg-chat-list');
+  if (!el) return;
+  if (!chats.length) {
+    el.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--t3);font-size:13px">Сообщений нет.<br>Подключите Telegram Business.<br><button class=\'btn btn-p\' style=\'margin-top:10px;font-size:12px\' onclick=\'openTgSettings()\'>⚙️ Настройка</button></div>';
+    return;
+  }
+  el.innerHTML = chats.map(function(c) {
+    var initials = (c.name||'?').split(' ').map(function(w){ return w[0]||''; }).join('').slice(0,2).toUpperCase();
+    var ts = c.lastTs ? new Date(c.lastTs).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}) : '';
+    var active = c.id === _tgCurrentChatId ? 'background:var(--acc-d);' : '';
+    return '<div onclick="tgOpenChat(\''+c.id+'\')" style="padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--s3);display:flex;gap:10px;align-items:center;transition:background .1s;'+active+'" onmouseenter="this.style.background=\'var(--s2)\'" onmouseleave="this.style.background=\''+active+'\'">'
+      + '<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--pur));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">'+initials+'</div>'
+      + '<div style="flex:1;min-width:0">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center">'
+          + '<div style="font-size:13px;font-weight:'+(c.unread?'700':'600')+';color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px">'+(c.name||'Unknown')+'</div>'
+          + '<div style="font-size:10px;color:var(--t3);flex-shrink:0">'+ts+'</div>'
+        + '</div>'
+        + '<div style="font-size:12px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">'+(c.lastMsg||'')+'</div>'
+      + '</div>'
+      + (c.unread ? '<div style="width:18px;height:18px;border-radius:50%;background:#229ed9;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+c.unread+'</div>' : '')
+      + '</div>';
+  }).join('');
+}
+
+// ── Open chat ─────────────────────────────────────────────────
+async function tgOpenChat(chatId, silent) {
+  _tgCurrentChatId = chatId;
+  // Mark active in list
+  document.querySelectorAll('#tg-chat-list > div').forEach(function(el) {
+    el.style.background = '';
+  });
+  try {
+    const res = await fetch('/api/tg/messages/' + chatId);
+    const data = await res.json();
+    if (!data.ok) return;
+    const chat = data.chat;
+    // Show chat view
+    g('tg-empty').style.display = 'none';
+    var cv = g('tg-chat-view');
+    cv.style.display = 'flex';
+    cv.style.flexDirection = 'column';
+    // Header
+    var name = chat.name||'Unknown';
+    g('tg-chat-name').textContent = name;
+    var username = chat.username ? '@' + chat.username : '';
+    g('tg-chat-username').textContent = username;
+    var avatarEl = g('tg-chat-avatar');
+    avatarEl.textContent = name.split(' ').map(function(w){ return w[0]||''; }).join('').slice(0,2).toUpperCase();
+    var link = g('tg-chat-link');
+    if (chat.username) {
+      link.href = 'https://t.me/' + chat.username;
+      link.style.display = '';
+    } else {
+      link.style.display = 'none';
+    }
+    // Messages
+    tgRenderMessages(data.messages || []);
+    // Signature preview
+    tgUpdateSignaturePreview();
+    // Reload chat list unread counts
+    if (!silent) tgLoadChats();
+  } catch(e) {
+    console.warn('[TG] openChat error:', e);
+  }
+}
+
+function tgRenderMessages(messages) {
+  var el = g('tg-messages');
+  if (!el) return;
+  el.innerHTML = messages.map(function(m) {
+    var isOut = m.isOutgoing;
+    var time  = new Date(m.ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+    var date  = new Date(m.ts).toLocaleDateString('ru-RU',{day:'2-digit',month:'short'});
+    // Format text with line breaks
+    var text  = esc(m.text||'').replace(/\n/g,'<br>');
+    return '<div style="display:flex;justify-content:'+(isOut?'flex-end':'flex-start')+'">'
+      + '<div style="max-width:72%;background:'+(isOut?'var(--acc)':'var(--surface)')+';color:'+(isOut?'#fff':'var(--t1)')+';border-radius:'+(isOut?'14px 14px 4px 14px':'14px 14px 14px 4px')+';padding:10px 13px;box-shadow:var(--sh);font-size:13.5px;line-height:1.5">'
+        + '<div style="font-size:10px;font-weight:700;margin-bottom:4px;opacity:.7">'+esc(m.fromName||'')+'</div>'
+        + '<div>'+text+'</div>'
+        + '<div style="font-size:10px;text-align:right;margin-top:4px;opacity:.6">'+time+'</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+  // Scroll to bottom
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── Send message ──────────────────────────────────────────────
+async function tgSendMessage() {
+  if (!_tgCurrentChatId) return;
+  var inp = g('tg-input');
+  var text = (inp.value||'').trim();
+  if (!text) return;
+  inp.value = '';
+  inp.disabled = true;
+  try {
+    var user = currentUser || {};
+    const res = await fetch('/api/tg/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chatId:      _tgCurrentChatId,
+        text:        text,
+        managerName: user.name || user.login || '',
+        managerRole: user.role || '',
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      tgOpenChat(_tgCurrentChatId, true);
+    } else {
+      toast('⚠️ Ошибка отправки: ' + (data.error||''));
+    }
+  } catch(e) {
+    toast('⚠️ Ошибка сети');
+  } finally {
+    inp.disabled = false;
+    inp.focus();
+  }
+}
+
+// ── Signature preview ─────────────────────────────────────────
+function tgUpdateSignaturePreview() {
+  var el = g('tg-signature-preview');
+  if (!el || !currentUser) return;
+  var user = currentUser;
+  var roleLabel = user.role==='admin'?'Администратор':user.role==='manager'?'Менеджер':user.role==='lawyer'?'Адвокат':user.role==='translator'?'Переводчик':'';
+  var name = user.name || user.login || '';
+  if (name) {
+    el.innerHTML = '<span style="color:var(--t4)">Подпись: </span><span style="color:var(--t2)">— '+esc(name)+(roleLabel?', '+roleLabel:'')+' | MigrAll</span>';
+  } else {
+    el.textContent = 'Подпись: не задана (нет имени пользователя)';
+  }
+}
+
+// ── Filter chats ──────────────────────────────────────────────
+function tgFilterChats(q) {
+  if (!q) { tgRenderChatList(_tgAllChats); return; }
+  var filtered = _tgAllChats.filter(function(c) {
+    return (c.name||'').toLowerCase().includes(q.toLowerCase())
+        || (c.username||'').toLowerCase().includes(q.toLowerCase())
+        || (c.lastMsg||'').toLowerCase().includes(q.toLowerCase());
+  });
+  tgRenderChatList(filtered);
+}
+
+function tgRefreshChats() { tgLoadChats(); }
+
+// ── Settings ─────────────────────────────────────────────────
+function openTgSettings() {
+  g('tg-settings-modal').style.display = 'flex';
+  // Pre-fill webhook URL
+  var inp = g('tg-webhook-url');
+  if (inp && !inp.value) {
+    inp.value = window.location.origin + '/tg/webhook';
+  }
+  tgCheckStatus();
+}
+
+async function tgCheckStatus() {
+  var block = g('tg-status-block');
+  if (block) block.textContent = 'Проверка...';
+  try {
+    const res = await fetch('/api/tg/status');
+    const data = await res.json();
+    if (block) {
+      if (!data.configured) {
+        block.innerHTML = '❌ Токен не настроен. Добавьте <b>TG_BOT_TOKEN</b> в Render Environment Variables.';
+      } else if (data.bot) {
+        block.innerHTML = '✅ Бот: @'+data.bot.username+' ('+data.bot.first_name+')<br>'
+          + (data.webhook && data.webhook.url ? '🔗 Webhook: '+data.webhook.url+'<br>Ожидает обновлений: '+data.webhook.pending_update_count : '⚠️ Webhook не установлен')
+          + '<br>💬 Чатов в памяти: '+(data.chatsCount||0);
+        tgSetStatus('ok');
+      }
+    }
+  } catch(e) {
+    if (block) block.textContent = '⚠️ Ошибка: ' + e.message;
+    tgSetStatus('error');
+  }
+}
+
+async function tgSetupWebhook() {
+  var inp = g('tg-webhook-url');
+  var webhookUrl = inp ? inp.value.trim() : '';
+  if (!webhookUrl) { toast('Введите URL webhook'); return; }
+  var block = g('tg-status-block');
+  if (block) block.textContent = 'Устанавливаю webhook...';
+  try {
+    const res = await fetch('/api/tg/setup-webhook', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: webhookUrl })
+    });
+    const data = await res.json();
+    if (block) {
+      if (data.ok) {
+        block.innerHTML = '✅ Webhook установлен!<br>' + JSON.stringify(data, null, 2);
+      } else {
+        block.innerHTML = '❌ Ошибка: ' + JSON.stringify(data);
+      }
+    }
+    toast(data.ok ? '✅ Webhook установлен' : '⚠️ ' + data.description);
+  } catch(e) {
+    toast('⚠️ Ошибка: ' + e.message);
+  }
+}
+
+// ── Auto-poll when messenger is open ─────────────────────────
+function tgStartPoll() {
+  tgLoadChats();
+  if (_tgPollTimer) clearInterval(_tgPollTimer);
+  _tgPollTimer = setInterval(tgLoadChats, 5000); // every 5 seconds
+}
+
+function tgStopPoll() {
+  if (_tgPollTimer) { clearInterval(_tgPollTimer); _tgPollTimer = null; }
+}
+
+// Hook into showView
+var _origShowView = typeof showView === 'function' ? showView : null;
+
+// ── Close settings modal on backdrop click ────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  var modal = g('tg-settings-modal');
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) modal.style.display = 'none';
+    });
+  }
+});
+
 
 // ============================================================
 // INIT
