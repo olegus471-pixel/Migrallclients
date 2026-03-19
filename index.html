@@ -4198,7 +4198,7 @@ function _normalizeUsers(data) {
 async function _loadUsersFromSheets(callback) {
   var sheetId = '';
   // 1. Приоритет: ENV переменная с сервера (Render.com → SHEET_USERS)
-  if(window.__ENV && window.__ENV.SHEET_USERS) sheetId = window.__ENV.SHEET_USERS;
+  // SHEET_USERS not exposed to browser (security)
   // 2. localStorage (настройки вручную) — только если это реально ID таблицы (не URL)
   if(!sheetId) {
     try {
@@ -5138,32 +5138,31 @@ function copyGasCode() {
 function _renderEnvStatus() {
   var el = document.getElementById('render-env-status');
   if (!el) return;
-  var env = window.__ENV || {};
-  var vars = [
-    ['GAS_URL',           'GAS_URL — Google Apps Script URL'],
-    ['SHEET_USERS',       'SHEET_USERS — Таблица пользователей'],
-    ['SHEET_CLIENTS',     'SHEET_CLIENTS — Клиенты'],
-    ['SHEET_STATUSES',    'SHEET_STATUSES — Статусы AIMA'],
-    ['SHEET_COURTS',      'SHEET_COURTS — Суды'],
-    ['SHEET_SCHEDULE',    'SHEET_SCHEDULE — Расписание'],
-    ['SHEET_CITIZENSHIP', 'SHEET_CITIZENSHIP — Гражданство'],
-    ['SHEET_RIGHTS',      'SHEET_RIGHTS — Права'],
-    ['SHEET_ORDERS',      'SHEET_ORDERS — Заказы'],
-    ['SHEET_TASKS',       'SHEET_TASKS — Задачи'],
-    ['SHEET_FILINGS',     'SHEET_FILINGS — Подачи'],
-    ['SHEET_SPEC_TASKS',  'SHEET_SPEC_TASKS — Дела адвоката/переводчика'],
-    ['DRIVE_ROOT',        'DRIVE_ROOT — Google Drive папка'],
-    ['CALENDAR_ID',       'CALENDAR_ID — Google Calendar'],
-  ];
-  el.innerHTML = vars.map(function(v) {
-    var set = env[v[0]] && env[v[0]].length > 0;
-    return '<div style="padding:2px 4px;border-radius:4px;background:' + (set ? 'rgba(34,197,94,.1)' : 'rgba(239,68,68,.08)') + '">'
-      + (set ? '✅' : '❌') + ' <b>' + v[0] + '</b>'
-      + (set ? ' <span style="color:var(--t3);font-weight:400">(' + env[v[0]].slice(0,20) + '…)</span>' : '')
-      + '</div>';
-  }).join('');
-}
-
+  el.innerHTML = '<div style="color:var(--t3);font-size:12px;grid-column:1/-1">Загрузка статуса...</div>';
+  var token = '';
+  try { token = sessionStorage.getItem('crm_srv_token')||''; } catch(e){}
+  fetch('/api/env-status', { headers: { 'x-crm-token': token } })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (!data.ok) { el.innerHTML = '<div style="color:var(--red)">Ошибка</div>'; return; }
+      var labels = {
+        GAS_URL:'GAS_URL',SHEET_USERS:'SHEET_USERS',SHEET_CLIENTS:'SHEET_CLIENTS',
+        SHEET_STATUSES:'SHEET_STATUSES',SHEET_COURTS:'SHEET_COURTS',
+        SHEET_SCHEDULE:'SHEET_SCHEDULE',SHEET_CITIZENSHIP:'SHEET_CITIZENSHIP',
+        SHEET_RIGHTS:'SHEET_RIGHTS',SHEET_ORDERS:'SHEET_ORDERS',
+        SHEET_TASKS:'SHEET_TASKS',SHEET_FILINGS:'SHEET_FILINGS',
+        SHEET_SPEC_TASKS:'SHEET_SPEC_TASKS',DRIVE_ROOT:'DRIVE_ROOT',
+        CALENDAR_ID:'CALENDAR_ID'
+      };
+      el.innerHTML = Object.keys(data.status).map(function(k) {
+        var ok = data.status[k]==='ok';
+        return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0">'
+          +'<span>'+(ok?'✅':'❌')+'</span>'
+          +'<code style="font-size:10.5px;flex:1">'+( labels[k]||k)+'</code>'
+          +'<span style="font-size:10px;color:'+(ok?'var(--gre)':'var(--red)')+'">'+( ok?'OK':'MISSING')+'</span>'
+          +'</div>';
+      }).join('');
+    }).catch(function(){ el.innerHTML='<div style="color:var(--t3)">Статус недоступен</div>'; });
 function saveUsersSheetId() {
   var val = (document.getElementById('users-sheet-id-input').value || '').trim();
   try { localStorage.setItem('crm_users_sheet_id', val); } catch(e){}
