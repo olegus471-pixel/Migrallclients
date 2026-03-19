@@ -180,11 +180,49 @@ app.use(express.json());
 app.use(express.text());
 
 // ── CORS ──────────────────────────────────────────────────────
+// Allowed origins: own domain + localhost for dev
+const ALLOWED_ORIGINS = [
+  process.env.RENDER_EXTERNAL_URL   || '',     // e.g. https://migrallclients.onrender.com
+  process.env.CORS_EXTRA_ORIGIN     || '',     // optional extra domain (custom domain)
+  'http://localhost:3000',
+  'http://localhost:8080',
+  'http://127.0.0.1:3000',
+].filter(Boolean);
+
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') { res.sendStatus(200); return; }
+  const origin = req.headers.origin || '';
+
+  // Telegram webhook comes without Origin header — allow it on /tg/webhook only
+  if (!origin && req.path === '/tg/webhook') {
+    return next();
+  }
+
+  // Allow requests with no Origin (same-origin browser requests, server-to-server)
+  if (!origin) {
+    return next();
+  }
+
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-crm-token');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Vary', 'Origin');
+  } else {
+    // Unknown origin — log and block CORS (request still processes for same-origin)
+    if (origin) console.warn('[CORS] Blocked origin:', origin);
+  }
+
+  if (req.method === 'OPTIONS') {
+    // Preflight: only respond OK if origin was allowed
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      res.sendStatus(204);
+    } else {
+      res.sendStatus(403);
+    }
+    return;
+  }
+
   next();
 });
 
