@@ -118,8 +118,12 @@ app.use((req, res, next) => {
 app.get('/ping', (req, res) => res.json({ ok: true, ts: Date.now() }));
 app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
 
-// ── API прокси: /api/* → GAS ──────────────────────────────────
-app.all('/api/*', (req, res) => {
+// ── API прокси: /api/* → GAS (excluding /api/tg/*) ───────────
+app.all('/api/*', (req, res, next) => {
+  // TG routes are handled by dedicated endpoints below
+  if (req.path.startsWith('/api/tg/') || req.path === '/api/tg') {
+    return next();
+  }
   const apiPath = req.path.replace('/api', '') || '/';
   let body = req.body || '';
   if (typeof body === 'object') body = JSON.stringify(body);
@@ -139,29 +143,6 @@ function serveHtml(file, res) {
     res.send(injected);
   });
 }
-
-// Статика
-app.use(express.static(__dirname, { index: false }));
-
-// Маршруты порталов
-app.get('/client.html',     (req, res) => serveHtml('client.html', res));
-app.get('/client',          (req, res) => serveHtml('client.html', res));
-app.get('/lawyer.html',     (req, res) => serveHtml('lawyer.html', res));
-app.get('/lawyer',          (req, res) => serveHtml('lawyer.html', res));
-app.get('/translator.html', (req, res) => serveHtml('translator.html', res));
-app.get('/translator',      (req, res) => serveHtml('translator.html', res));
-app.get('/realestate.html', (req, res) => serveHtml('realestate.html', res));
-app.get('/realestate',      (req, res) => serveHtml('realestate.html', res));
-app.get('*',                (req, res) => serveHtml('index.html', res));
-
-// ── Старт ─────────────────────────────────────────────────────
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log('MigrAll CRM running on port ' + PORT);
-  console.log('ENV:', Object.entries(ENV).map(([k,v]) => k + '=' + (v ? 'OK' : 'MISSING')).join(' | '));
-  if (RENDER_URL) console.log('[keepalive] Self-ping enabled:', RENDER_URL + '/ping');
-  else console.log('[keepalive] Set RENDER_EXTERNAL_URL env var to enable self-ping');
-});
 
 // ═══════════════════════════════════════════════════════════════
 // TELEGRAM BUSINESS INTEGRATION
@@ -377,3 +358,26 @@ app.get('/api/tg/unread', (req, res) => {
 });
 
 console.log('[TG]', TG_TOKEN ? 'Bot token configured' : 'WARNING: TG_BOT_TOKEN not set');
+
+// Статика
+app.use(express.static(__dirname, { index: false }));
+
+// Маршруты порталов
+app.get('/client.html',     (req, res) => serveHtml('client.html', res));
+app.get('/client',          (req, res) => serveHtml('client.html', res));
+app.get('/lawyer.html',     (req, res) => serveHtml('lawyer.html', res));
+app.get('/lawyer',          (req, res) => serveHtml('lawyer.html', res));
+app.get('/translator.html', (req, res) => serveHtml('translator.html', res));
+app.get('/translator',      (req, res) => serveHtml('translator.html', res));
+app.get('/realestate.html', (req, res) => serveHtml('realestate.html', res));
+app.get('/realestate',      (req, res) => serveHtml('realestate.html', res));
+app.get('*',                (req, res) => serveHtml('index.html', res));
+
+// ── Старт ─────────────────────────────────────────────────────
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('MigrAll CRM running on port ' + PORT);
+  console.log('ENV:', Object.entries(ENV).map(([k,v]) => k + '=' + (v ? 'OK' : 'MISSING')).join(' | '));
+  if (RENDER_URL) console.log('[keepalive] Self-ping enabled:', RENDER_URL + '/ping');
+  else console.log('[keepalive] Set RENDER_EXTERNAL_URL env var to enable self-ping');
+});
