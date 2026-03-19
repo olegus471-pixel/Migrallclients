@@ -4173,6 +4173,12 @@ async function authFetch(action, body) {
       body: bodyStr,
     });
   }
+  // Handle rate limit response
+  if (res.status === 429) {
+    const retryAfter = res.headers.get('Retry-After') || 60;
+    const mins = Math.ceil(retryAfter / 60);
+    return { error: 'Слишком много попыток входа. Подождите ' + mins + ' мин.', blocked: true, code: 429 };
+  }
   return res.json();
 }
 
