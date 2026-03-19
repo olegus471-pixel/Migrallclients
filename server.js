@@ -226,9 +226,78 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── Rate Limiter (no external deps) ──────────────────────────
+// Protects auth endpoints from brute-force attacks
+const _rateLimitStore = new Map(); // ip:endpoint → [timestamps]
+
+function rateLimiter(maxRequests, windowMs, keyPrefix) {
+  return (req, res, next) => {
+    const ip  = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+              || req.socket?.remoteAddress
+              || 'unknown';
+    const key = keyPrefix + ':' + ip;
+    const now = Date.now();
+
+    // Get existing timestamps, remove expired ones
+    const timestamps = (_rateLimitStore.get(key) || [])
+      .filter(ts => now - ts < windowMs);
+
+    if (timestamps.length >= maxRequests) {
+      const oldest   = timestamps[0];
+      const retryAfter = Math.ceil((oldest + windowMs - now) / 1000);
+      res.setHeader('Retry-After', retryAfter);
+      res.setHeader('X-RateLimit-Limit', maxRequests);
+      res.setHeader('X-RateLimit-Remaining', 0);
+      res.setHeader('X-RateLimit-Reset', Math.ceil((oldest + windowMs) / 1000));
+      console.warn('[RateLimit] Blocked:', ip, 'on', keyPrefix,
+        '| attempts:', timestamps.length, '| retry in:', retryAfter + 's');
+      return res.status(429).json({
+        error: 'Слишком много попыток. Попробуйте через ' + retryAfter + ' секунд.',
+        retryAfter,
+        code: 429,
+      });
+    }
+
+    // Record this request
+    timestamps.push(now);
+    _rateLimitStore.set(key, timestamps);
+
+    // Add headers
+    res.setHeader('X-RateLimit-Limit', maxRequests);
+    res.setHeader('X-RateLimit-Remaining', maxRequests - timestamps.length);
+
+    next();
+  };
+}
+
+// Cleanup expired entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  const maxWindow = 15 * 60 * 1000;
+  let cleaned = 0;
+  for (const [key, timestamps] of _rateLimitStore.entries()) {
+    const fresh = timestamps.filter(ts => now - ts < maxWindow);
+    if (fresh.length === 0) { _rateLimitStore.delete(key); cleaned++; }
+    else _rateLimitStore.set(key, fresh);
+  }
+  if (cleaned > 0) console.log('[RateLimit] Cleaned', cleaned, 'expired entries');
+}, 5 * 60 * 1000);
+
+// Specific limiters:
+const loginLimiter    = rateLimiter(5,  15 * 60 * 1000, 'login');    // 5 per 15min
+const authLimiter     = rateLimiter(20, 15 * 60 * 1000, 'auth');     // 20 per 15min
+const tgSendLimiter   = rateLimiter(60,  1 * 60 * 1000, 'tg-send');  // 60 per min
+
 // ── Health/ping endpoint ──────────────────────────────────────
 app.get('/ping', (req, res) => res.json({ ok: true, ts: Date.now() }));
 app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
+
+// ── Rate limiting on auth routes ─────────────────────────────
+// Login: 5 attempts per 15min per IP
+app.post('/api/auth/login',        loginLimiter, (req, res, next) => next());
+app.post('/api/auth/client_login', loginLimiter, (req, res, next) => next());
+// All other auth: 20 per 15min per IP
+app.all('/api/auth/*',             authLimiter,  (req, res, next) => next());
 
 // ── API прокси: /api/* → GAS (excluding /api/tg/*) ───────────
 app.all('/api/*', (req, res, next) => {
@@ -489,7 +558,7 @@ app.get('/api/tg/messages/:chatId', requireAuth, (req, res) => {
 });
 
 // ── POST /api/tg/send — send message with signature ──────────
-app.post('/api/tg/send', express.json(), requireAuth, (req, res) => {
+app.post('/api/tg/send', express.json(), requireAuth, tgSendLimiter, (req, res) => {
   if (!TG_TOKEN) return res.json({ error: 'TG_BOT_TOKEN not configured' });
   const { chatId, text, businessConnectionId } = req.body;
   if (!chatId || !text) return res.json({ error: 'chatId and text required' });
