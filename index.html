@@ -5163,6 +5163,8 @@ function _renderEnvStatus() {
           +'</div>';
       }).join('');
     }).catch(function(){ el.innerHTML='<div style="color:var(--t3)">Статус недоступен</div>'; });
+}
+
 function saveUsersSheetId() {
   var val = (document.getElementById('users-sheet-id-input').value || '').trim();
   try { localStorage.setItem('crm_users_sheet_id', val); } catch(e){}
