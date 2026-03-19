@@ -32,6 +32,76 @@ const ENV = {
 
 if (!GAS_URL) console.warn('WARNING: GAS_URL is not set! API calls will fail.');
 
+// ── Session store (in-memory, keyed by token) ────────────────
+// Token = 32-byte hex, maps to { email, name, role, createdAt }
+const crypto   = require('crypto');
+const sessions = {}; // { token: { email, name, role, createdAt } }
+const SESSION_TTL = 12 * 60 * 60 * 1000; // 12 hours
+
+function createSession(user) {
+  const token = crypto.randomBytes(32).toString('hex');
+  sessions[token] = {
+    email:     user.email || '',
+    name:      user.name  || '',
+    role:      user.role  || 'manager',
+    createdAt: Date.now(),
+  };
+  // Clean expired sessions
+  const now = Date.now();
+  Object.keys(sessions).forEach(t => {
+    if (now - sessions[t].createdAt > SESSION_TTL) delete sessions[t];
+  });
+  return token;
+}
+
+function getSession(req) {
+  // Accept token from header or cookie
+  const authHeader = req.headers['x-crm-token'] || '';
+  const cookieStr  = req.headers['cookie'] || '';
+  const cookieToken = cookieStr.split(';').map(s => s.trim())
+    .find(s => s.startsWith('crm_token='));
+  const token = authHeader || (cookieToken ? cookieToken.split('=')[1] : '');
+  if (!token) return null;
+  const sess = sessions[token];
+  if (!sess) return null;
+  if (Date.now() - sess.createdAt > SESSION_TTL) { delete sessions[token]; return null; }
+  return { ...sess, token };
+}
+
+// ── Auth middleware for protected routes ──────────────────────
+function requireAuth(req, res, next) {
+  const sess = getSession(req);
+  if (!sess) return res.status(401).json({ error: 'Unauthorized', code: 401 });
+  req.session = sess;
+  next();
+}
+
+// ── POST /auth/session — issue token after GAS login ─────────
+// Called by CRM after successful /api/auth/login
+app.post('/auth/session', express.json(), (req, res) => {
+  const { email, name, role } = req.body || {};
+  if (!email) return res.status(400).json({ error: 'email required' });
+  const token = createSession({ email, name, role });
+  // Set as cookie too (httpOnly for safety)
+  res.setHeader('Set-Cookie', `crm_token=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=43200`);
+  res.json({ ok: true, token });
+});
+
+// ── DELETE /auth/session — logout ────────────────────────────
+app.delete('/auth/session', (req, res) => {
+  const sess = getSession(req);
+  if (sess) delete sessions[sess.token];
+  res.setHeader('Set-Cookie', 'crm_token=; Path=/; HttpOnly; Max-Age=0');
+  res.json({ ok: true });
+});
+
+// ── GET /auth/session — check current session ─────────────────
+app.get('/auth/session', (req, res) => {
+  const sess = getSession(req);
+  if (!sess) return res.json({ ok: false });
+  res.json({ ok: true, user: { email: sess.email, name: sess.name, role: sess.role } });
+});
+
 // ── Keep-alive: self-ping every 10 minutes to prevent sleep ──
 const RENDER_URL = process.env.RENDER_EXTERNAL_URL || '';
 function selfPing() {
@@ -239,7 +309,7 @@ app.post('/tg/webhook', express.json(), (req, res) => {
 });
 
 // ── GET /api/tg/chats — list all chats ────────────────────────
-app.get('/api/tg/chats', (req, res) => {
+app.get('/api/tg/chats', requireAuth, (req, res) => {
   if (!TG_TOKEN) return res.json({ error: 'TG_BOT_TOKEN not configured' });
   const list = Object.values(tgChats)
     .sort((a, b) => b.lastTs - a.lastTs)
@@ -256,7 +326,7 @@ app.get('/api/tg/chats', (req, res) => {
 });
 
 // ── GET /api/tg/messages/:chatId ─────────────────────────────
-app.get('/api/tg/messages/:chatId', (req, res) => {
+app.get('/api/tg/messages/:chatId', requireAuth, (req, res) => {
   const chatId = req.params.chatId;
   const chat   = tgChats[chatId];
   if (!chat) return res.json({ ok: true, messages: [], chat: null });
@@ -267,12 +337,14 @@ app.get('/api/tg/messages/:chatId', (req, res) => {
 });
 
 // ── POST /api/tg/send — send message with signature ──────────
-app.post('/api/tg/send', express.json(), (req, res) => {
+app.post('/api/tg/send', express.json(), requireAuth, (req, res) => {
   if (!TG_TOKEN) return res.json({ error: 'TG_BOT_TOKEN not configured' });
-  const { chatId, text, managerName, managerRole, businessConnectionId } = req.body;
+  const { chatId, text, businessConnectionId } = req.body;
   if (!chatId || !text) return res.json({ error: 'chatId and text required' });
 
-  // Build signature
+  // Use verified session data — NOT client-supplied name/role (security fix)
+  const managerName = req.session.name || req.session.email || '';
+  const managerRole = req.session.role || '';
   const roleLabel = managerRole === 'admin' ? 'Администратор'
     : managerRole === 'manager' ? 'Менеджер'
     : managerRole === 'lawyer' ? 'Адвокат'
@@ -319,7 +391,7 @@ app.post('/api/tg/send', express.json(), (req, res) => {
 });
 
 // ── POST /api/tg/setup-webhook — register webhook ────────────
-app.post('/api/tg/setup-webhook', express.json(), (req, res) => {
+app.post('/api/tg/setup-webhook', express.json(), requireAuth, (req, res) => {
   if (!TG_TOKEN) return res.json({ error: 'TG_BOT_TOKEN not set' });
   const webhookUrl = req.body.url || (process.env.RENDER_EXTERNAL_URL + '/tg/webhook');
   const params = {
@@ -335,7 +407,7 @@ app.post('/api/tg/setup-webhook', express.json(), (req, res) => {
 });
 
 // ── GET /api/tg/status — bot info + webhook info ──────────────
-app.get('/api/tg/status', (req, res) => {
+app.get('/api/tg/status', requireAuth, (req, res) => {
   if (!TG_TOKEN) return res.json({ error: 'TG_BOT_TOKEN not set', configured: false });
   tgCall('getMe', {}, (err, meResult) => {
     if (err) return res.json({ error: err, configured: false });
@@ -352,7 +424,7 @@ app.get('/api/tg/status', (req, res) => {
 });
 
 // ── GET /api/tg/unread — total unread count ───────────────────
-app.get('/api/tg/unread', (req, res) => {
+app.get('/api/tg/unread', requireAuth, (req, res) => {
   const total = Object.values(tgChats).reduce((s, c) => s + c.unread, 0);
   res.json({ ok: true, unread: total });
 });
