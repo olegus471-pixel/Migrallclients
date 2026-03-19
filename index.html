@@ -827,8 +827,9 @@ button:active{transform:scale(.97)}
     <div class="panel">
       <div class="dt-wrap"><table class="dt">
         <thead><tr>
-          <th>Клиент</th><th>Переводчик</th><th>Статус</th>
-          <th>Создан</th><th>Обновлён</th><th>Папка</th><th>Комментарий</th>
+          <th style="width:36px;text-align:center;color:var(--t3)">#</th>
+          <th>Telegram</th><th>Клиент</th><th>Переводчик</th><th>Статус</th>
+          <th>Создан</th><th>Обновлён</th><th>Папка</th><th>Комментарий</th><th></th>
         </tr></thead>
         <tbody id="trans-tbody"></tbody>
       </table></div>
@@ -854,8 +855,9 @@ button:active{transform:scale(.97)}
     <div class="panel">
       <div class="dt-wrap"><table class="dt">
         <thead><tr>
-          <th>Клиент</th><th>Переводчик</th><th>Статус</th>
-          <th>Создан</th><th>Обновлён</th><th>Папка</th><th>Комментарий</th>
+          <th style="width:36px;text-align:center;color:var(--t3)">#</th>
+          <th>Telegram</th><th>Клиент</th><th>Переводчик</th><th>Статус</th>
+          <th>Создан</th><th>Обновлён</th><th>Папка</th><th>Комментарий</th><th></th>
         </tr></thead>
         <tbody id="nocrims-tbody"></tbody>
       </table></div>
@@ -926,12 +928,12 @@ button:active{transform:scale(.97)}
     </div></div>
     <div class="chips" id="rights-status-chips" style="margin-bottom:8px">
       <div class="chip active" onclick="filterRightsStatus('all',this)">Все</div>
-      <div class="chip" onclick="filterRightsStatus('В обработке',this)">В обработке</div>
-      <div class="chip" onclick="filterRightsStatus('Принято',this)">Принято</div>
-      <div class="chip" onclick="filterRightsStatus('Апрув',this)">Апрув</div>
-      <div class="chip" onclick="filterRightsStatus('Дозапрос',this)">Дозапрос</div>
-      <div class="chip" onclick="filterRightsStatus('Отказ',this)">Отказ</div>
-      <div class="chip" onclick="filterRightsStatus('Права выданы',this)">Права выданы</div>
+      <div class="chip" onclick="filterRightsStatus('Документы приняты',this)">Документы приняты</div>
+      <div class="chip" onclick="filterRightsStatus('Передано переводчикам',this)">Передано переводчикам</div>
+      <div class="chip" onclick="filterRightsStatus('В работе у переводчика',this)">В работе</div>
+      <div class="chip" onclick="filterRightsStatus('Документы из консульства готовы',this)">Готово из консульства</div>
+      <div class="chip" onclick="filterRightsStatus('Апостиль',this)">Апостиль</div>
+      <div class="chip" onclick="filterRightsStatus('Готово',this)">Готово</div>
     </div>
     <div class="panel">
       <div class="dt-wrap"><div class="dt-wrap"><table class="dt">
@@ -2787,32 +2789,32 @@ function copyGasCode() {
 function _renderEnvStatus() {
   var el = document.getElementById('render-env-status');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--t3);font-size:12px;grid-column:1/-1">Загрузка статуса...</div>';
-  var token = '';
-  try { token = sessionStorage.getItem('crm_srv_token')||''; } catch(e){}
-  fetch('/api/env-status', { headers: { 'x-crm-token': token } })
-    .then(function(r){ return r.json(); })
-    .then(function(data) {
-      if (!data.ok) { el.innerHTML = '<div style="color:var(--red)">Ошибка</div>'; return; }
-      var labels = {
-        GAS_URL:'GAS_URL',SHEET_USERS:'SHEET_USERS',SHEET_CLIENTS:'SHEET_CLIENTS',
-        SHEET_STATUSES:'SHEET_STATUSES',SHEET_COURTS:'SHEET_COURTS',
-        SHEET_SCHEDULE:'SHEET_SCHEDULE',SHEET_CITIZENSHIP:'SHEET_CITIZENSHIP',
-        SHEET_RIGHTS:'SHEET_RIGHTS',SHEET_ORDERS:'SHEET_ORDERS',
-        SHEET_TASKS:'SHEET_TASKS',SHEET_FILINGS:'SHEET_FILINGS',
-        SHEET_SPEC_TASKS:'SHEET_SPEC_TASKS',DRIVE_ROOT:'DRIVE_ROOT',
-        CALENDAR_ID:'CALENDAR_ID'
-      };
-      el.innerHTML = Object.keys(data.status).map(function(k) {
-        var ok = data.status[k]==='ok';
-        return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0">'
-          +'<span>'+(ok?'✅':'❌')+'</span>'
-          +'<code style="font-size:10.5px;flex:1">'+(labels[k]||k)+'</code>'
-          +'<span style="font-size:10px;color:'+(ok?'var(--gre)':'var(--red))')+'">'+(ok?'OK':'MISSING')+'</span>'
-          +'</div>';
-      }).join('');
-    }).catch(function(){ el.innerHTML='<div style="color:var(--t3)">Статус недоступен</div>'; });
+  var env = window.__ENV || {};
+  var vars = [
+    ['GAS_URL',           'GAS_URL — Google Apps Script URL'],
+    ['SHEET_USERS',       'SHEET_USERS — Таблица пользователей'],
+    ['SHEET_CLIENTS',     'SHEET_CLIENTS — Клиенты'],
+    ['SHEET_STATUSES',    'SHEET_STATUSES — Статусы AIMA'],
+    ['SHEET_COURTS',      'SHEET_COURTS — Суды'],
+    ['SHEET_SCHEDULE',    'SHEET_SCHEDULE — Расписание'],
+    ['SHEET_CITIZENSHIP', 'SHEET_CITIZENSHIP — Гражданство'],
+    ['SHEET_RIGHTS',      'SHEET_RIGHTS — Права'],
+    ['SHEET_ORDERS',      'SHEET_ORDERS — Заказы'],
+    ['SHEET_TASKS',       'SHEET_TASKS — Задачи'],
+    ['SHEET_FILINGS',     'SHEET_FILINGS — Подачи'],
+    ['SHEET_SPEC_TASKS',  'SHEET_SPEC_TASKS — Дела адвоката/переводчика'],
+    ['DRIVE_ROOT',        'DRIVE_ROOT — Google Drive папка'],
+    ['CALENDAR_ID',       'CALENDAR_ID — Google Calendar'],
+  ];
+  el.innerHTML = vars.map(function(v) {
+    var set = env[v[0]] && env[v[0]].length > 0;
+    return '<div style="padding:2px 4px;border-radius:4px;background:' + (set ? 'rgba(34,197,94,.1)' : 'rgba(239,68,68,.08)') + '">'
+      + (set ? '✅' : '❌') + ' <b>' + v[0] + '</b>'
+      + (set ? ' <span style="color:var(--t3);font-weight:400">(' + env[v[0]].slice(0,20) + '…)</span>' : '')
+      + '</div>';
+  }).join('');
 }
+
 function saveUsersSheetId() {
   var val = (document.getElementById('users-sheet-id-input').value || '').trim();
   try { localStorage.setItem('crm_users_sheet_id', val); } catch(e){}
@@ -4966,11 +4968,29 @@ async function _createServiceDriveFolder(clientNum, serviceType) {
   return null;
 }
 async function saveCourt(idx){
-  if(_isSaving)return; _isSaving=true;
-  const _ctDrive=g('ct-drive'); const obj={num:g('ct-num').value,name:g('ct-name').value,lawyer:g('ct-lawyer').value,article:g('ct-art').value,date:g('ct-date').value,place:g('ct-place').value,stage:g('ct-stage').value,status:g('ct-status').value,updated:nowDMY(),comment:g('ct-comment').value,driveLink:_ctDrive?_ctDrive.value:undefined};
-  if(idx<0)courts.push(obj);else courts[idx]=obj;
-  _isSaving=false; closeModal();renderCourts();renderDash();toast(idx<0?'Дело добавлено ✓':'Суд обновлён ✓');
-  await (idx<0?apiPost('/courts',obj):apiPut('/courts/'+obj.num,obj));
+  if(_isSaving) return; _isSaving = true;
+  const num    = (g('ct-num')    ||{}).value||'';
+  const name   = (g('ct-name')   ||{}).value||'';
+  if(!name.trim()){ toast('Укажите ФИО клиента'); _isSaving=false; return; }
+  const _ctDrive = g('ct-drive');
+  const obj = {
+    num:      num,
+    name:     name,
+    lawyer:   (g('ct-lawyer')||{}).value||'',
+    article:  (g('ct-art')   ||{}).value||'',
+    date:     (g('ct-date')  ||{}).value||'',
+    place:    (g('ct-place') ||{}).value||'',
+    stage:    (g('ct-stage') ||{}).value||'',
+    status:   (g('ct-status')||{}).value||'',
+    updated:  nowDMY(),
+    comment:  (g('ct-comment')||{}).value||'',
+    driveLink: _ctDrive ? _ctDrive.value : undefined
+  };
+  if(idx<0) courts.push(obj); else courts[idx]=obj;
+  _isSaving = false;
+  closeModal(); renderCourts(); renderDash();
+  toast(idx<0 ? 'Дело добавлено ✓' : 'Суд обновлён ✓');
+  await (idx<0 ? apiPost('/courts',obj) : apiPut('/courts/'+obj.num, obj));
   if(idx<0) _createServiceDriveFolder(obj.num, 'Суд');
 }
 
@@ -4986,23 +5006,14 @@ function renderTranslations(filter){
   const filtered = filter && filter !== 'all' ? arr.filter(o=>o.status===filter) : arr;
   const tbody = g('trans-tbody');
   if(!tbody) return;
-  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:24px">Нет переводов</td></tr>'; return; }
+  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:24px">Нет переводов</td></tr>'; return; }
   tbody.innerHTML = filtered.map(o => {
     const client = clients.find(c=>c.id===o.clientId);
     const cName  = client ? client.name : (o.clientId||'—');
-    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'
-      +'<td style="font-weight:600">'+cName+'</td>'
-      +'<td>'+(o.translator||'—')+'</td>'
-      +'<td>'+bdg(o.status)+'</td>'
-      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'
-      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'
-      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'
-      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'
-      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'
-        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)" title="Редактировать">✏</button>'
-        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)" title="Удалить">🗑</button>'
-      +'</td>'
-      +'</tr>';
+    const cNum   = client ? (client.num||'—') : '—';
+    const cTg    = client ? (client.tg||'') : '';
+    const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
+    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+cNum+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td>'+bdg(o.status)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
   }).join('');
 }
 
@@ -5020,23 +5031,14 @@ function renderNocrims(filter){
   const filtered = filter && filter !== 'all' ? arr.filter(o=>o.status===filter) : arr;
   const tbody = g('nocrims-tbody');
   if(!tbody) return;
-  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:24px">Нет справок</td></tr>'; return; }
+  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:24px">Нет справок</td></tr>'; return; }
   tbody.innerHTML = filtered.map(o => {
     const client = clients.find(c=>c.id===o.clientId);
     const cName  = client ? client.name : (o.clientId||'—');
-    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'
-      +'<td style="font-weight:600">'+cName+'</td>'
-      +'<td>'+(o.translator||'—')+'</td>'
-      +'<td>'+bdg(o.status)+'</td>'
-      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'
-      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'
-      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'
-      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'
-      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'
-        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)" title="Редактировать">✏</button>'
-        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)" title="Удалить">🗑</button>'
-      +'</td>'
-      +'</tr>';
+    const cNum   = client ? (client.num||'—') : '—';
+    const cTg    = client ? (client.tg||'') : '';
+    const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
+    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+cNum+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td>'+bdg(o.status)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
   }).join('');
 }
 
@@ -5234,11 +5236,27 @@ function editCitizenship(idx,e){
   fillLawyerSelect('ci-lawyer', c.lawyer||'');
 }
 async function saveCitizenship(idx){
-  if(_isSaving)return; _isSaving=true;
-  const _ciDrive=g('ci-drive'); const obj={num:g('ci-num').value,name:g('ci-name').value,lawyer:g('ci-lawyer').value,type:g('ci-type').value,date:g('ci-date').value,track:g('ci-track').value,stage:g('ci-stage').value,status:g('ci-status').value,updated:nowDMY(),comment:g('ci-comment').value,driveLink:_ciDrive?_ciDrive.value:undefined};
-  if(idx<0)citizenship.push(obj);else citizenship[idx]=obj;
-  _isSaving=false; closeModal();renderCitizenship();renderDash();toast(idx<0?'Добавлено ✓':'Гражданство обновлено ✓');
-  await (idx<0?apiPost('/citizenship',obj):apiPut('/citizenship/'+obj.num,obj));
+  if(_isSaving) return; _isSaving = true;
+  const name = (g('ci-name')||{}).value||'';
+  if(!name.trim()){ toast('Укажите ФИО клиента'); _isSaving=false; return; }
+  const obj = {
+    num:     (g('ci-num')   ||{}).value||'',
+    name:    name,
+    lawyer:  (g('ci-lawyer')||{}).value||'',
+    type:    (g('ci-type')  ||{}).value||'',
+    date:    (g('ci-date')  ||{}).value||'',
+    track:   (g('ci-track') ||{}).value||'',
+    stage:   (g('ci-stage') ||{}).value||'',
+    status:  (g('ci-status')||{}).value||'',
+    updated: nowDMY(),
+    comment: (g('ci-comment')||{}).value||'',
+    driveLink: (g('ci-drive')||{}).value||undefined
+  };
+  if(idx<0) citizenship.push(obj); else citizenship[idx]=obj;
+  _isSaving = false;
+  closeModal(); renderCitizenship(); renderDash();
+  toast(idx<0 ? 'Дело добавлено ✓' : 'Гражданство обновлено ✓');
+  await (idx<0 ? apiPost('/citizenship',obj) : apiPut('/citizenship/'+obj.num, obj));
   if(idx<0) _createServiceDriveFolder(obj.num, 'Гражданство');
 }
 
@@ -5391,14 +5409,7 @@ async function _createServiceDriveFolder(clientNum, serviceType) {
   } catch(e) {}
   return null;
 }
-async function saveCourt(idx){
-  if(_isSaving)return; _isSaving=true;
-  const _ctDrive=g('ct-drive'); const obj={num:g('ct-num').value,name:g('ct-name').value,lawyer:g('ct-lawyer').value,article:g('ct-art').value,date:g('ct-date').value,place:g('ct-place').value,stage:g('ct-stage').value,status:g('ct-status').value,updated:nowDMY(),comment:g('ct-comment').value,driveLink:_ctDrive?_ctDrive.value:undefined};
-  if(idx<0)courts.push(obj);else courts[idx]=obj;
-  _isSaving=false; closeModal();renderCourts();renderDash();toast(idx<0?'Дело добавлено ✓':'Суд обновлён ✓');
-  await (idx<0?apiPost('/courts',obj):apiPut('/courts/'+obj.num,obj));
-  if(idx<0) _createServiceDriveFolder(obj.num, 'Суд');
-}
+
 
 // ============================================================
 // CITIZENSHIP
@@ -5659,14 +5670,7 @@ function editCitizenship(idx,e){
   // Async-заполнение адвоката если usersData ещё не загружен
   fillLawyerSelect('ci-lawyer', c.lawyer||'');
 }
-async function saveCitizenship(idx){
-  if(_isSaving)return; _isSaving=true;
-  const _ciDrive=g('ci-drive'); const obj={num:g('ci-num').value,name:g('ci-name').value,lawyer:g('ci-lawyer').value,type:g('ci-type').value,date:g('ci-date').value,track:g('ci-track').value,stage:g('ci-stage').value,status:g('ci-status').value,updated:nowDMY(),comment:g('ci-comment').value,driveLink:_ciDrive?_ciDrive.value:undefined};
-  if(idx<0)citizenship.push(obj);else citizenship[idx]=obj;
-  _isSaving=false; closeModal();renderCitizenship();renderDash();toast(idx<0?'Добавлено ✓':'Гражданство обновлено ✓');
-  await (idx<0?apiPost('/citizenship',obj):apiPut('/citizenship/'+obj.num,obj));
-  if(idx<0) _createServiceDriveFolder(obj.num, 'Гражданство');
-}
+
 
 // ============================================================
 // RIGHTS
@@ -6313,102 +6317,24 @@ async function tgOpenChat(chatId, silent) {
   }
 }
 
-function tgFormatFileSize(bytes) {
-  if (!bytes) return '';
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
-  return (bytes/1024/1024).toFixed(1) + ' MB';
-}
-
-function tgRenderMedia(m) {
-  if (!m.mediaType) return '';
-  var isOut   = m.isOutgoing;
-  var fileUrl = m.fileId ? '/api/tg/file/' + encodeURIComponent(m.fileId) : m.fileUrl || '';
-  var token   = '';
-  try { token = sessionStorage.getItem('crm_srv_token')||''; } catch(e){}
-
-  if (m.mediaType === 'photo') {
-    return '<div style="margin-bottom:6px">'
-      + '<img src="'+fileUrl+'" alt="Фото" '
-      + 'style="max-width:100%;max-height:280px;border-radius:8px;cursor:pointer;display:block" '
-      + 'onerror="this.style.display=\'none\'" '
-      + 'onclick="tgOpenFile(\''+fileUrl+'\',\'photo\')" loading="lazy">'
-      + '</div>';
-  }
-
-  if (m.mediaType === 'sticker') {
-    return '<div style="font-size:48px;margin:4px 0">' + esc(m.fileName||'🎯') + '</div>';
-  }
-
-  if (m.mediaType === 'voice' || m.mediaType === 'audio') {
-    return '<div style="margin-bottom:6px">'
-      + '<audio controls style="max-width:220px;height:36px">'
-      + '<source src="'+fileUrl+'">'
-      + '</audio>'
-      + '</div>';
-  }
-
-  if (m.mediaType === 'video' || m.mediaType === 'video_note' || m.mediaType === 'animation') {
-    return '<div style="margin-bottom:6px">'
-      + '<video controls style="max-width:100%;max-height:220px;border-radius:8px">'
-      + '<source src="'+fileUrl+'">'
-      + '</video>'
-      + '</div>';
-  }
-
-  // Document / other file
-  var icon = '📎';
-  var mt = m.mimeType || '';
-  if (mt.includes('pdf')) icon = '📄';
-  else if (mt.includes('word') || mt.includes('doc')) icon = '📝';
-  else if (mt.includes('sheet') || mt.includes('excel') || mt.includes('xls')) icon = '📊';
-  else if (mt.includes('zip') || mt.includes('rar') || mt.includes('7z')) icon = '🗜️';
-  else if (mt.includes('image')) icon = '🖼️';
-
-  var size = m.fileSize ? ' · ' + tgFormatFileSize(m.fileSize) : '';
-  return '<a href="'+fileUrl+'" target="_blank" download="'+(m.fileName||'file')+'" '
-    + 'style="display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.08);border-radius:8px;padding:8px 10px;text-decoration:none;color:inherit;margin-bottom:6px;max-width:240px">'
-    + '<span style="font-size:24px">'+icon+'</span>'
-    + '<div style="min-width:0">'
-    + '<div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(m.fileName||'Файл')+'</div>'
-    + '<div style="font-size:10px;opacity:.7">'+esc(mt.split('/')[1]||'файл')+size+'</div>'
-    + '</div>'
-    + '</a>';
-}
-
-function tgOpenFile(url, type) {
-  if (type === 'photo') {
-    var w = window.open('', '_blank');
-    w.document.write('<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh">'
-      + '<img src="'+url+'" style="max-width:100%;max-height:100vh;object-fit:contain">'
-      + '</body></html>');
-    w.document.close();
-  } else {
-    window.open(url, '_blank');
-  }
-}
-
 function tgRenderMessages(messages) {
   var el = g('tg-messages');
   if (!el) return;
   el.innerHTML = messages.map(function(m) {
     var isOut = m.isOutgoing;
     var time  = new Date(m.ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+    var date  = new Date(m.ts).toLocaleDateString('ru-RU',{day:'2-digit',month:'short'});
+    // Format text with line breaks
     var text  = esc(m.text||'').replace(/\n/g,'<br>');
-    var media = tgRenderMedia(m);
-    var bubble_bg     = isOut ? 'var(--acc)'     : 'var(--surface)';
-    var bubble_color  = isOut ? '#fff'            : 'var(--t1)';
-    var bubble_radius = isOut ? '14px 14px 4px 14px' : '14px 14px 14px 4px';
-
-    return '<div style="display:flex;justify-content:'+(isOut?'flex-end':'flex-start')+';margin-bottom:2px">'
-      + '<div style="max-width:75%;background:'+bubble_bg+';color:'+bubble_color+';border-radius:'+bubble_radius+';padding:10px 13px;box-shadow:var(--sh);font-size:13.5px;line-height:1.5;word-break:break-word">'
+    return '<div style="display:flex;justify-content:'+(isOut?'flex-end':'flex-start')+'">'
+      + '<div style="max-width:72%;background:'+(isOut?'var(--acc)':'var(--surface)')+';color:'+(isOut?'#fff':'var(--t1)')+';border-radius:'+(isOut?'14px 14px 4px 14px':'14px 14px 14px 4px')+';padding:10px 13px;box-shadow:var(--sh);font-size:13.5px;line-height:1.5">'
         + '<div style="font-size:10px;font-weight:700;margin-bottom:4px;opacity:.7">'+esc(m.fromName||'')+'</div>'
-        + media
-        + (text ? '<div>'+text+'</div>' : '')
+        + '<div>'+text+'</div>'
         + '<div style="font-size:10px;text-align:right;margin-top:4px;opacity:.6">'+time+'</div>'
       + '</div>'
       + '</div>';
   }).join('');
+  // Scroll to bottom
   el.scrollTop = el.scrollHeight;
 }
 
@@ -7275,7 +7201,7 @@ function setOrdSvcFilter(v, el){
 }
 
 /** Создать новый заказ */
-function openNewOrderModal(prefillClientId){
+function openNewOrderModal(prefillClientId, prefillSvcType){
   const translators = getUsersByRole('translator');
   openModal(`
     <div class="mhdr">
@@ -7291,7 +7217,7 @@ function openNewOrderModal(prefillClientId){
       <div class="mf">
         <label class="mfl">${_t('ord_svc_type')}</label>
         <select class="ms" id="nord-svc" onchange="nordSvcChange(this.value)">
-          ${SVC_NEEDS_TRANSLATOR.map(s=>`<option value="${s}">${s}</option>`).join('')}
+          ${SVC_NEEDS_TRANSLATOR.map(s=>`<option value="${s}"${prefillSvcType===s?' selected':''} >${s}</option>`).join('')}
           <option value="__custom__">${_t('ord_svc_custom')}</option>
         </select>
       </div>
@@ -7321,7 +7247,7 @@ function openNewOrderModal(prefillClientId){
       <button class="btn btn-g" onclick="closeModal()">${_t('del_cancel')}</button>
       <button class="btn btn-p" onclick="saveNewOrder()">${_t('ord_create')}</button>
     </div>`);
-  nordSvcChange(SVC_NEEDS_TRANSLATOR[0]);
+  nordSvcChange(prefillSvcType || SVC_NEEDS_TRANSLATOR[0]);
 }
 
 function nordClientChange(val){
@@ -8601,6 +8527,10 @@ function openAddSpecTaskModal(role) {
 }
 
 async function saveSpecTask() {
+  // Защита от двойного сабмита
+  var btn = document.querySelector('#modal-spec-task .btn-p');
+  if (btn && btn.disabled) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Сохранение...'; }
   // Читать из searchable picker
   var stCpVal = document.getElementById('st-cp-val');
   if(stCpVal && stCpVal.value) {
@@ -8643,6 +8573,8 @@ async function saveSpecTask() {
     }
   } else {
     toast('Ошибка сохранения');
+    // Re-enable button on error so user can try again
+    if (btn) { btn.disabled = false; btn.textContent = 'Создать'; }
   }
 }
 
