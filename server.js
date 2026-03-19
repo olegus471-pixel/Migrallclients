@@ -13,8 +13,13 @@ const app     = express();
 // ── Переменные окружения ──────────────────────────────────────
 const GAS_URL = process.env.GAS_URL || '';
 
+// Only GAS_URL is exposed to frontend — all Sheet IDs stay server-side
 const ENV = {
-  GAS_URL:           GAS_URL,
+  GAS_URL: GAS_URL,
+};
+
+// Server-side config (never sent to browser)
+const SERVER_CONFIG = {
   SHEET_USERS:       process.env.SHEET_USERS        || '',
   SHEET_CLIENTS:     process.env.SHEET_CLIENTS      || '',
   SHEET_STATUSES:    process.env.SHEET_STATUSES     || '',
@@ -421,6 +426,16 @@ app.get('/api/tg/status', requireAuth, (req, res) => {
       });
     });
   });
+});
+
+// ── GET /api/env-status — config status (no values exposed) ────
+app.get('/api/env-status', requireAuth, (req, res) => {
+  const status = {};
+  Object.keys(SERVER_CONFIG).forEach(key => {
+    status[key] = SERVER_CONFIG[key] ? 'ok' : 'missing';
+  });
+  status['GAS_URL'] = GAS_URL ? 'ok' : 'missing';
+  res.json({ ok: true, status });
 });
 
 // ── GET /api/tg/unread — total unread count ───────────────────
