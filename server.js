@@ -225,8 +225,101 @@ const TG_TOKEN   = process.env.TG_BOT_TOKEN    || '';
 const TG_SECRET  = process.env.TG_WEBHOOK_SECRET || '';
 const TG_API     = 'https://api.telegram.org/bot';
 
-// In-memory chat store (replace with DB/Sheets for persistence)
+// In-memory chat store + GAS persistence
 const tgChats = {}; // { chatId: { info, messages[] } }
+
+// ── Persist message to GAS ────────────────────────────────────
+function persistTgMessage(chatInfo, msg) {
+  if (!GAS_URL) return;
+  const payload = {
+    id:           String(msg.id || Date.now()),
+    chatId:       String(chatInfo.id),
+    chatName:     chatInfo.name     || '',
+    chatUsername: chatInfo.username || '',
+    fromName:     msg.fromName      || '',
+    fromId:       String(msg.fromId || ''),
+    text:         msg.text          || '',
+    ts:           msg.ts            || Date.now(),
+    isOutgoing:   msg.isOutgoing ? 'TRUE' : 'FALSE',
+    isRead:       msg.isRead    ? 'TRUE' : 'FALSE',
+  };
+
+  const body = JSON.stringify(payload);
+  const gasUrl = GAS_URL + '?path=tg-messages';
+  const parsedUrl = url.parse(gasUrl);
+  const req = https.request({
+    hostname: parsedUrl.hostname,
+    path:     parsedUrl.path,
+    method:   'POST',
+    headers:  { 'Content-Type': 'text/plain', 'Content-Length': Buffer.byteLength(body) }
+  }, res => {
+    let data = '';
+    res.on('data', c => data += c);
+    res.on('end', () => {
+      try { const r = JSON.parse(data); if (!r.ok) console.warn('[TG persist] error:', r); }
+      catch(e) { console.warn('[TG persist] parse error:', e.message); }
+    });
+  });
+  req.on('error', e => console.warn('[TG persist] request error:', e.message));
+  req.write(body);
+  req.end();
+}
+
+// ── Load chat history from GAS on startup ─────────────────────
+function loadTgHistoryFromGAS() {
+  if (!GAS_URL) return;
+  const gasUrl    = GAS_URL + '?path=tg-messages';
+  const parsedUrl = url.parse(gasUrl);
+  https.get({ hostname: parsedUrl.hostname, path: parsedUrl.path }, res => {
+    let data = '';
+    res.on('data', c => data += c);
+    res.on('end', () => {
+      try {
+        const rows = JSON.parse(data);
+        if (!Array.isArray(rows)) return;
+        let loaded = 0;
+        rows.forEach(r => {
+          const chatId = String(r.chatId || '');
+          if (!chatId) return;
+          if (!tgChats[chatId]) {
+            tgChats[chatId] = {
+              id:       chatId,
+              name:     r.chatName     || 'Unknown',
+              username: r.chatUsername || '',
+              type:     'private',
+              messages: [],
+              unread:   0,
+              lastTs:   0,
+            };
+          }
+          const msg = {
+            id:         r.id,
+            ts:         Number(r.ts) || 0,
+            text:       r.text       || '',
+            fromName:   r.fromName   || '',
+            fromId:     r.fromId     || '',
+            isOutgoing: r.isOutgoing === 'TRUE' || r.isOutgoing === true,
+            isRead:     r.isRead     === 'TRUE' || r.isRead     === true,
+          };
+          tgChats[chatId].messages.push(msg);
+          if (msg.ts > tgChats[chatId].lastTs) tgChats[chatId].lastTs = msg.ts;
+          if (!msg.isOutgoing && !msg.isRead) tgChats[chatId].unread++;
+          loaded++;
+        });
+        // Sort messages by ts in each chat
+        Object.values(tgChats).forEach(c => {
+          c.messages.sort((a, b) => a.ts - b.ts);
+        });
+        console.log('[TG] Loaded', loaded, 'messages from GAS for', Object.keys(tgChats).length, 'chats');
+      } catch(e) {
+        console.warn('[TG] Failed to load history from GAS:', e.message);
+      }
+    });
+  }).on('error', e => console.warn('[TG] History load error:', e.message));
+}
+
+// Load history on startup (with delay to let server fully start)
+setTimeout(loadTgHistoryFromGAS, 3000);
 
 // ── Telegram API helper ────────────────────────────────────────
 function tgCall(method, params, cb) {
@@ -302,6 +395,9 @@ app.post('/tg/webhook', express.json(), (req, res) => {
     chat.messages.push(msgObj);
     chat.lastTs = msgObj.ts;
     if (!msgObj.isOutgoing) chat.unread++;
+
+    // Persist to GAS asynchronously (non-blocking)
+    persistTgMessage(chat, msgObj);
   }
 
   // Handle business connection events
@@ -334,9 +430,23 @@ app.get('/api/tg/messages/:chatId', requireAuth, (req, res) => {
   const chatId = req.params.chatId;
   const chat   = tgChats[chatId];
   if (!chat) return res.json({ ok: true, messages: [], chat: null });
-  // Mark as read
+  // Mark as read in memory
   chat.unread = 0;
   chat.messages.forEach(m => { m.isRead = true; });
+
+  // Mark as read in GAS (async, non-blocking)
+  if (GAS_URL) {
+    const gasUrl = GAS_URL + '?path=tg-messages&chatId=' + encodeURIComponent(chatId) + '&action=markread';
+    const body   = JSON.stringify({ action: 'markread', chatId });
+    const pu     = url.parse(GAS_URL + '?path=tg-messages');
+    const req    = https.request({
+      hostname: pu.hostname, path: pu.path, method: 'POST',
+      headers: { 'Content-Type': 'text/plain', 'Content-Length': Buffer.byteLength(body) }
+    }, r => r.resume());
+    req.on('error', () => {});
+    req.write(body); req.end();
+  }
+
   res.json({ ok: true, chat: { id: chat.id, name: chat.name, username: chat.username }, messages: chat.messages });
 });
 
@@ -377,17 +487,20 @@ app.post('/api/tg/send', express.json(), requireAuth, (req, res) => {
     if (err) return res.json({ error: err });
     if (!result.ok) return res.json({ error: result.description });
 
-    // Store sent message in chat
+    // Store sent message in chat + persist to GAS
     if (tgChats[chatId]) {
-      tgChats[chatId].messages.push({
+      const sentMsg = {
         id:         result.result.message_id,
         ts:         Date.now(),
         text:       fullText,
         fromName:   managerName || 'MigrAll',
+        fromId:     '',
         isOutgoing: true,
         isRead:     true,
-      });
+      };
+      tgChats[chatId].messages.push(sentMsg);
       tgChats[chatId].lastTs = Date.now();
+      persistTgMessage(tgChats[chatId], sentMsg);
     }
     res.json({ ok: true, messageId: result.result.message_id });
   });
