@@ -288,12 +288,32 @@ function renderAll() {
   const isTranslator = currentUser.role === 'translator';
   const myName  = (currentUser.name  || '').trim();
   const myEmail = (currentUser.email || '').trim().toLowerCase();
+  console.log('[translator] renderAll: name=', myName, 'email=', myEmail, 'isTranslator=', isTranslator);
+  console.log('[translator] allTasks:', allTasks.length, 'allOrders:', allOrders.length, 'allClients:', allClients.length);
+  if (allTasks.length) console.log('[translator] sample task assignees:', allTasks.slice(0,3).map(t=>t.assignee));
+  if (allOrders.length) console.log('[translator] sample order translators:', allOrders.slice(0,3).map(o=>o.translator));
 
   function matchesMe(val) {
     if (!val) return false;
-    const v = String(val).trim();
-    return v === myName || v.toLowerCase() === myEmail ||
-           (myName && v.toLowerCase() === myName.toLowerCase());
+    const v = String(val).trim().toLowerCase();
+    const n = myName.toLowerCase();
+    const e = myEmail.toLowerCase();
+    if (!v || !n) return false;
+    // Exact match
+    if (v === n || v === e) return true;
+    // Partial: 'translator' vs 'Test Translator' or vice versa
+    if (n.startsWith(v + ' ') || v.startsWith(n + ' ')) return true;
+    if (n === v) return true;
+    // Email local part: 'translator@gmail.com' → 'translator'
+    const emailLocal = e.split('@')[0];
+    if (emailLocal && emailLocal.length > 2 && (v === emailLocal || n === emailLocal)) return true;
+    // Any word in name contains val or vice versa (for short names like 'translator')
+    const nWords = n.split(/\s+/);
+    if (nWords.some(w => w.length > 2 && (w === v || v === w))) return true;
+    // Check if val is contained in name or vice versa (for role-based names)
+    if (v.length > 3 && n.includes(v)) return true;
+    if (n.length > 3 && v.includes(n)) return true;
+    return false;
   }
 
   let myTasks = isTranslator
