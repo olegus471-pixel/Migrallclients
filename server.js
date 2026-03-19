@@ -162,3 +162,218 @@ app.listen(PORT, '0.0.0.0', () => {
   if (RENDER_URL) console.log('[keepalive] Self-ping enabled:', RENDER_URL + '/ping');
   else console.log('[keepalive] Set RENDER_EXTERNAL_URL env var to enable self-ping');
 });
+
+// ═══════════════════════════════════════════════════════════════
+// TELEGRAM BUSINESS INTEGRATION
+// ═══════════════════════════════════════════════════════════════
+const TG_TOKEN   = process.env.TG_BOT_TOKEN    || '';
+const TG_SECRET  = process.env.TG_WEBHOOK_SECRET || '';
+const TG_API     = 'https://api.telegram.org/bot';
+
+// In-memory chat store (replace with DB/Sheets for persistence)
+const tgChats = {}; // { chatId: { info, messages[] } }
+
+// ── Telegram API helper ────────────────────────────────────────
+function tgCall(method, params, cb) {
+  if (!TG_TOKEN) return cb && cb({ error: 'TG_BOT_TOKEN not set' });
+  const body = JSON.stringify(params);
+  const parsedUrl = url.parse(TG_API + TG_TOKEN + '/' + method);
+  const req = https.request({
+    hostname: parsedUrl.hostname,
+    path:     parsedUrl.path,
+    method:   'POST',
+    headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+  }, res => {
+    let data = '';
+    res.on('data', c => data += c);
+    res.on('end', () => {
+      try { cb && cb(null, JSON.parse(data)); }
+      catch(e) { cb && cb({ error: data }); }
+    });
+  });
+  req.on('error', e => cb && cb({ error: e.message }));
+  req.write(body);
+  req.end();
+}
+
+// ── Webhook: receive messages from Telegram ────────────────────
+app.post('/tg/webhook', express.json(), (req, res) => {
+  // Verify secret token
+  const secret = req.headers['x-telegram-bot-api-secret-token'];
+  if (TG_SECRET && secret !== TG_SECRET) {
+    return res.sendStatus(403);
+  }
+
+  const update = req.body;
+  console.log('[TG webhook]', JSON.stringify(update).slice(0, 200));
+
+  // Handle business messages (from connected business account)
+  const msg = update.message
+    || update.business_message
+    || update.edited_business_message
+    || update.edited_message;
+
+  if (msg) {
+    const chatId   = String(msg.chat.id);
+    const from     = msg.from || {};
+    const isBot    = from.is_bot;
+    const isBusinessConn = !!update.business_message || !!update.edited_business_message;
+
+    if (!tgChats[chatId]) {
+      tgChats[chatId] = {
+        id:       chatId,
+        name:     msg.chat.first_name
+                  ? (msg.chat.first_name + ' ' + (msg.chat.last_name||'')).trim()
+                  : (msg.chat.title || msg.chat.username || 'Unknown'),
+        username: msg.chat.username || '',
+        type:     msg.chat.type,
+        messages: [],
+        unread:   0,
+        lastTs:   0,
+      };
+    }
+
+    const chat = tgChats[chatId];
+    const msgObj = {
+      id:        msg.message_id,
+      ts:        msg.date * 1000,
+      text:      msg.text || msg.caption || '[медиа]',
+      fromName:  from.first_name ? (from.first_name + ' ' + (from.last_name||'')).trim() : 'Business',
+      fromId:    from.id,
+      isOutgoing: isBot || (from.id && String(from.id) === String(msg.chat.id) ? false : isBusinessConn && from.is_bot),
+      isRead:    false,
+    };
+
+    chat.messages.push(msgObj);
+    chat.lastTs = msgObj.ts;
+    if (!msgObj.isOutgoing) chat.unread++;
+  }
+
+  // Handle business connection events
+  if (update.business_connection) {
+    console.log('[TG] Business connection:', update.business_connection.id);
+  }
+
+  res.sendStatus(200);
+});
+
+// ── GET /api/tg/chats — list all chats ────────────────────────
+app.get('/api/tg/chats', (req, res) => {
+  if (!TG_TOKEN) return res.json({ error: 'TG_BOT_TOKEN not configured' });
+  const list = Object.values(tgChats)
+    .sort((a, b) => b.lastTs - a.lastTs)
+    .map(c => ({
+      id:       c.id,
+      name:     c.name,
+      username: c.username,
+      type:     c.type,
+      unread:   c.unread,
+      lastTs:   c.lastTs,
+      lastMsg:  c.messages.length ? c.messages[c.messages.length - 1].text.slice(0, 80) : '',
+    }));
+  res.json({ ok: true, chats: list, total: list.length });
+});
+
+// ── GET /api/tg/messages/:chatId ─────────────────────────────
+app.get('/api/tg/messages/:chatId', (req, res) => {
+  const chatId = req.params.chatId;
+  const chat   = tgChats[chatId];
+  if (!chat) return res.json({ ok: true, messages: [], chat: null });
+  // Mark as read
+  chat.unread = 0;
+  chat.messages.forEach(m => { m.isRead = true; });
+  res.json({ ok: true, chat: { id: chat.id, name: chat.name, username: chat.username }, messages: chat.messages });
+});
+
+// ── POST /api/tg/send — send message with signature ──────────
+app.post('/api/tg/send', express.json(), (req, res) => {
+  if (!TG_TOKEN) return res.json({ error: 'TG_BOT_TOKEN not configured' });
+  const { chatId, text, managerName, managerRole, businessConnectionId } = req.body;
+  if (!chatId || !text) return res.json({ error: 'chatId and text required' });
+
+  // Build signature
+  const roleLabel = managerRole === 'admin' ? 'Администратор'
+    : managerRole === 'manager' ? 'Менеджер'
+    : managerRole === 'lawyer' ? 'Адвокат'
+    : managerRole === 'translator' ? 'Переводчик' : '';
+  const signature = managerName
+    ? `\n\n— ${managerName}${roleLabel ? ', ' + roleLabel : ''}\nMigrAll`
+    : '';
+  const fullText = text + signature;
+
+  const params = {
+    chat_id: chatId,
+    text:    fullText,
+    parse_mode: 'HTML',
+  };
+  if (businessConnectionId) {
+    params.business_connection_id = businessConnectionId;
+  }
+
+  // Send "typing..." indicator before message (mimics real human)
+  const typingDelay = Math.min(1500, fullText.length * 30); // ~30ms per char, max 1.5s
+  tgCall('sendChatAction', { chat_id: chatId, action: 'typing',
+    ...(businessConnectionId ? { business_connection_id: businessConnectionId } : {}) }, () => {});
+  
+  setTimeout(() => {
+  tgCall('sendMessage', params, (err, result) => {
+    if (err) return res.json({ error: err });
+    if (!result.ok) return res.json({ error: result.description });
+
+    // Store sent message in chat
+    if (tgChats[chatId]) {
+      tgChats[chatId].messages.push({
+        id:         result.result.message_id,
+        ts:         Date.now(),
+        text:       fullText,
+        fromName:   managerName || 'MigrAll',
+        isOutgoing: true,
+        isRead:     true,
+      });
+      tgChats[chatId].lastTs = Date.now();
+    }
+    res.json({ ok: true, messageId: result.result.message_id });
+  });
+  }, typingDelay); // end setTimeout
+});
+
+// ── POST /api/tg/setup-webhook — register webhook ────────────
+app.post('/api/tg/setup-webhook', express.json(), (req, res) => {
+  if (!TG_TOKEN) return res.json({ error: 'TG_BOT_TOKEN not set' });
+  const webhookUrl = req.body.url || (process.env.RENDER_EXTERNAL_URL + '/tg/webhook');
+  const params = {
+    url:                  webhookUrl,
+    allowed_updates:      ['message','business_message','edited_business_message','business_connection'],
+    drop_pending_updates: true,
+  };
+  if (TG_SECRET) params.secret_token = TG_SECRET;
+  tgCall('setWebhook', params, (err, result) => {
+    if (err) return res.json({ error: err });
+    res.json(result);
+  });
+});
+
+// ── GET /api/tg/status — bot info + webhook info ──────────────
+app.get('/api/tg/status', (req, res) => {
+  if (!TG_TOKEN) return res.json({ error: 'TG_BOT_TOKEN not set', configured: false });
+  tgCall('getMe', {}, (err, meResult) => {
+    if (err) return res.json({ error: err, configured: false });
+    tgCall('getWebhookInfo', {}, (err2, whResult) => {
+      res.json({
+        ok:         true,
+        configured: true,
+        bot:        meResult.result,
+        webhook:    whResult?.result,
+        chatsCount: Object.keys(tgChats).length,
+      });
+    });
+  });
+});
+
+// ── GET /api/tg/unread — total unread count ───────────────────
+app.get('/api/tg/unread', (req, res) => {
+  const total = Object.values(tgChats).reduce((s, c) => s + c.unread, 0);
+  res.json({ ok: true, unread: total });
+});
+
+console.log('[TG]', TG_TOKEN ? 'Bot token configured' : 'WARNING: TG_BOT_TOKEN not set');
