@@ -4604,6 +4604,16 @@ function loginAs(userOrLogin){
   }
   currentUser = user;
   try{ localStorage.setItem('crm_user', JSON.stringify(user)); }catch(e){}
+  // Create server-side session for API auth (security)
+  fetch('/auth/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: user.email||user.login||'', name: user.name||'', role: user.role||'manager' })
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(d.ok && d.token) {
+      try { sessionStorage.setItem('crm_srv_token', d.token); } catch(e){}
+    }
+  }).catch(function(){});
 
   // Скрыть экран входа
   const ov = g('auth-overlay'); if(ov) ov.style.display='none';
@@ -4636,6 +4646,10 @@ function loginAs(userOrLogin){
 
 function doLogout(){
   try{ localStorage.removeItem('crm_user'); }catch(e){}
+  // Destroy server session
+  var srvToken = '';
+  try { srvToken = sessionStorage.getItem('crm_srv_token')||''; sessionStorage.removeItem('crm_srv_token'); } catch(e){}
+  if(srvToken) fetch('/auth/session', { method:'DELETE', headers:{'x-crm-token': srvToken} }).catch(function(){});
   currentUser = null;
   closeUserMenu();
   // Сбросить форму и показать экран входа
@@ -8532,6 +8546,27 @@ function renderAll(){
 // ═══════════════════════════════════════════════════════════════
 // TELEGRAM MESSENGER
 // ═══════════════════════════════════════════════════════════════
+
+function tgAuthHeaders() {
+  var token = '';
+  try { token = sessionStorage.getItem('crm_srv_token') || ''; } catch(e){}
+  return token ? { 'Content-Type': 'application/json', 'x-crm-token': token }
+               : { 'Content-Type': 'application/json' };
+}
+
+function tgFetch(url, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({}, opts.headers || {}, tgAuthHeaders());
+  return fetch(url, opts).then(function(r) {
+    if (r.status === 401) {
+      toast('⚠️ Сессия истекла, войдите заново');
+      doLogout();
+      throw new Error('Unauthorized');
+    }
+    return r.json();
+  });
+}
+// ═══════════════════════════════════════════════════════════════
 var _tgCurrentChatId = null;
 var _tgAllChats      = [];
 var _tgPollTimer     = null;
@@ -8539,9 +8574,7 @@ var _tgPollTimer     = null;
 // ── Load chats ────────────────────────────────────────────────
 async function tgLoadChats() {
   try {
-    const res = await fetch('/api/tg/chats');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
+    const data = await tgFetch('/api/tg/chats');
     if (data.error) { tgSetStatus('error'); return; }
     tgSetStatus('ok');
     _tgAllChats = data.chats || [];
@@ -8598,8 +8631,7 @@ async function tgOpenChat(chatId, silent) {
     el.style.background = '';
   });
   try {
-    const res = await fetch('/api/tg/messages/' + chatId);
-    const data = await res.json();
+    const data = await tgFetch('/api/tg/messages/' + chatId);
     if (!data.ok) return;
     const chat = data.chat;
     // Show chat view
@@ -8663,17 +8695,10 @@ async function tgSendMessage() {
   inp.disabled = true;
   try {
     var user = currentUser || {};
-    const res = await fetch('/api/tg/send', {
+    const data = await tgFetch('/api/tg/send', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chatId:      _tgCurrentChatId,
-        text:        text,
-        managerName: user.name || user.login || '',
-        managerRole: user.role || '',
-      })
+      body: JSON.stringify({ chatId: _tgCurrentChatId, text: text })
     });
-    const data = await res.json();
     if (data.ok) {
       tgOpenChat(_tgCurrentChatId, true);
     } else {
@@ -8729,8 +8754,7 @@ async function tgCheckStatus() {
   var block = g('tg-status-block');
   if (block) block.textContent = 'Проверка...';
   try {
-    const res = await fetch('/api/tg/status');
-    const data = await res.json();
+    const data = await tgFetch('/api/tg/status');
     if (block) {
       if (!data.configured) {
         block.innerHTML = '❌ Токен не настроен. Добавьте <b>TG_BOT_TOKEN</b> в Render Environment Variables.';
@@ -8754,12 +8778,10 @@ async function tgSetupWebhook() {
   var block = g('tg-status-block');
   if (block) block.textContent = 'Устанавливаю webhook...';
   try {
-    const res = await fetch('/api/tg/setup-webhook', {
+    const data = await tgFetch('/api/tg/setup-webhook', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: webhookUrl })
     });
-    const data = await res.json();
     if (block) {
       if (data.ok) {
         block.innerHTML = '✅ Webhook установлен!<br>' + JSON.stringify(data, null, 2);
