@@ -330,6 +330,11 @@ function serveHtml(file, res) {
 // ═══════════════════════════════════════════════════════════════
 const TG_TOKEN   = process.env.TG_BOT_TOKEN    || '';
 const TG_SECRET  = process.env.TG_WEBHOOK_SECRET || '';
+if (!TG_SECRET) {
+  console.warn('⚠️  WARNING: TG_WEBHOOK_SECRET is not set!');
+  console.warn('⚠️  Anyone can send fake messages to /tg/webhook');
+  console.warn('⚠️  Add TG_WEBHOOK_SECRET to Render Environment Variables');
+}
 const TG_API     = 'https://api.telegram.org/bot';
 
 // In-memory chat store + GAS persistence
@@ -537,9 +542,13 @@ function tgCall(method, params, cb) {
 
 // ── Webhook: receive messages from Telegram ────────────────────
 app.post('/tg/webhook', express.json(), (req, res) => {
-  // Verify secret token
-  const secret = req.headers['x-telegram-bot-api-secret-token'];
-  if (TG_SECRET && secret !== TG_SECRET) {
+  // Verify secret token — always required if configured
+  const secret = req.headers['x-telegram-bot-api-secret-token'] || '';
+  if (!TG_SECRET) {
+    // No secret configured — log warning but accept (dev mode)
+    console.warn('[TG webhook] No secret configured — accepting without verification');
+  } else if (secret !== TG_SECRET) {
+    console.warn('[TG webhook] Invalid secret from', req.ip, '— rejected');
     return res.sendStatus(403);
   }
 
