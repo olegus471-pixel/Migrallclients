@@ -803,6 +803,76 @@ app.get('/api/env-status', requireAuth, (req, res) => {
   res.json({ ok: true, status });
 });
 
+// ── POST /api/tg/import — bulk import from MTProto script ───────
+// Accepts single message, adds to in-memory store + persists to GAS
+app.post('/api/tg/import', express.json(), requireAuth, (req, res) => {
+  const m = req.body;
+  if (!m || !m.chatId || !m.id) {
+    return res.status(400).json({ error: 'chatId and id required' });
+  }
+
+  const chatId = String(m.chatId);
+
+  // Init chat if not exists
+  if (!tgChats[chatId]) {
+    tgChats[chatId] = {
+      id:       chatId,
+      name:     m.chatName     || 'Unknown',
+      username: m.chatUsername || '',
+      type:     'private',
+      messages: [],
+      unread:   0,
+      lastTs:   0,
+    };
+  }
+
+  const chat = tgChats[chatId];
+
+  // Check for duplicate by message id
+  if (chat.messages.some(msg => String(msg.id) === String(m.id))) {
+    return res.json({ ok: true, skipped: true });
+  }
+
+  const msgObj = {
+    id:         m.id,
+    ts:         Number(m.ts) || 0,
+    text:       m.text        || '',
+    fromName:   m.fromName    || '',
+    fromId:     m.fromId      || '',
+    isOutgoing: m.isOutgoing  === true || m.isOutgoing === 'TRUE',
+    isRead:     true,
+    mediaType:  m.mediaType   || null,
+    fileId:     m.fileId      || null,
+    fileName:   m.fileName    || null,
+    mimeType:   m.mimeType    || null,
+    fileSize:   m.fileSize    ? Number(m.fileSize) : null,
+    fileUrl:    m.fileUrl     || null,
+  };
+
+  chat.messages.push(msgObj);
+
+  // Keep messages sorted by timestamp
+  if (msgObj.ts > chat.lastTs) {
+    chat.lastTs = msgObj.ts;
+  }
+
+  // Persist to GAS
+  persistTgMessage(chat, msgObj);
+
+  res.json({ ok: true, imported: true });
+});
+
+// ── POST /api/tg/enrich — set CRM name for a chat ───────────────
+// Called when CRM matches a chat username to a client record
+app.post('/api/tg/enrich', express.json(), requireAuth, (req, res) => {
+  const { chatId, crmName } = req.body || {};
+  if (!chatId || !crmName) return res.json({ error: 'chatId and crmName required' });
+  if (tgChats[chatId]) {
+    tgChats[chatId].crmName = crmName;
+  }
+  res.json({ ok: true });
+});
+
 // ── GET /api/tg/unread — total unread count ───────────────────
 app.get('/api/tg/unread', requireAuth, (req, res) => {
   const total = Object.values(tgChats).reduce((s, c) => s + c.unread, 0);
