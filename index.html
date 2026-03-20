@@ -2154,7 +2154,24 @@ function initAuth(){
   // Check localStorage for saved session
   try{
     const saved = localStorage.getItem('crm_user');
-    if(saved){const u=JSON.parse(saved);loginAs(u);return;}
+    if(saved){
+      const u = JSON.parse(saved);
+      // Recreate server session (token may have expired or been cleared)
+      var _token = '';
+      try { _token = sessionStorage.getItem('crm_srv_token') || localStorage.getItem('crm_srv_token') || ''; } catch(e){}
+      // Always refresh session to get valid token
+      fetch('/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: u.email||'', name: u.name||'', role: u.role||'manager' })
+      }).then(function(r){ return r.json(); }).then(function(d){
+        if(d.ok && d.token){
+          try{ sessionStorage.setItem('crm_srv_token', d.token); localStorage.setItem('crm_srv_token', d.token); }catch(e){}
+        }
+      }).catch(function(){});
+      loginAs(u);
+      return;
+    }
   }catch(e){}
   
   const ov=g('auth-overlay'); if(ov) ov.style.display='flex';
@@ -2206,7 +2223,7 @@ async function doLogin(){
         body: JSON.stringify({ email: data.user.email||'', name: data.user.name||'', role: data.user.role||'manager' })
       }).then(function(r){ return r.json(); }).then(function(d){
         if(d.ok && d.token) {
-          try { sessionStorage.setItem('crm_srv_token', d.token); } catch(e){}
+          try { sessionStorage.setItem('crm_srv_token', d.token); localStorage.setItem('crm_srv_token', d.token); } catch(e){}
         }
       }).catch(function(){});
       loginAs(data.user);
@@ -2344,7 +2361,7 @@ function loginAs(userOrLogin){
     body: JSON.stringify({ email: user.email||user.login||'', name: user.name||'', role: user.role||'manager' })
   }).then(function(r){ return r.json(); }).then(function(d){
     if(d.ok && d.token) {
-      try { sessionStorage.setItem('crm_srv_token', d.token); } catch(e){}
+      try { sessionStorage.setItem('crm_srv_token', d.token); localStorage.setItem('crm_srv_token', d.token); } catch(e){}
     }
   }).catch(function(){});
 
@@ -2381,7 +2398,7 @@ function doLogout(){
   try{ localStorage.removeItem('crm_user'); }catch(e){}
   // Destroy server session
   var srvToken = '';
-  try { srvToken = sessionStorage.getItem('crm_srv_token')||''; sessionStorage.removeItem('crm_srv_token'); } catch(e){}
+  try { srvToken = sessionStorage.getItem('crm_srv_token') || localStorage.getItem('crm_srv_token') || ''; sessionStorage.removeItem('crm_srv_token'); localStorage.removeItem('crm_srv_token'); } catch(e){}
   if(srvToken) fetch('/auth/session', { method:'DELETE', headers:{'x-crm-token': srvToken} }).catch(function(){});
   currentUser = null;
   closeUserMenu();
@@ -6262,7 +6279,11 @@ function renderAll(){
 
 function tgAuthHeaders() {
   var token = '';
-  try { token = sessionStorage.getItem('crm_srv_token') || ''; } catch(e){}
+  try {
+    // Check sessionStorage first, then localStorage fallback
+    token = sessionStorage.getItem('crm_srv_token') || '';
+    if (!token) token = localStorage.getItem('crm_srv_token') || '';
+  } catch(e){}
   return token ? { 'Content-Type': 'application/json', 'x-crm-token': token }
                : { 'Content-Type': 'application/json' };
 }
