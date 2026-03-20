@@ -6337,6 +6337,59 @@ async function tgOpenChat(chatId, silent) {
   }
 }
 
+function tgFormatFileSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1048576).toFixed(1) + ' MB';
+}
+
+function tgOpenFile(url) { window.open(url, '_blank'); }
+
+function tgRenderMedia(m) {
+  if (!m.mediaType) return '';
+  var isRawId = m.fileId && String(m.fileId).startsWith('raw:');
+  var fileUrl = (!isRawId && m.fileId)
+    ? '/api/tg/file/' + encodeURIComponent(m.fileId)
+    : (m.fileUrl || '');
+
+  // Raw IDs from MTProto import — cannot fetch via Bot API
+  if (isRawId && !m.fileUrl) {
+    var _icon = m.mediaType==='photo'?'🖼️':m.mediaType==='voice'?'🎤':m.mediaType==='video'?'🎥':'📎';
+    return '<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.06);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--t3);margin-bottom:4px">'
+      +_icon+' '+esc(m.fileName||m.mediaType||'файл')
+      +' <span style="font-size:10px">(история)</span></div>';
+  }
+  if (!fileUrl) return '';
+
+  if (m.mediaType === 'photo') {
+    return '<div style="margin-bottom:6px"><img src="'+fileUrl+'" alt="Фото" style="max-width:100%;max-height:260px;border-radius:8px;cursor:pointer;display:block" onclick="tgOpenFile(''+fileUrl+'')" onerror="this.parentElement.innerHTML='🖼️ Фото (недоступно)'" loading="lazy"></div>';
+  }
+  if (m.mediaType === 'voice' || m.mediaType === 'audio') {
+    return '<div style="margin-bottom:6px"><audio controls style="max-width:220px;height:36px"><source src="'+fileUrl+'"></audio></div>';
+  }
+  if (m.mediaType === 'video' || m.mediaType === 'video_note' || m.mediaType === 'animation') {
+    return '<div style="margin-bottom:6px"><video controls style="max-width:100%;max-height:220px;border-radius:8px"><source src="'+fileUrl+'"></video></div>';
+  }
+  if (m.mediaType === 'sticker') {
+    return '<div style="font-size:48px;margin:4px 0">'+esc(m.fileName||'🎯')+'</div>';
+  }
+  // Document / file
+  var ficon = '📎';
+  var mt = m.mimeType || '';
+  if (mt.includes('pdf')) ficon='📄';
+  else if (mt.includes('word')||mt.includes('doc')) ficon='📝';
+  else if (mt.includes('sheet')||mt.includes('excel')) ficon='📊';
+  else if (mt.includes('zip')||mt.includes('rar')) ficon='🗜️';
+  else if (mt.includes('image')) ficon='🖼️';
+  var fsize = m.fileSize ? ' · '+tgFormatFileSize(m.fileSize) : '';
+  return '<a href="'+fileUrl+'" target="_blank" download="'+(m.fileName||'file')+'" '
+    +'style="display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.08);border-radius:8px;padding:8px 10px;text-decoration:none;color:inherit;margin-bottom:6px;max-width:240px">'
+    +'<span style="font-size:22px">'+ficon+'</span>'
+    +'<div style="min-width:0"><div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(m.fileName||'Файл')+'</div>'
+    +'<div style="font-size:10px;opacity:.7">'+esc(mt.split('/')[1]||'файл')+fsize+'</div></div></a>';
+}
+
 function tgRenderMessages(messages) {
   var el = g('tg-messages');
   if (!el) return;
@@ -6346,10 +6399,12 @@ function tgRenderMessages(messages) {
     var date  = new Date(m.ts).toLocaleDateString('ru-RU',{day:'2-digit',month:'short'});
     // Format text with line breaks
     var text  = esc(m.text||'').replace(/\n/g,'<br>');
-    return '<div style="display:flex;justify-content:'+(isOut?'flex-end':'flex-start')+'">'
-      + '<div style="max-width:72%;background:'+(isOut?'var(--acc)':'var(--surface)')+';color:'+(isOut?'#fff':'var(--t1)')+';border-radius:'+(isOut?'14px 14px 4px 14px':'14px 14px 14px 4px')+';padding:10px 13px;box-shadow:var(--sh);font-size:13.5px;line-height:1.5">'
+    var media = tgRenderMedia(m);
+    return '<div style="display:flex;justify-content:'+(isOut?'flex-end':'flex-start')+';margin-bottom:2px">'
+      + '<div style="max-width:75%;background:'+(isOut?'var(--acc)':'var(--surface)')+';color:'+(isOut?'#fff':'var(--t1)')+';border-radius:'+(isOut?'14px 14px 4px 14px':'14px 14px 14px 4px')+';padding:10px 13px;box-shadow:var(--sh);font-size:13.5px;line-height:1.5;word-break:break-word">'
         + '<div style="font-size:10px;font-weight:700;margin-bottom:4px;opacity:.7">'+esc(m.fromName||'')+'</div>'
-        + '<div>'+text+'</div>'
+        + media
+        + (text ? '<div>'+text+'</div>' : '')
         + '<div style="font-size:10px;text-align:right;margin-top:4px;opacity:.6">'+time+'</div>'
       + '</div>'
       + '</div>';
