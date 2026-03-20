@@ -1752,7 +1752,15 @@ CRM ↔ Backend (Render) ↔ Google Sheets
 // ─── API CONFIG ─────────────────────────────────────────────
 // Установить реальный URL после деплоя Apps Script:
 // window.__ENV инжектируется сервером (server.js) из переменных окружения Render.com
-// window.API_BASE = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+// window.const _isFileMode = window.location.protocol === 'file:';
+let API_BASE;
+if (_isFileMode) {
+  API_BASE = (__ENV && __ENV.GAS_URL) ? __ENV.GAS_URL
+    : (()=>{ try{ return localStorage.getItem('crm_gas_url')||''; }catch(e){ return ''; } })()
+    || '';
+} else {
+  API_BASE = '__PROXY__'; // Use server.js proxy — GAS URL never exposed to browser
+}
 const __ENV = window.__ENV || {};
 
 // ── FIX: Кнопка "Назад" и "Обновить" не сбрасывают логин ──
@@ -1785,20 +1793,38 @@ async function apiFetch(path, options={}){
   if(!API_BASE) return null;
   try {
     let url, fetchOpts;
-    // Кодируем path без слэшей чтобы GAS мог разобрать resource/id
-    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
-    if(!options.method || options.method==='GET'){
-      url = API_BASE + '?path=' + encodedPath;
-      fetchOpts = { method:'GET' };
+    const cleanPath = path.replace(/^\//, '');
+    const encodedPath = cleanPath.split('/').map(encodeURIComponent).join('/');
+
+    if (API_BASE === '__PROXY__') {
+      // Production: route through server.js proxy
+      if(!options.method || options.method==='GET'){
+        url = '/api/' + encodedPath;
+        fetchOpts = { method:'GET' };
+      } else {
+        url = '/api/' + encodedPath;
+        const body = options.body ? JSON.parse(options.body) : {};
+        fetchOpts = {
+          method: options.method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        };
+      }
     } else {
-      url = API_BASE + '?path=' + encodedPath;
-      const body = options.body ? JSON.parse(options.body) : {};
-      if(options.method !== 'POST') body._method = options.method;
-      fetchOpts = {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(body),
-      };
+      // Local dev: direct GAS call
+      if(!options.method || options.method==='GET'){
+        url = API_BASE + '?path=' + encodedPath;
+        fetchOpts = { method:'GET' };
+      } else {
+        url = API_BASE + '?path=' + encodedPath;
+        const body = options.body ? JSON.parse(options.body) : {};
+        if(options.method !== 'POST') body._method = options.method;
+        fetchOpts = {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(body),
+        };
+      }
     }
     const res = await fetch(url, fetchOpts);
     if(!res.ok) throw new Error('HTTP ' + res.status);
@@ -1810,6 +1836,30 @@ async function apiFetch(path, options={}){
     console.warn('API error:', path, e.message);
     return null;
   }
+}
+
+async function authFetch(action, body) {
+  const bodyStr = JSON.stringify({ action, ...body });
+  let res;
+  if (API_BASE === '__PROXY__') {
+    res = await fetch('/api/auth/' + action, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: bodyStr,
+    });
+  } else {
+    res = await fetch((API_BASE||'') + '?path=auth&action=' + action, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: bodyStr,
+    });
+  }
+  if (res.status === 429) {
+    const retryAfter = res.headers.get('Retry-After') || 60;
+    const mins = Math.ceil(retryAfter / 60);
+    return { error: 'Слишком много попыток. Подождите ' + mins + ' мин.', blocked: true, code: 429 };
+  }
+  return res.json();
 }
 
 async function apiPut(path, data){
@@ -2145,13 +2195,20 @@ async function doLogin(){
   }
   const btn = g('auth-btn-login');
   btn.disabled=true; btn.textContent='Проверка...';
-  fetch(API_BASE + '?path=auth&action=login', {
-    method:'POST', headers:{'Content-Type':'text/plain'},
-    body: JSON.stringify({action:'login', email:email, password:pass})
-  }).then(function(r){ return r.json(); }).then(function(data){
+  authFetch('login', {email:email, password:pass}).then(function(data){
     btn.disabled=false; btn.textContent='Войти →';
     if(data.ok && data.user){
       loginAs._fromForm = true;
+      // Create server session for API auth
+      fetch('/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.user.email||'', name: data.user.name||'', role: data.user.role||'manager' })
+      }).then(function(r){ return r.json(); }).then(function(d){
+        if(d.ok && d.token) {
+          try { sessionStorage.setItem('crm_srv_token', d.token); } catch(e){}
+        }
+      }).catch(function(){});
       loginAs(data.user);
     } else if(data.blocked){
       g('auth-attempts').style.display='none';
@@ -2189,10 +2246,7 @@ function sendResetCode(){
   if(!email||!email.includes('@')){ showAuthErr('Введите корректный email'); return; }
   const btn = g('auth-btn-reset');
   btn.disabled=true; btn.textContent='Отправка...';
-  fetch(API_BASE + '?path=auth&action=request_otp', {
-    method:'POST', headers:{'Content-Type':'text/plain'},
-    body: JSON.stringify({action:'request_otp', email:email})
-  }).then(function(r){ return r.json(); }).then(function(data){
+  authFetch('request_otp', {email:email}).then(function(data){
     btn.disabled=false; btn.textContent='Отправить код →';
     if(data.ok){
       g('auth-step-reset').style.display='none';
@@ -2217,10 +2271,7 @@ function verifyOtpAndSetPass(){
   if(pass1!==pass2){ showAuthErr('Пароли не совпадают'); return; }
   const btn = g('auth-btn-verify');
   btn.disabled=true; btn.textContent='Сохранение...';
-  fetch(API_BASE + '?path=auth&action=reset_password', {
-    method:'POST', headers:{'Content-Type':'text/plain'},
-    body: JSON.stringify({action:'reset_password', email:email, otp:otp, newPassword:pass1})
-  }).then(function(r){ return r.json(); }).then(function(data){
+  authFetch('reset_password', {email:email, otp:otp, newPassword:pass1}).then(function(data){
     btn.disabled=false; btn.textContent='Сохранить пароль →';
     if(data.ok){
       if(otpTimerInterval) clearInterval(otpTimerInterval);
@@ -2435,10 +2486,8 @@ function changePassword(email){
   if(!oldp){ err.textContent='Введите текущий пароль'; err.style.display='block'; return; }
   if(!np1||np1.length<6){ err.textContent='Новый пароль минимум 6 символов'; err.style.display='block'; return; }
   if(np1!==np2){ err.textContent='Пароли не совпадают'; err.style.display='block'; return; }
-  fetch(API_BASE + '?path=auth', {
-    method:'POST', headers:{'Content-Type':'text/plain'},
-    body: JSON.stringify({action:'change_password', email:email, oldPassword:oldp, newPassword:np1})
-  }).then(function(r){return r.json();}).then(function(data){
+  authFetch('change_password', { email:email, oldPassword:oldp, newPassword:np1})
+  .then(function(data){
     if(data.ok){ ok.textContent='✓ Пароль изменён'; ok.style.display='block';
       setTimeout(function(){ var m=document.getElementById('profile-modal'); if(m) m.remove(); },1500); }
     else{ err.textContent=data.error||'Ошибка'; err.style.display='block'; }
@@ -8834,11 +8883,7 @@ async function toggleUserStatus(uid, currentStatus) {
 
 async function resetUserPass(email) {
   if(!confirm('Сбросить пароль для ' + email + '? Новый пароль будет отправлен на почту.')) return;
-  var result = await fetch(API_BASE + '?path=auth', {
-    method: 'POST',
-    headers: {'Content-Type': 'text/plain'},
-    body: JSON.stringify({action: 'request_otp', email: email})
-  }).then(function(r){ return r.json(); }).catch(function(){ return null; });
+  var result = await authFetch('request_otp', {email: email}).catch(function(){ return null; });
   toast(result && result.ok ? 'Код сброса отправлен на ' + email : 'Ошибка: ' + (result && result.error || ''));
 }
 
