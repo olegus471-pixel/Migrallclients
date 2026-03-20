@@ -468,13 +468,21 @@ function resolveFileUrl(fileId, msgObj, chatId) {
 // Browser can't directly access api.telegram.org (CORS)
 // Server proxies the file download
 app.get('/api/tg/file/:fileId', requireAuth, (req, res) => {
-  const fileId = req.params.fileId;
+  const fileId = decodeURIComponent(req.params.fileId);
   if (!TG_TOKEN) return res.status(503).json({ error: 'Bot not configured' });
+
+  // Handle raw: prefixed IDs from Telethon import (internal IDs, not Bot API compatible)
+  if (fileId.startsWith('raw:')) {
+    return res.status(404).json({
+      error: 'File imported from history — not accessible via Bot API',
+      hint: 'This file was imported using MTProto. Bot API cannot retrieve it.'
+    });
+  }
 
   // First get the file path
   tgCall('getFile', { file_id: fileId }, (err, result) => {
     if (err || !result || !result.ok) {
-      return res.status(404).json({ error: 'File not found' });
+      return res.status(404).json({ error: 'File not found', fileId });
     }
     const filePath = result.result.file_path;
     const fileUrl  = `https://api.telegram.org/file/bot${TG_TOKEN}/${filePath}`;
