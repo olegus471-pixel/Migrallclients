@@ -6427,7 +6427,7 @@ function tgRenderMedia(m) {
   if (!fileUrl) return '';
 
   if (m.mediaType === 'photo') {
-    return '<div style="margin-bottom:6px"><img src="'+fileUrl+'" alt="Фото" style="max-width:100%;max-height:260px;border-radius:8px;cursor:pointer;display:block" onclick="tgOpenFile(''+fileUrl+'')" onerror="this.parentElement.innerHTML='🖼️ Фото (недоступно)'" loading="lazy"></div>';
+    return '<div style="margin-bottom:6px"><img src="'+fileUrl+'" alt="Фото" style="max-width:100%;max-height:260px;border-radius:8px;cursor:pointer;display:block" onclick="tgOpenFile(this.src)" onerror="this.hidden=true" loading="lazy"></div>';
   }
   if (m.mediaType === 'voice' || m.mediaType === 'audio') {
     return '<div style="margin-bottom:6px"><audio controls style="max-width:220px;height:36px"><source src="'+fileUrl+'"></audio></div>';
