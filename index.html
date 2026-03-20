@@ -194,10 +194,10 @@ button:active{transform:scale(.97)}
 
 /* ── TABLE ── */
 .dt-wrap{width:100%;border-radius:var(--r);border:1px solid var(--border);overflow:hidden}
-.dt-wrap .dt{border:none;border-radius:0}
+.dt-wrap .dt{border:none;border-radius:0;table-layout:auto}
 .dt{width:100%;border-collapse:collapse;table-layout:fixed}
 .dt th{padding:9px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--t3);border-bottom:1.5px solid var(--border);background:var(--s2);text-transform:uppercase;letter-spacing:.06em;white-space:normal;word-break:break-word;font-family:'Plus Jakarta Sans',sans-serif;overflow:hidden}
-.dt td{padding:10px 10px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dt td{padding:10px 10px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dt tr:hover td{white-space:normal;word-break:break-word}
 @media(max-width:800px){.dt th{font-size:9px;padding:7px 7px}.dt td{font-size:11.5px;padding:8px 7px}}
 @media(max-width:500px){.dt th{font-size:8.5px;padding:5px 5px}.dt td{font-size:11px;padding:6px 5px}}
@@ -607,7 +607,7 @@ button:active{transform:scale(.97)}
     <div class="ni manager-only" onclick="showView('tasks',this)"><span class="ni-ic">☑</span>Задачи<span class="ni-bdg y" id="bdg-tasks">0</span></div>
     <div class="ni manager-only" id="sb-filings-mgr" onclick="showView('filings',this)"><span class="ni-ic">📤</span>Подачи<span class="ni-bdg" id="bdg-filings"></span></div>
     <div class="ni manager-only" id="sb-lawyer-tasks-mgr" onclick="showView('lawyer-tasks',this)"><span class="ni-ic">⚖</span>Дела адвокатов<span class="ni-bdg" id="bdg-lawyer-mgr"></span></div>
-    <div class="ni manager-only" id="sb-translator-tasks-mgr" onclick="showView('translator-tasks',this)"><span class="ni-ic">📝</span>Задания переводчиков<span class="ni-bdg" id="bdg-trans-mgr"></span></div>
+    
     <div class="ni admin-only" onclick="showView('integration',this)"><span class="ni-ic">⚡</span>API / Интеграции</div>
     <div class="ni manager-only" onclick="showView('orders',this)"><span class="ni-ic">📦</span><span data-i18n="ni_orders">Заказы</span><span class="ni-bdg y" id="bdg-orders">0</span></div>
     <div class="ni manager-only" onclick="showView('messenger',this)" id="ni-messenger"><span class="ni-ic">💬</span><span>Мессенджер</span><span class="ni-bdg" id="bdg-tg" style="background:#229ed9;color:#fff;display:none">0</span></div>
@@ -4969,8 +4969,13 @@ async function _createServiceDriveFolder(clientNum, serviceType) {
 }
 async function saveCourt(idx){
   if(_isSaving) return; _isSaving = true;
+  // Try to autofill from client picker if fields are empty
+  var _ctPicker = g('ct-client-val');
+  if (_ctPicker && _ctPicker.value) _fillFromClientSearch_ct(_ctPicker.value);
   const num    = (g('ct-num')    ||{}).value||'';
-  const name   = (g('ct-name')   ||{}).value||'';
+  const name   = (g('ct-name')   ||{}).value
+    || (()=>{ var c=clients.find(function(x){return x.id===(_ctPicker&&_ctPicker.value);}); return c?c.name:''; })()
+    || '';
   if(!name.trim()){ toast('Укажите ФИО клиента'); _isSaving=false; return; }
   const _ctDrive = g('ct-drive');
   const obj = {
@@ -5237,7 +5242,11 @@ function editCitizenship(idx,e){
 }
 async function saveCitizenship(idx){
   if(_isSaving) return; _isSaving = true;
-  const name = (g('ci-name')||{}).value||'';
+  var _ciPicker = g('ci-client-val');
+  if (_ciPicker && _ciPicker.value) _fillFromClientSearch_ci(_ciPicker.value);
+  const name = (g('ci-name')||{}).value
+    || (()=>{ var c=clients.find(function(x){return x.id===(_ciPicker&&_ciPicker.value);}); return c?c.name:''; })()
+    || '';
   if(!name.trim()){ toast('Укажите ФИО клиента'); _isSaving=false; return; }
   const obj = {
     num:     (g('ci-num')   ||{}).value||'',
@@ -5749,10 +5758,12 @@ function renderTasks(){
 
 function renderTCard(t){
   const now=new Date();const ov=t.stage!=='done'&&t.due&&new Date(t.due)<now;
+  const _tc = t.clientId ? clients.find(c=>c.id===t.clientId) : (t.client ? clients.find(c=>c.num===t.client||c.name===t.client||c.id===t.client) : null);
+  const _tcLabel = _tc ? ((_tc.num?'№'+_tc.num+' ':'') + _tc.name) : (t.client ? 'кл.'+t.client : '');
   return`<div class="tcard pb-${t.prio}" id="tc-${t.id}" draggable="true" ondragstart="tDragStart(event,'${t.id}')" onclick="openTaskModal('${t.id}')">
     <div class="tcard-txt">${t.text}</div>
     <div class="tcard-meta">
-      ${t.client?`<span class="cn">кл.${t.client}</span>`:''}
+      ${_tcLabel?`<span class="cn" title="${_tc?_tc.name:t.client}">${_tcLabel}</span>`:''}
       ${t.assignee&&t.assignee!=='—'?`<span class="as">${t.assignee}</span>`:''}
       <span class="pdot ${t.prio}"></span>
       ${t.due?`<span style="color:${ov?'var(--red)':'var(--t3)'}">${t.due}</span>`:''}
@@ -6259,7 +6270,16 @@ function tgRenderChatList(chats) {
     return;
   }
   el.innerHTML = chats.map(function(c) {
-    var initials = (c.name||'?').split(' ').map(function(w){ return w[0]||''; }).join('').slice(0,2).toUpperCase();
+    // Match with CRM client by TG username
+    var _crmCl = null;
+    if (c.username) {
+      var _un = c.username.replace('@','').toLowerCase();
+      _crmCl = (typeof clients !== 'undefined' && clients)
+        ? clients.find(function(cl){ return (cl.tg||'').replace('@','').toLowerCase() === _un; })
+        : null;
+    }
+    var displayName = c.crmName || (_crmCl ? _crmCl.name : null) || c.name || 'Unknown';
+    var initials = displayName.split(' ').map(function(w){ return w[0]||''; }).join('').slice(0,2).toUpperCase();
     var ts = c.lastTs ? new Date(c.lastTs).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}) : '';
     var active = c.id === _tgCurrentChatId ? 'background:var(--acc-d);' : '';
     return '<div onclick="tgOpenChat(\''+c.id+'\')" style="padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--s3);display:flex;gap:10px;align-items:center;transition:background .1s;'+active+'" onmouseenter="this.style.background=\'var(--s2)\'" onmouseleave="this.style.background=\''+active+'\'">'
@@ -6450,9 +6470,16 @@ async function tgSetupWebhook() {
 
 // ── Auto-poll when messenger is open ─────────────────────────
 function tgStartPoll() {
+  // Show loading state immediately
+  var el = g('tg-chat-list');
+  if (el && !_tgAllChats.length) {
+    el.innerHTML = '<div style="padding:20px 16px;text-align:center;color:var(--t3);font-size:13px">⏳ Загрузка истории...</div>';
+  }
   tgLoadChats();
   if (_tgPollTimer) clearInterval(_tgPollTimer);
-  _tgPollTimer = setInterval(tgLoadChats, 5000); // every 5 seconds
+  _tgPollTimer = setInterval(tgLoadChats, 5000);
+  // Extra retry after 4s in case server was still loading from GAS
+  setTimeout(tgLoadChats, 4000);
 }
 
 function tgStopPoll() {
@@ -7273,15 +7300,22 @@ function nordSvcChange(svc){
 
 async function saveNewOrder(){
   if(_isSaving)return; _isSaving=true;
-  const clientId = (g('nord-client-val')||g('nord-client')||{}).value||'';
-  const _svcRaw  = g('nord-svc').value;
+  // Client ID comes from hidden field set by clientPickerOnInput
+  const clientId = (g('nord-client-val')||{}).value
+    || (g('nord-client-input') ? (()=>{
+         var inp = g('nord-client-input').value.trim();
+         var c = clients.find(function(x){ return x.name===inp || (x.num&&('№'+x.num+' — '+x.name)===inp); });
+         return c ? c.id : '';
+       })() : '')
+    || '';
+  const _svcRaw  = (g('nord-svc')||{}).value||'';
   const _customEl = g('nord-custom-svc');
   const svcType  = _svcRaw==='__custom__' ? (_customEl&&_customEl.value.trim()||'Custom') : _svcRaw;
-  if(_svcRaw==='__custom__' && (!_customEl||!_customEl.value.trim())){ toast(_t('ord_svc_name_req')); return; }
-  const trans    = g('nord-trans').value;
+  if(_svcRaw==='__custom__' && (!_customEl||!_customEl.value.trim())){ toast(_t('ord_svc_name_req')); _isSaving=false; return; }
+  const trans    = (g('nord-trans')||{}).value||'';
   const drive    = '';
-  const comment  = g('nord-comment').value.trim();
-  if(!clientId){ toast(_t('ord_select_client')); return; }
+  const comment  = (g('nord-comment')||{}).value||'';
+  if(!clientId){ toast(_t('ord_select_client')); _isSaving=false; return; }
   const today = new Date().toLocaleDateString('ru-RU');
   const ord = {
     id: _genOrdId(),
