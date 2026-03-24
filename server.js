@@ -161,7 +161,7 @@ function proxyToGAS(method, apiPath, body, callback) {
           doRequest({ hostname: redir.hostname, path: redir.path, method: 'GET', headers: {} }, '', cb);
           return;
         }
-        try { cb(null, JSON.parse(data)); }
+        try { cb(JSON.parse(data)); }
         catch(e) { cb({ error: 'Invalid JSON: ' + data.slice(0, 200) }); }
       });
     });
@@ -171,7 +171,7 @@ function proxyToGAS(method, apiPath, body, callback) {
   }
 
   doRequest(options, requestBody, (err, data) => {
-    callback(err || data);
+    callback(err ? { error: err.message || String(err) } : data);
   });
 }
 
