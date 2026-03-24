@@ -1054,6 +1054,7 @@ app.post('/api/admin/encrypt-migrate', express.json(), requireAuth, (req, res) =
     { path: '/spec-tasks', fields: ENC_FIELDS.specTasks,  idField: 'id' },
     { path: '/schedule',   fields: ENC_FIELDS.schedule,   idField: 'id' },
     { path: '/filings',    fields: ENC_FIELDS.filings,    idField: 'id' },
+    { path: '/users',      fields: ENC_FIELDS.users,      idField: 'email' },
   ];
   let pending = tables.length + 1; // +1 for tgmessages
 
