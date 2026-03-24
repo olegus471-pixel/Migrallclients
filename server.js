@@ -238,7 +238,7 @@ const ENCRYPT_KEY = ENCRYPT_KEY_HEX
 
 if (!ENCRYPT_KEY_HEX) {
   console.warn('⚠️  ENCRYPT_KEY not set — data stored in plaintext');
-  console.warn('⚠️  Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"');
+  console.warn(`⚠️  Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`);
 }
 
 function encryptField(value) {
