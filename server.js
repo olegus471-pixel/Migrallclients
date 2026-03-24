@@ -413,8 +413,11 @@ app.all('/api/auth/*',             authLimiter,  (req, res, next) => next());
 
 // ── API прокси: /api/* → GAS (excluding /api/tg/*) ───────────
 app.all('/api/*', (req, res, next) => {
-  // TG routes are handled by dedicated endpoints below
+  // TG and admin routes are handled by dedicated endpoints
   if (req.path.startsWith('/api/tg/') || req.path === '/api/tg') {
+    return next();
+  }
+  if (req.path.startsWith('/api/admin/')) {
     return next();
   }
   const apiPath = req.path.replace('/api', '') || '/';
