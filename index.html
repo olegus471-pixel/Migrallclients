@@ -1785,6 +1785,11 @@ let _pollInterval = null;
 
 async function apiFetch(path, options={}){
   if(!API_BASE) return null;
+  // Debug: log API_BASE mode on first call
+  if (!apiFetch._logged) {
+    apiFetch._logged = true;
+    console.log('[apiFetch] MODE:', API_BASE === '__PROXY__' ? 'PROXY (server.js)' : 'DIRECT GAS: ' + API_BASE.slice(0,60));
+  }
   try {
     let url, fetchOpts;
     const cleanPath = path.replace(/^\//, '');
@@ -8023,6 +8028,7 @@ function parseFilingDate(s) {
 
 async function loadFilings() {
   if (!API_BASE) { filingsData = []; renderFilingsList(); return; }
+  console.log('[Filings] API_BASE at fetch time:', API_BASE === '__PROXY__' ? 'PROXY' : 'DIRECT: '+String(API_BASE).slice(0,60));
   var data = await apiFetch('/filings').catch(function(e){ console.error('[Filings] fetch error:', e); return null; });
   if (data && Array.isArray(data)) {
     console.log('[Filings] loaded:', data.length, 'records. Sample:', JSON.stringify(data[0]).slice(0,150));
