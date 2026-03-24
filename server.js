@@ -226,6 +226,118 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── Field-level AES-256-CBC Encryption ───────────────────────
+// Key stored in ENCRYPT_KEY env var (never in code or Sheets)
+// Format stored in Sheets: "enc:<base64_iv>:<base64_ciphertext>"
+// Plain values are stored as-is (no prefix) for backward compat
+
+const ENCRYPT_KEY_HEX = process.env.ENCRYPT_KEY || '';
+const ENCRYPT_KEY = ENCRYPT_KEY_HEX
+  ? Buffer.from(ENCRYPT_KEY_HEX.padEnd(64, '0').slice(0, 64), 'hex')
+  : null;
+
+if (!ENCRYPT_KEY_HEX) {
+  console.warn('⚠️  ENCRYPT_KEY not set — data stored in plaintext');
+  console.warn('⚠️  Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"');
+}
+
+function encryptField(value) {
+  if (!ENCRYPT_KEY || !value) return value || '';
+  try {
+    const iv         = crypto.randomBytes(16);
+    const cipher     = crypto.createCipheriv('aes-256-cbc', ENCRYPT_KEY, iv);
+    const encrypted  = Buffer.concat([cipher.update(String(value), 'utf8'), cipher.final()]);
+    return 'enc:' + iv.toString('base64') + ':' + encrypted.toString('base64');
+  } catch(e) {
+    console.error('[encrypt] error:', e.message);
+    return value;
+  }
+}
+
+function decryptField(value) {
+  if (!ENCRYPT_KEY || !value || !String(value).startsWith('enc:')) return value || '';
+  try {
+    const parts      = String(value).split(':');
+    if (parts.length !== 3) return value;
+    const iv         = Buffer.from(parts[1], 'base64');
+    const encrypted  = Buffer.from(parts[2], 'base64');
+    const decipher   = crypto.createDecipheriv('aes-256-cbc', ENCRYPT_KEY, iv);
+    return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
+  } catch(e) {
+    // Return as-is if decryption fails (unencrypted legacy data)
+    return value;
+  }
+}
+
+// Encrypt/decrypt objects by field list
+function encryptFields(obj, fields) {
+  if (!ENCRYPT_KEY) return obj;
+  const result = { ...obj };
+  fields.forEach(f => { if (result[f]) result[f] = encryptField(result[f]); });
+  return result;
+}
+
+function decryptFields(obj, fields) {
+  const result = { ...obj };
+  fields.forEach(f => { if (result[f]) result[f] = decryptField(result[f]); });
+  return result;
+}
+
+// Field lists per data type — ALL sensitive fields across ALL sheets
+const ENC_FIELDS = {
+  // Telegram messages
+  tgmessages:  ['text', 'fromName', 'chatName', 'fileName'],
+
+  // Clients
+  clients:     ['name', 'tg', 'phone', 'email', 'comment', 'address',
+                 'notes', 'passport', 'inn', 'snils', 'birthdate'],
+
+  // Staff / users
+  users:       ['name', 'email', 'phone'],
+
+  // Court cases
+  courts:      ['name', 'comment', 'place'],
+
+  // Citizenship cases
+  citizenship: ['name', 'comment', 'track'],
+
+  // Orders (Права, Переводы, Справки)
+  orders:      ['comment', 'clientName'],
+
+  // Spec tasks (lawyer/translator tasks)
+  specTasks:   ['client', 'description', 'comment'],
+
+  // Filings
+  filings:     ['clientName', 'comment', 'notes'],
+
+  // Checklists
+  checklists:  ['comment', 'notes'],
+
+  // Schedule
+  schedule:    ['clientName', 'notes', 'comment'],
+};
+
+// Map API path prefix → ENC_FIELDS key
+const ENC_PATH_MAP = {
+  '/clients':    'clients',
+  '/users':      'users',
+  '/auth':       'users',
+  '/courts':     'courts',
+  '/citizenship':'citizenship',
+  '/orders':     'orders',
+  '/spec-tasks': 'specTasks',
+  '/filings':    'filings',
+  '/checklists': 'checklists',
+  '/schedule':   'schedule',
+};
+
+function getEncFields(apiPath) {
+  for (const [prefix, key] of Object.entries(ENC_PATH_MAP)) {
+    if (apiPath.startsWith(prefix)) return ENC_FIELDS[key] || [];
+  }
+  return [];
+}
+
 // ── Rate Limiter (no external deps) ──────────────────────────
 // Protects auth endpoints from brute-force attacks
 const _rateLimitStore = new Map(); // ip:endpoint → [timestamps]
@@ -308,7 +420,33 @@ app.all('/api/*', (req, res, next) => {
   const apiPath = req.path.replace('/api', '') || '/';
   let body = req.body || '';
   if (typeof body === 'object') body = JSON.stringify(body);
-  proxyToGAS(req.method, apiPath, body, (data) => res.json(data));
+  // Encrypt sensitive fields BEFORE sending to GAS
+  const _encFields = getEncFields(apiPath);
+  if (req.method !== 'GET' && body && typeof body === 'string' && _encFields.length) {
+    try {
+      const parsed = JSON.parse(body);
+      body = JSON.stringify(encryptFields(parsed, _encFields));
+    } catch(e) {}
+  }
+
+  proxyToGAS(req.method, apiPath, body, (data) => {
+    if (!data || data.error) return res.json(data);
+
+    // Decrypt all sensitive fields coming FROM GAS
+    if (_encFields.length) {
+      if (Array.isArray(data)) {
+        data = data.map(r => decryptFields(r, _encFields));
+      } else if (data.data && Array.isArray(data.data)) {
+        data.data = data.data.map(r => decryptFields(r, _encFields));
+      } else if (data.user) {
+        data.user = decryptFields(data.user, _encFields);
+      } else if (data.id || data.num) {
+        data = decryptFields(data, _encFields);
+      }
+    }
+
+    res.json(data);
+  });
 });
 
 // ── HTML с инжекцией __ENV ────────────────────────────────────
@@ -343,7 +481,7 @@ const tgChats = {}; // { chatId: { info, messages[] } }
 // ── Persist message to GAS ────────────────────────────────────
 function persistTgMessage(chatInfo, msg) {
   if (!GAS_URL) return;
-  const payload = {
+  const rawPayload = {
     id:           String(msg.id || Date.now()),
     chatId:       String(chatInfo.id),
     chatName:     chatInfo.name     || '',
@@ -361,6 +499,8 @@ function persistTgMessage(chatInfo, msg) {
     fileSize:     msg.fileSize   || '',
     fileUrl:      msg.fileUrl    || '',
   };
+  // Encrypt sensitive fields before storing in Sheets
+  const payload = encryptFields(rawPayload, ENC_FIELDS.tgmessages);
 
   const body = JSON.stringify(payload);
   const gasUrl = GAS_URL + '?path=tg-messages';
@@ -410,24 +550,27 @@ function loadTgHistoryFromGAS() {
               lastTs:   0,
             };
           }
+          // Decrypt sensitive fields from Sheets
+          const rd = decryptFields(r, ENC_FIELDS.tgmessages);
           const msg = {
             id:         r.id,
             ts:         Number(r.ts) || 0,
-            text:       r.text       || '',
-            fromName:   r.fromName   || '',
+            text:       rd.text      || '',
+            fromName:   rd.fromName  || '',
             fromId:     r.fromId     || '',
             isOutgoing: r.isOutgoing === 'TRUE' || r.isOutgoing === true,
             isRead:     r.isRead     === 'TRUE' || r.isRead     === true,
             mediaType:  r.mediaType  || null,
             fileId:     r.fileId     || null,
-            fileName:   r.fileName   || null,
+            fileName:   rd.fileName  || null,
             mimeType:   r.mimeType   || null,
             fileSize:   r.fileSize   ? Number(r.fileSize) : null,
             fileUrl:    r.fileUrl    || null,
           };
           tgChats[chatId].messages.push(msg);
           if (msg.ts > tgChats[chatId].lastTs) tgChats[chatId].lastTs = msg.ts;
-          if (!msg.isOutgoing && !msg.isRead) tgChats[chatId].unread++;
+          // Only count as unread if explicitly marked false (not just empty/unknown)
+          if (!msg.isOutgoing && msg.isRead === false) tgChats[chatId].unread++;
           loaded++;
         });
         // Sort messages by ts in each chat
@@ -640,14 +783,15 @@ app.post('/tg/webhook', express.json(), (req, res) => {
       mimeType  = msg.sticker.is_animated ? 'application/json' : 'image/webp';
     }
 
+    const _isOut = isBot || (from.id && String(from.id) === String(msg.chat.id) ? false : isBusinessConn && from.is_bot);
     const msgObj = {
       id:         msg.message_id,
       ts:         msg.date * 1000,
       text:       msg.text || msg.caption || '',
       fromName:   from.first_name ? (from.first_name + ' ' + (from.last_name||'')).trim() : 'Business',
       fromId:     from.id,
-      isOutgoing: isBot || (from.id && String(from.id) === String(msg.chat.id) ? false : isBusinessConn && from.is_bot),
-      isRead:     false,
+      isOutgoing: _isOut,
+      isRead:     _isOut ? true : false, // outgoing = already read; incoming = unread
       // Media fields
       mediaType:  mediaType,
       fileId:     fileId,
@@ -888,6 +1032,75 @@ app.post('/api/tg/enrich', express.json(), requireAuth, (req, res) => {
     tgChats[chatId].crmName = crmName;
   }
   res.json({ ok: true });
+});
+
+// ── POST /api/admin/encrypt-migrate — encrypt existing plaintext ─
+// One-time migration: encrypts plaintext data already in all Sheets
+// Call once after setting ENCRYPT_KEY
+app.post('/api/admin/encrypt-migrate', express.json(), requireAuth, (req, res) => {
+  if (!ENCRYPT_KEY) return res.json({ error: 'ENCRYPT_KEY not set — add it to Render env vars first' });
+  const sess = getSession(req);
+  if (!sess || sess.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+
+  const results = {};
+  const tables = [
+    { path: '/clients',    fields: ENC_FIELDS.clients,    idField: 'id' },
+    { path: '/courts',     fields: ENC_FIELDS.courts,     idField: 'num' },
+    { path: '/citizenship',fields: ENC_FIELDS.citizenship,idField: 'num' },
+    { path: '/orders',     fields: ENC_FIELDS.orders,     idField: 'id' },
+    { path: '/spec-tasks', fields: ENC_FIELDS.specTasks,  idField: 'id' },
+    { path: '/schedule',   fields: ENC_FIELDS.schedule,   idField: 'id' },
+    { path: '/filings',    fields: ENC_FIELDS.filings,    idField: 'id' },
+  ];
+  let pending = tables.length + 1; // +1 for tgmessages
+
+  function checkDone() {
+    pending--;
+    if (pending === 0) {
+      console.log('[encrypt-migrate] done:', results);
+      res.json({ ok: true, results });
+    }
+  }
+
+  // Migrate each table
+  tables.forEach(({ path, fields, idField }) => {
+    const key = path.replace('/', '');
+    proxyToGAS('GET', path, '', (rows) => {
+      if (!Array.isArray(rows)) {
+        results[key] = 'skipped (no array)';
+        checkDone(); return;
+      }
+      const toMigrate = rows.filter(r =>
+        fields.some(f => r[f] && !String(r[f]).startsWith('enc:'))
+      );
+      if (!toMigrate.length) { results[key] = 'already encrypted or empty'; checkDone(); return; }
+      let done = 0;
+      toMigrate.forEach(row => {
+        const encrypted = encryptFields(row, fields);
+        proxyToGAS('PUT', path + '/' + row[idField], JSON.stringify(encrypted), () => {
+          done++;
+          if (done === toMigrate.length) { results[key] = 'migrated ' + done; checkDone(); }
+        });
+      });
+    });
+  });
+
+  // Migrate TG messages via GAS tg-messages path
+  proxyToGAS('GET', '/tg-messages', '', (msgs) => {
+    if (!Array.isArray(msgs)) { results.tgmessages = 'skipped'; checkDone(); return; }
+    const toMigrate = msgs.filter(m =>
+      ENC_FIELDS.tgmessages.some(f => m[f] && !String(m[f]).startsWith('enc:'))
+    );
+    if (!toMigrate.length) { results.tgmessages = 'already encrypted or empty'; checkDone(); return; }
+    let done = 0;
+    toMigrate.forEach(msg => {
+      const encrypted = encryptFields(msg, ENC_FIELDS.tgmessages);
+      proxyToGAS('PUT', '/tg-messages/' + msg.id, JSON.stringify(encrypted), () => {
+        done++;
+        if (done === toMigrate.length) { results.tgmessages = 'migrated ' + done; checkDone(); }
+      });
+    });
+  });
 });
 
 // ── GET /api/tg/unread — total unread count ───────────────────
