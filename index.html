@@ -6394,6 +6394,17 @@ async function tgOpenChat(chatId, silent) {
     tgRenderMessages(data.messages || []);
     // Signature preview
     tgUpdateSignaturePreview();
+    // Update local unread count immediately (don't wait for poll)
+    var localChat = _tgAllChats.find(function(c){ return c.id === chatId; });
+    if (localChat) {
+      localChat.unread = 0;
+      // Update badge immediately
+      var totalUnread = _tgAllChats.reduce(function(s,c){ return s + (c.unread||0); }, 0);
+      var bdg = g('bdg-tg');
+      if (bdg) { bdg.textContent = totalUnread; bdg.style.display = totalUnread > 0 ? '' : 'none'; }
+      // Re-render chat list to remove unread badge
+      tgRenderChatList(_tgAllChats);
+    }
     // Reload chat list unread counts
     if (!silent) tgLoadChats();
   } catch(e) {
