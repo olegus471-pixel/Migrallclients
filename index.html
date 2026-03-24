@@ -3139,8 +3139,11 @@ function saveGasUrl(){
     toast('Неверный URL — должен быть script.google.com/...'); return;
   }
   try{ localStorage.setItem('crm_gas_url', url); }catch(e){}
-  API_BASE = url;
-  window.API_BASE = url;
+  // In production proxy mode, don't override API_BASE
+  if (_isFileMode) {
+    API_BASE = url;
+    window.API_BASE = url;
+  }
   g('gas-url-status').textContent = '✅ URL сохранён · ' + url.slice(0,60) + '...';
   g('gas-url-status').style.color = 'var(--gre)';
   toast('URL сохранён — запускаем синхронизацию...');
@@ -7862,8 +7865,11 @@ function switchClientTab(btn, paneId){
   try{
     const savedUrl = localStorage.getItem('crm_gas_url');
     if(savedUrl){
-      API_BASE = savedUrl;
-      window.API_BASE = savedUrl;
+      // Only override API_BASE in file:// mode — in production always use proxy
+      if (_isFileMode) {
+        API_BASE = savedUrl;
+        window.API_BASE = savedUrl;
+      }
       setTimeout(()=>{
         const inp = g('gas-url-input');
         if(inp) inp.value = savedUrl;
