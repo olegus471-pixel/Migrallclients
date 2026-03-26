@@ -402,6 +402,37 @@ const tgSendLimiter   = rateLimiter(60,  1 * 60 * 1000, 'tg-send');  // 60 per m
 
 // ── Health/ping endpoint ──────────────────────────────────────
 app.get('/ping', (req, res) => res.json({ ok: true, ts: Date.now() }));
+
+// ── Encryption diagnostic ──────────────────────────────────────
+app.get('/api/diag/enc', (req, res) => {
+  const keySet = !!ENCRYPT_KEY;
+  const keyLen = ENCRYPT_KEY ? ENCRYPT_KEY.length : 0;
+  const testResult = keySet ? (() => {
+    try {
+      const enc = encryptField('test_value_123');
+      const dec = decryptField(enc);
+      return { encrypted: enc.slice(0, 30) + '...', decrypted: dec, ok: dec === 'test_value_123' };
+    } catch(e) { return { error: e.message }; }
+  })() : null;
+
+  // Fetch one client and show raw vs decrypted
+  if (!GAS_URL) return res.json({ keySet, keyLen, testResult, error: 'No GAS_URL' });
+
+  proxyToGAS('GET', '/clients', '', (rawClients) => {
+    const sample = Array.isArray(rawClients) ? rawClients.slice(0, 2) : rawClients;
+    const encFields = ENC_FIELDS.clients || [];
+    const decSample = Array.isArray(rawClients)
+      ? rawClients.slice(0, 2).map(r => decryptFields(r, encFields))
+      : null;
+    res.json({
+      keySet, keyLen, testResult,
+      encFields,
+      rawSample: sample,
+      decryptedSample: decSample,
+      proxyWorking: Array.isArray(rawClients),
+    });
+  });
+});
 app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
 
 // ── Rate limiting on auth routes ─────────────────────────────
