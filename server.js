@@ -264,8 +264,9 @@ function decryptField(value) {
     const decipher   = crypto.createDecipheriv('aes-256-cbc', ENCRYPT_KEY, iv);
     return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
   } catch(e) {
-    // Return as-is if decryption fails (unencrypted legacy data)
-    return value;
+    // Decryption failed - log error for debugging
+    console.error('[decrypt] FAILED for value starting:', String(value).slice(0, 40), 'error:', e.message);
+    return value; // Return as-is
   }
 }
 
@@ -503,6 +504,7 @@ app.all('/api/*', (req, res, next) => {
 
     // Decrypt all sensitive fields coming FROM GAS
     if (_encFields.length) {
+      console.log('[proxy decrypt] path:', apiPath, 'fields:', _encFields, 'isArray:', Array.isArray(data));
       if (Array.isArray(data)) {
         data = data.map(r => decryptFields(r, _encFields));
       } else if (data.data && Array.isArray(data.data)) {
