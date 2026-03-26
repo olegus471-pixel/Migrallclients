@@ -170,8 +170,8 @@ function proxyToGAS(method, apiPath, body, callback) {
     req.end();
   }
 
-  doRequest(options, requestBody, (err, data) => {
-    callback(err ? { error: err.message || String(err) } : data);
+  doRequest(options, requestBody, (data) => {
+    callback(data);
   });
 }
 
