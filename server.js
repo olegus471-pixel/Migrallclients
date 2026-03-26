@@ -293,7 +293,7 @@ const ENC_FIELDS = {
                  'notes', 'passport', 'inn', 'snils', 'birthdate'],
 
   // Staff / users
-  users:       ['name', 'email', 'phone'],
+  users:       ['name', 'phone'], // email excluded — used as login lookup key
 
   // Court cases
   courts:      ['name', 'comment', 'place'],
@@ -410,6 +410,41 @@ app.post('/api/auth/login',        loginLimiter, (req, res, next) => next());
 app.post('/api/auth/client_login', loginLimiter, (req, res, next) => next());
 // All other auth: 20 per 15min per IP
 app.all('/api/auth/*',             authLimiter,  (req, res, next) => next());
+
+// ── Login interceptor: handle encrypted emails ────────────────
+// If ENCRYPT_KEY is set and user emails are encrypted in Sheets,
+// we need to find user by decrypting all emails server-side
+app.post('/api/auth/login', express.json(), (req, res, next) => {
+  if (!ENCRYPT_KEY || !GAS_URL) return next(); // no encryption, pass through
+  const { email, password } = req.body || {};
+  if (!email || !password) return next();
+
+  // Fetch all users from GAS and find by decrypted email
+  proxyToGAS('GET', '/users', '', (users) => {
+    if (!Array.isArray(users)) return next(); // fallback to normal flow
+
+    // Find user whose decrypted email matches
+    const user = users.find(u => {
+      const decryptedEmail = decryptField(u.email || '');
+      return decryptedEmail.toLowerCase() === email.toLowerCase();
+    });
+
+    if (!user) {
+      // Try exact match (email not encrypted)
+      const plainUser = users.find(u => (u.email||'').toLowerCase() === email.toLowerCase());
+      if (!plainUser) return res.json({ error: 'Неверный email или пароль' });
+    }
+
+    // Found user - proxy login to GAS using the decrypted/plain email
+    // GAS will do verifyPassword on the stored hash
+    proxyToGAS('POST', '/auth/login', JSON.stringify({ action: 'login', email, password }), (result) => {
+      if (result && result.ok && result.user) {
+        result.user = decryptFields(result.user, ENC_FIELDS.users || []);
+      }
+      res.json(result);
+    });
+  });
+});
 
 // ── API прокси: /api/* → GAS (excluding /api/tg/*) ───────────
 app.all('/api/*', (req, res, next) => {
@@ -1042,10 +1077,14 @@ app.post('/api/tg/enrich', express.json(), requireAuth, (req, res) => {
 // Call once after setting ENCRYPT_KEY
 // ── POST /api/admin/decrypt-user-emails — one-time fix ──────────
 // Decrypts email fields in users that were incorrectly encrypted
-app.post('/api/admin/decrypt-user-emails', express.json(), requireAuth, (req, res) => {
+app.post('/api/admin/decrypt-user-emails', express.json(), (req, res) => {
   if (!ENCRYPT_KEY) return res.json({ error: 'ENCRYPT_KEY not set' });
+  // Allow with admin secret OR valid admin session
+  const adminSecret = process.env.ADMIN_SECRET || '';
+  const providedSecret = (req.body || {}).secret || '';
   const sess = getSession(req);
-  if (!sess || sess.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const isAdmin = (adminSecret && providedSecret === adminSecret) || (sess && sess.role === 'admin');
+  if (!isAdmin) return res.status(403).json({ error: 'Provide admin secret or login as admin' });
 
   proxyToGAS('GET', '/users', '', (users) => {
     if (!Array.isArray(users)) return res.json({ error: 'Could not fetch users', raw: users });
