@@ -2980,7 +2980,7 @@ async function diagUsersRaw() {
   out.style.display = 'block';
   out.textContent = 'Прямой fetch /users...';
   try {
-    var url = API_BASE + '?path=' + encodeURIComponent('/users');
+    var url = API_BASE === '__PROXY__' ? '/api/users' : (API_BASE + '?path=users');
     var res = await fetch(url);
     var text = await res.text();
     out.textContent = 'HTTP ' + res.status + '\n\n' + text.slice(0, 2000);
@@ -3102,8 +3102,8 @@ async function doSync(silent=false){
   // Загрузка событий командного Google Calendar
   (function loadCalendar(){
     if(!API_BASE) return;
-    const url = API_BASE + '?path=calendar&back=30&fwd=90';
-    fetch(url).then(function(r){ return r.json(); }).then(function(data){
+    apiFetch('/calendar?back=30&fwd=90').then(function(data){
+      if (!data) return;
       console.log('[Calendar] response:', Array.isArray(data) ? data.length+' events' : JSON.stringify(data).slice(0,100));
       if(Array.isArray(data)){ calEvents = data; renderCal(); }
       else if(data && data.error){ console.warn('[Calendar] error:', data.error); }
