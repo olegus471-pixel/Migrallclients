@@ -405,6 +405,76 @@ const tgSendLimiter   = rateLimiter(60,  1 * 60 * 1000, 'tg-send');  // 60 per m
 app.get('/ping', (req, res) => res.json({ ok: true, ts: Date.now() }));
 
 // ── Encryption diagnostic ──────────────────────────────────────
+// Also: quick re-run migration without auth (uses ADMIN_SECRET)
+app.post('/api/admin/remigrate', express.json(), (req, res) => {
+  if (!ENCRYPT_KEY) return res.json({ error: 'ENCRYPT_KEY not set' });
+  const adminSecret = process.env.ADMIN_SECRET || 'fix2024';
+  const provided = (req.body || {}).secret || '';
+  if (provided !== adminSecret) return res.status(403).json({ error: 'Wrong secret' });
+
+  // Just re-trigger the full migration
+  req.body = req.body || {};
+  // Forward to encrypt-migrate handler
+  const fakeReq = { body: req.body, headers: req.headers, ip: req.ip, socket: req.socket };
+  // Call migration logic inline
+  if (!GAS_URL) return res.json({ error: 'No GAS_URL' });
+
+  const results = {};
+  const tables = [
+    { path: '/clients',    fields: ENC_FIELDS.clients,    idField: 'id' },
+    { path: '/courts',     fields: ENC_FIELDS.courts,     idField: 'num' },
+    { path: '/citizenship',fields: ENC_FIELDS.citizenship,idField: 'num' },
+    { path: '/orders',     fields: ENC_FIELDS.orders,     idField: 'id' },
+    { path: '/spec-tasks', fields: ENC_FIELDS.specTasks,  idField: 'id' },
+    { path: '/schedule',   fields: ENC_FIELDS.schedule,   idField: 'id' },
+    { path: '/filings',    fields: ENC_FIELDS.filings,    idField: 'id' },
+    { path: '/users',      fields: ENC_FIELDS.users,      idField: 'email' },
+  ];
+  let pending = tables.length + 1;
+
+  function checkDone() {
+    pending--;
+    if (pending === 0) {
+      console.log('[remigrate] done:', results);
+      res.json({ ok: true, results });
+    }
+  }
+
+  tables.forEach(({ path, fields, idField }) => {
+    const key = path.replace('/', '');
+    proxyToGAS('GET', path, '', (rows) => {
+      console.log('[remigrate]', path, 'got:', Array.isArray(rows) ? rows.length + ' rows' : 'ERROR: ' + JSON.stringify(rows).slice(0,100));
+      if (!Array.isArray(rows)) { results[key] = 'error: not array'; checkDone(); return; }
+      const toMigrate = rows.filter(r => fields.some(f => r[f] && !String(r[f]).startsWith('enc:')));
+      console.log('[remigrate]', path, 'to encrypt:', toMigrate.length);
+      if (!toMigrate.length) { results[key] = 'already encrypted or empty'; checkDone(); return; }
+      let done = 0;
+      toMigrate.forEach(row => {
+        const encrypted = encryptFields(row, fields);
+        proxyToGAS('PUT', path + '/' + (row[idField]||row.id||row.num||''), JSON.stringify(encrypted), (r) => {
+          done++;
+          if (done === toMigrate.length) { results[key] = 'migrated ' + done; checkDone(); }
+        });
+      });
+    });
+  });
+
+  // TG messages
+  proxyToGAS('GET', '/tg-messages', '', (msgs) => {
+    if (!Array.isArray(msgs)) { results.tgmessages = 'error'; checkDone(); return; }
+    const toMigrate = msgs.filter(m => ENC_FIELDS.tgmessages.some(f => m[f] && !String(m[f]).startsWith('enc:')));
+    if (!toMigrate.length) { results.tgmessages = 'already encrypted or empty'; checkDone(); return; }
+    let done = 0;
+    toMigrate.forEach(msg => {
+      const encrypted = encryptFields(msg, ENC_FIELDS.tgmessages);
+      proxyToGAS('PUT', '/tg-messages/' + msg.id, JSON.stringify(encrypted), () => {
+        done++;
+        if (done === toMigrate.length) { results.tgmessages = 'migrated ' + done; checkDone(); }
+      });
+    });
+  });
+});
+
 app.get('/api/diag/enc', (req, res) => {
   const keySet = !!ENCRYPT_KEY;
   const keyLen = ENCRYPT_KEY ? ENCRYPT_KEY.length : 0;
@@ -503,10 +573,19 @@ app.all('/api/*', (req, res, next) => {
     if (!data || data.error) return res.json(data);
 
     // Decrypt all sensitive fields coming FROM GAS
+    console.log('[proxy result] path:', apiPath, 'encFields:', _encFields.length, 'dataType:', Array.isArray(data) ? 'array('+data.length+')' : typeof data, data && data.error ? 'ERROR:'+data.error : '');
     if (_encFields.length) {
       console.log('[proxy decrypt] path:', apiPath, 'fields:', _encFields, 'isArray:', Array.isArray(data));
-      if (Array.isArray(data)) {
+      if (Array.isArray(data) && data.length > 0) {
+        // Log first record before decrypt
+        const sample = data[0];
+        const encCount = _encFields.filter(f => sample[f] && String(sample[f]).startsWith('enc:')).length;
+        console.log('[proxy decrypt] first record encrypted fields:', encCount, '/', _encFields.length);
         data = data.map(r => decryptFields(r, _encFields));
+        // Log after decrypt
+        const decSample = data[0];
+        const stillEnc = _encFields.filter(f => decSample[f] && String(decSample[f]).startsWith('enc:')).length;
+        console.log('[proxy decrypt] after decrypt still enc:', stillEnc);
       } else if (data.data && Array.isArray(data.data)) {
         data.data = data.data.map(r => decryptFields(r, _encFields));
       } else if (data.user) {
