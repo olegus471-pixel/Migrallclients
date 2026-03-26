@@ -3102,7 +3102,9 @@ async function doSync(silent=false){
   // Загрузка событий командного Google Calendar
   (function loadCalendar(){
     if(!API_BASE) return;
-    apiFetch('/calendar?back=30&fwd=90').then(function(data){
+    // Calendar uses direct fetch to avoid URL encoding of query params
+    var calUrl = API_BASE === '__PROXY__' ? '/api/calendar?back=30&fwd=90' : (API_BASE + '?path=calendar&back=30&fwd=90');
+    fetch(calUrl).then(function(r){ return r.json(); }).then(function(data){
       if (!data) return;
       console.log('[Calendar] response:', Array.isArray(data) ? data.length+' events' : JSON.stringify(data).slice(0,100));
       if(Array.isArray(data)){ calEvents = data; renderCal(); }
