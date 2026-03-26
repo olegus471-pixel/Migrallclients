@@ -1040,6 +1040,32 @@ app.post('/api/tg/enrich', express.json(), requireAuth, (req, res) => {
 // ── POST /api/admin/encrypt-migrate — encrypt existing plaintext ─
 // One-time migration: encrypts plaintext data already in all Sheets
 // Call once after setting ENCRYPT_KEY
+// ── POST /api/admin/decrypt-user-emails — one-time fix ──────────
+// Decrypts email fields in users that were incorrectly encrypted
+app.post('/api/admin/decrypt-user-emails', express.json(), requireAuth, (req, res) => {
+  if (!ENCRYPT_KEY) return res.json({ error: 'ENCRYPT_KEY not set' });
+  const sess = getSession(req);
+  if (!sess || sess.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+
+  proxyToGAS('GET', '/users', '', (users) => {
+    if (!Array.isArray(users)) return res.json({ error: 'Could not fetch users', raw: users });
+    const toFix = users.filter(u => u.email && String(u.email).startsWith('enc:'));
+    if (!toFix.length) return res.json({ ok: true, message: 'No encrypted emails found' });
+
+    let done = 0;
+    toFix.forEach(user => {
+      const decryptedEmail = decryptField(user.email);
+      const fixed = { ...user, email: decryptedEmail };
+      proxyToGAS('PUT', '/users/' + decryptedEmail, JSON.stringify(fixed), () => {
+        done++;
+        if (done === toFix.length) {
+          res.json({ ok: true, fixed: done, emails: toFix.map(u => decryptField(u.email)) });
+        }
+      });
+    });
+  });
+});
+
 app.post('/api/admin/encrypt-migrate', express.json(), requireAuth, (req, res) => {
   if (!ENCRYPT_KEY) return res.json({ error: 'ENCRYPT_KEY not set — add it to Render env vars first' });
   const sess = getSession(req);
