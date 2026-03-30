@@ -499,8 +499,8 @@ function renderAll() {
 
   // Spec-tasks (role=lawyer) assigned to this lawyer
   const mySpecTasks = isLawyer
-    ? allSpecTasks.filter(t => t.role === 'lawyer' && matchesMe(t.assignee) && t.stage !== 'Завершено')
-    : allSpecTasks.filter(t => t.role === 'lawyer' && t.stage !== 'Завершено');
+    ? allSpecTasks.filter(t => t.role === 'lawyer' && (matchesMe(t.assignee) || !t.assignee || t.assignee === '' || t.assignee === '—'))
+    : allSpecTasks.filter(t => t.role === 'lawyer');
 
   const myTasks = [...myGeneralTasks, ...mySpecTasks];
 
@@ -581,7 +581,7 @@ function renderAll() {
 
   // Citizenship
   const myCitizenship = isLawyer
-    ? allCitizenship.filter(c => matchesMe(c.lawyer) || myClients.some(cl => cl.num === c.num || cl.name === c.name))
+    ? allCitizenship.filter(c => matchesMe(c.lawyer) || !c.lawyer || myClients.some(cl => cl.num === c.num || cl.name === c.name))
     : allCitizenship;
   myCit_cache = myCitizenship; // cache for modal access
   document.getElementById('cnt-citizenship').textContent = myCitizenship.length + ' дел';
@@ -606,7 +606,7 @@ function renderAll() {
 
   // Filings
   const myFilings = isLawyer
-    ? allFilings.filter(f => matchesMe(f.lawyer) || myClients.some(cl => cl.name === f.client || cl.name === f.name))
+    ? allFilings.filter(f => matchesMe(f.lawyer) || !f.lawyer || myClients.some(cl => cl.name === f.client || cl.name === f.name))
     : allFilings;
   document.getElementById('cnt-filings').textContent = myFilings.length + ' подач';
   const sortedFilings = [...myFilings].sort((a,b) => {
