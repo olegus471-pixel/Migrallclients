@@ -330,10 +330,24 @@ function renderAll() {
 
   // Convert orders to task-like objects and merge
   const orderTasks = myOrders.map(o => {
-    const stageMap = { 'Новый': 'Новое', 'new': 'Новое', 'Новое': 'Новое',
-                       'В работе': 'В работе', 'active': 'В работе',
-                       'Готово': 'Готово к выдаче', 'Готово к выдаче': 'Готово к выдаче', 'ready': 'Готово к выдаче',
-                       'Завершено': 'Завершено', 'done': 'Завершено', 'Выдано': 'Завершено' };
+    const stageMap = {
+      // New / just created
+      'Новый': 'Новое', 'new': 'Новое', 'Новое': 'Новое',
+      'Принято': 'Новое', 'Принято в работу': 'Новое', 'Документы приняты': 'Новое',
+      // Active / in progress
+      'В работе': 'В работе', 'active': 'В работе',
+      'В работе у переводчика': 'В работе',
+      'Передано переводчику': 'В работе', 'Передано переводчикам': 'В работе',
+      'Принято в работу': 'В работе',
+      // Ready / pending handover
+      'Готово': 'Готово к выдаче', 'Готово к выдаче': 'Готово к выдаче', 'ready': 'Готово к выдаче',
+      'Перевод готов': 'Готово к выдаче', 'Справка готова': 'Готово к выдаче',
+      'Документы из консульства готовы': 'Готово к выдаче', 'Апостиль': 'Готово к выдаче',
+      'Документы собраны': 'Готово к выдаче',
+      // Done
+      'Завершено': 'Завершено', 'done': 'Завершено',
+      'Выдано': 'Завершено', 'Выдано клиенту': 'Завершено', 'Готово': 'Завершено',
+    };
     const client = allClients.find(c => c.id === o.clientId || c.tg === o.clientId);
     return {
       id:       o.id,
@@ -362,6 +376,9 @@ function renderAll() {
     return { ...t, stage: stageNorm[t.stage] || t.stage };
   });
   const allMyTasks = [...normalizedMyTasks, ...orderTasks];
+
+  // Debug: log all stages to find unmapped ones
+  console.log('[translator] allMyTasks stages:', allMyTasks.map(t => t.stage + '(' + (t.type||'') + ')'));
 
   const newTasks     = allMyTasks.filter(t => t.stage === 'Новое');
   const activeTasks  = allMyTasks.filter(t => t.stage === 'В работе');
