@@ -322,13 +322,11 @@ function renderAll() {
 
   // Also include orders assigned to this translator
   // Show orders that are either assigned to me, or unassigned Переводы (so translator can accept)
-  const isTranslationOrder = o => {
-    const svc = (o.svcType||'').trim();
-    return svc === 'Переводы' || svc === 'Перевод' || svc === 'Translations' || svc === 'Translation';
-  };
+  // Show ALL order types where translator is assigned
+  // (not just 'Переводы' — translator can be assigned to Права, Справки etc)
   let myOrders = isTranslator
-    ? allOrders.filter(o => isTranslationOrder(o) && (matchesMe(o.translator) || !o.translator))
-    : allOrders.filter(o => isTranslationOrder(o));
+    ? allOrders.filter(o => matchesMe(o.translator))
+    : allOrders; // admin/manager sees all
 
   // Convert orders to task-like objects and merge
   const orderTasks = myOrders.map(o => {
@@ -347,7 +345,8 @@ function renderAll() {
       stage:    stageMap[o.status] || o.status || 'Новое',
       due:      o.due || '',
       description: o.comment || '',
-      driveUrl: o.driveLink || '',
+      driveUrl:       o.driveLink || '',
+      clientDriveUrl: (client ? client.driveLink : '') || '',
     };
   });
 
@@ -398,8 +397,10 @@ function renderTaskList(listId, cntId, tasks, mode) {
     const stageColor = STAGE_COLORS[t.stage] || 'var(--t3)';
     const stageBg    = t.stage === 'Новое' ? 'var(--ora-d)' : t.stage === 'В работе' ? 'var(--acc-d)' : t.stage === 'Готово к выдаче' ? 'var(--yel-d)' : 'var(--gre-d)';
     const driveBtn   = t.driveUrl
-      ? `<a href="${esc(t.driveUrl)}" target="_blank" class="btn-drive">📁 Drive</a>`
-      : '';
+      ? `<a href="${esc(t.driveUrl)}" target="_blank" class="btn-drive" title="Открыть папку для загрузки документов">📁 Загрузить документы</a>`
+      : (t.clientDriveUrl
+          ? `<a href="${esc(t.clientDriveUrl)}" target="_blank" class="btn-drive" title="Папка клиента">📁 Папка клиента</a>`
+          : '<span style="font-size:11px;color:var(--t3)">📁 Папка не создана</span>');
     let actionBtn = '';
     if(mode === 'new')
       actionBtn = `<button class="btn-accept" onclick="acceptTask('${t.id}')">✅ Принять в работу</button>`;
