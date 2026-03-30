@@ -482,13 +482,13 @@ function renderAll() {
   }
 
   const myClients = isLawyer
-    ? allClients.filter(c => matchesMe(c.lawyer))
+    ? allClients.filter(c => matchesMe(c.lawyer) || !c.lawyer)
     : allClients;
 
   const myClientIds = new Set(myClients.map(c => c.id));
 
   const myCourts = isLawyer
-    ? allCourts.filter(c => matchesMe(c.lawyer) || myClientIds.has(c.num) || myClientIds.has(c.clientId))
+    ? allCourts.filter(c => matchesMe(c.lawyer) || !c.lawyer || myClientIds.has(c.num) || myClientIds.has(c.clientId))
     : allCourts;
 
   // General tasks assigned to this lawyer
