@@ -351,7 +351,17 @@ function renderAll() {
   });
 
   // Merge spec-tasks and orders
-  const allMyTasks = [...myTasks, ...orderTasks];
+  // Normalize spec-task stages to match order stages
+  const normalizedMyTasks = myTasks.map(t => {
+    const stageNorm = {
+      'new': 'Новое', 'todo': 'Новое',
+      'active': 'В работе', 'inprogress': 'В работе', 'in_progress': 'В работе',
+      'done': 'Завершено', 'completed': 'Завершено', 'closed': 'Завершено',
+      'pending': 'Готово к выдаче', 'ready': 'Готово к выдаче',
+    };
+    return { ...t, stage: stageNorm[t.stage] || t.stage };
+  });
+  const allMyTasks = [...normalizedMyTasks, ...orderTasks];
 
   const newTasks     = allMyTasks.filter(t => t.stage === 'Новое');
   const activeTasks  = allMyTasks.filter(t => t.stage === 'В работе');
