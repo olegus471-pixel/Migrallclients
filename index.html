@@ -1746,6 +1746,7 @@ CRM ↔ Backend (Render) ↔ Google Sheets
 <script>
 'use strict';
 // VERSION: 2026-03-24-v3 (proxy mode + encryption)
+var _isSaving = false; // Global save-in-progress flag (prevents double submit)
 console.log('[CRM] Version: 2026-03-24-v3 | API mode:', window.location.protocol === 'file:' ? 'DIRECT' : 'PROXY');
 // ============================================================
 // API LAYER — calls go to /api/* on Render
@@ -8318,8 +8319,15 @@ function fillLawyerSelect(selId, currentVal) {
 })();
 
 async function saveFiling() {
+  var saveBtn = document.getElementById('modal-filing-save');
+  if (saveBtn && saveBtn.disabled) return;
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Сохранение...'; }
   var client = (document.getElementById('fm-client').value||'').trim();
-  if (!client) { toast('Введите клиента'); return; }
+  if (!client) {
+    toast('Введите клиента');
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = document.getElementById('fm-editing-id').value ? 'Сохранить' : 'Создать подачу'; }
+    return;
+  }
   var editingId = document.getElementById('fm-editing-id').value;
   var filing = {
     id: editingId || ('fil_' + Date.now()),
@@ -8347,6 +8355,7 @@ async function saveFiling() {
     }
   } else {
     toast('Ошибка: ' + (result && result.error || 'нет ответа'));
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = document.getElementById('fm-editing-id').value ? 'Сохранить' : 'Создать подачу'; }
   }
 }
 
