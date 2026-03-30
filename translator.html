@@ -186,8 +186,14 @@ button:active{transform:scale(.97)}
 
     <!-- Done tasks -->
     <div class="section-wrap">
-      <div class="section-title">✅ Завершённые <span class="section-cnt" id="cnt-done">0</span></div>
-      <div id="list-done"></div>
+      <div class="section-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>✅ Завершённые <span class="section-cnt" id="cnt-done">0</span></span>
+        <label style="font-size:12px;font-weight:400;cursor:pointer;display:flex;align-items:center;gap:6px">
+          <input type="checkbox" id="show-done-cb" onchange="toggleShowDone(this.checked)" style="cursor:pointer">
+          Показать
+        </label>
+      </div>
+      <div id="list-done" style="display:none"></div>
     </div>
 
     <!-- Stats section -->
@@ -423,16 +429,20 @@ function renderTaskList(listId, cntId, tasks, mode) {
     const clientName = clientObj ? clientObj.name : (t.client || '');
     const stageColor = STAGE_COLORS[t.stage] || 'var(--t3)';
     const stageBg    = t.stage === 'Новое' ? 'var(--ora-d)' : t.stage === 'В работе' ? 'var(--acc-d)' : t.stage === 'Готово к выдаче' ? 'var(--yel-d)' : 'var(--gre-d)';
-    const driveBtn   = t.driveUrl
-      ? `<a href="${esc(t.driveUrl)}" target="_blank" class="btn-drive" title="Открыть папку для загрузки документов">📁 Загрузить документы</a>`
-      : (t.clientDriveUrl
-          ? `<a href="${esc(t.clientDriveUrl)}" target="_blank" class="btn-drive" title="Папка клиента">📁 Папка клиента</a>`
-          : '<span style="font-size:11px;color:var(--t3)">📁 Папка не создана</span>');
+    // Only use driveUrl if it's a real Google Drive URL
+    const isDriveUrl = u => u && (u.includes('drive.google.com') || u.includes('docs.google.com'));
+    const driveUrl   = isDriveUrl(t.driveUrl) ? t.driveUrl : (isDriveUrl(t.clientDriveUrl) ? t.clientDriveUrl : null);
+    const driveBtnLabel = isDriveUrl(t.driveUrl) ? '📁 Загрузить документы' : '📁 Папка клиента';
+    const driveBtn   = driveUrl
+      ? `<a href="${esc(driveUrl)}" target="_blank" class="btn-drive" title="Открыть папку на Google Drive">${driveBtnLabel}</a>`
+      : '<span style="font-size:11px;color:var(--t3)">📁 Папка не создана</span>';
     let actionBtn = '';
     if(mode === 'new')
       actionBtn = `<button class="btn-accept" onclick="acceptTask('${t.id}')">✅ Принять в работу</button>`;
     else if(mode === 'active')
       actionBtn = `<button class="btn-ready" onclick="markReady('${t.id}')">📤 Готово</button>`;
+    else if(mode === 'pending')
+      actionBtn = `<button class="btn-done" onclick="markDone('${t.id}')" style="background:var(--gre);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer">✅ Завершить</button>`;
 
     const cardCls = mode === 'new' ? 'new-task' : mode === 'active' ? 'active-task' : '';
 
@@ -488,6 +498,28 @@ async function markReady(taskId) {
       await api('/orders/' + taskId, { method:'PUT', body: JSON.stringify({status: 'Готово'}) });
     } else {
       await api('/spec-tasks/' + taskId, { method:'PUT', body: JSON.stringify({stage: 'Готово к выдаче'}) });
+    }
+  } catch(e) { console.warn(e); }
+}
+
+function toggleShowDone(show) {
+  var el = document.getElementById('list-done');
+  if(el) el.style.display = show ? '' : 'none';
+}
+
+async function markDone(taskId) {
+  let t = allTasks.find(x => x.id === taskId);
+  let isOrder = false;
+  if (!t) { t = allOrders.find(x => x.id === taskId); isOrder = !!t; }
+  if(!t) return;
+  if(isOrder) t.status = 'Выдано клиенту'; else t.stage = 'Завершено';
+  renderAll();
+  toast('✅ Задание завершено');
+  try {
+    if(isOrder) {
+      await api('/orders/' + taskId, { method:'PUT', body: JSON.stringify({status: 'Выдано клиенту'}) });
+    } else {
+      await api('/spec-tasks/' + taskId, { method:'PUT', body: JSON.stringify({stage: 'Завершено'}) });
     }
   } catch(e) { console.warn(e); }
 }
