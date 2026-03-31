@@ -689,9 +689,10 @@ function loadTgHistoryFromGAS() {
       const chatId = String(r.chatId || '');
       if (!chatId) return;
       if (!tgChats[chatId]) {
+        const _n = r.chatName || 'Unknown';
         tgChats[chatId] = {
           id:       chatId,
-          name:     r.chatName     || 'Unknown',
+          name:     (ENCRYPT_KEY && String(_n).startsWith('enc:')) ? decryptField(_n) : _n,
           username: r.chatUsername || '',
           type:     'private',
           messages: [],
@@ -1001,6 +1002,10 @@ app.get('/api/tg/messages/:chatId', requireAuth, (req, res) => {
   const chatId = req.params.chatId;
   const chat   = tgChats[chatId];
   if (!chat) return res.json({ ok: true, messages: [], chat: null });
+  // Decrypt name if still encrypted
+  if (ENCRYPT_KEY && chat.name && String(chat.name).startsWith('enc:')) {
+    chat.name = decryptField(chat.name);
+  }
   // Mark as read in memory
   chat.unread = 0;
   chat.messages.forEach(m => {
