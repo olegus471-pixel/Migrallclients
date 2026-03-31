@@ -529,6 +529,7 @@ function renderAll() {
     const cb = document.getElementById(id);
     return cb ? cb.checked : false;
   }
+  const doneStages = new Set(['Завершено', 'done', 'Выдано', 'Выдано клиенту', 'closed']);
   // KPI
   const now = new Date(); now.setHours(0,0,0,0);
   const submits = myClients.filter(c => {
@@ -686,7 +687,6 @@ function renderAll() {
   // Merge all: spec-tasks first, then courts, then citizenship
   const myDeals = [...mySpecDeals, ...courtDeals, ...citDeals];
 
-  const doneStages = new Set(['Завершено', 'done', 'Выдано', 'Выдано клиенту', 'closed']);
   const visibleDeals = showDone('show-done-deals')
     ? myDeals
     : myDeals.filter(d => !doneStages.has(d.stage));
