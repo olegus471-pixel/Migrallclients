@@ -397,8 +397,8 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 // Specific limiters:
-const loginLimiter    = rateLimiter(5,  15 * 60 * 1000, 'login');    // 5 per 15min
-const authLimiter     = rateLimiter(20, 15 * 60 * 1000, 'auth');     // 20 per 15min
+const loginLimiter    = rateLimiter(20, 15 * 60 * 1000, 'login');   // 20 per 15min
+const authLimiter     = rateLimiter(50, 15 * 60 * 1000, 'auth');     // 50 per 15min
 const tgSendLimiter   = rateLimiter(60,  1 * 60 * 1000, 'tg-send');  // 60 per min
 
 // ── Health/ping endpoint ──────────────────────────────────────
@@ -676,63 +676,64 @@ function persistTgMessage(chatInfo, msg) {
 // ── Load chat history from GAS on startup ─────────────────────
 function loadTgHistoryFromGAS() {
   if (!GAS_URL) return;
-  const gasUrl    = GAS_URL + '?path=tg-messages';
-  const parsedUrl = url.parse(gasUrl);
-  https.get({ hostname: parsedUrl.hostname, path: parsedUrl.path }, res => {
-    let data = '';
-    res.on('data', c => data += c);
-    res.on('end', () => {
-      try {
-        const rows = JSON.parse(data);
-        if (!Array.isArray(rows)) return;
-        let loaded = 0;
-        rows.forEach(r => {
-          const chatId = String(r.chatId || '');
-          if (!chatId) return;
-          if (!tgChats[chatId]) {
-            tgChats[chatId] = {
-              id:       chatId,
-              name:     r.chatName     || 'Unknown',
-              username: r.chatUsername || '',
-              type:     'private',
-              messages: [],
-              unread:   0,
-              lastTs:   0,
-            };
-          }
-          // Decrypt sensitive fields from Sheets
-          const rd = decryptFields(r, ENC_FIELDS.tgmessages);
-          const msg = {
-            id:         r.id,
-            ts:         Number(r.ts) || 0,
-            text:       rd.text      || '',
-            fromName:   rd.fromName  || '',
-            fromId:     r.fromId     || '',
-            isOutgoing: r.isOutgoing === 'TRUE' || r.isOutgoing === true,
-            isRead:     r.isRead     === 'TRUE' || r.isRead     === true,
-            mediaType:  r.mediaType  || null,
-            fileId:     r.fileId     || null,
-            fileName:   rd.fileName  || null,
-            mimeType:   r.mimeType   || null,
-            fileSize:   r.fileSize   ? Number(r.fileSize) : null,
-            fileUrl:    r.fileUrl    || null,
-          };
-          tgChats[chatId].messages.push(msg);
-          if (msg.ts > tgChats[chatId].lastTs) tgChats[chatId].lastTs = msg.ts;
-          // Only count as unread if explicitly marked false (not just empty/unknown)
-          if (!msg.isOutgoing && msg.isRead === false) tgChats[chatId].unread++;
-          loaded++;
-        });
-        // Sort messages by ts in each chat
-        Object.values(tgChats).forEach(c => {
-          c.messages.sort((a, b) => a.ts - b.ts);
-        });
-        console.log('[TG] Loaded', loaded, 'messages from GAS for', Object.keys(tgChats).length, 'chats');
-      } catch(e) {
-        console.warn('[TG] Failed to load history from GAS:', e.message);
+  console.log('[TG] Loading message history from GAS...');
+
+  function processRows(rows) {
+    if (!Array.isArray(rows)) {
+      console.warn('[TG] History: expected array, got:', typeof rows, JSON.stringify(rows).slice(0,100));
+      return;
+    }
+    let loaded = 0;
+    rows.forEach(r => {
+      const chatId = String(r.chatId || '');
+      if (!chatId) return;
+      if (!tgChats[chatId]) {
+        tgChats[chatId] = {
+          id:       chatId,
+          name:     r.chatName     || 'Unknown',
+          username: r.chatUsername || '',
+          type:     'private',
+          messages: [],
+          unread:   0,
+          lastTs:   0,
+        };
       }
+      // proxyToGAS already decrypts fields — use directly
+      const msg = {
+        id:         r.id,
+        ts:         Number(r.ts) || 0,
+        text:       r.text       || '',
+        fromName:   r.fromName   || '',
+        fromId:     r.fromId     || '',
+        isOutgoing: r.isOutgoing === 'TRUE' || r.isOutgoing === true,
+        isRead:     r.isRead     === 'TRUE' || r.isRead     === true,
+        mediaType:  r.mediaType  || null,
+        fileId:     r.fileId     || null,
+        fileName:   r.fileName   || null,
+        mimeType:   r.mimeType   || null,
+        fileSize:   r.fileSize   ? Number(r.fileSize) : null,
+        fileUrl:    r.fileUrl    || null,
+      };
+      tgChats[chatId].messages.push(msg);
+      if (msg.ts > tgChats[chatId].lastTs) tgChats[chatId].lastTs = msg.ts;
+      if (!msg.isOutgoing && msg.isRead === false) tgChats[chatId].unread++;
+      loaded++;
     });
-  }).on('error', e => console.warn('[TG] History load error:', e.message));
+    // Sort messages by ts in each chat
+    Object.values(tgChats).forEach(c => {
+      c.messages.sort((a, b) => a.ts - b.ts);
+    });
+    console.log('[TG] Loaded', loaded, 'messages from GAS for', Object.keys(tgChats).length, 'chats');
+  }
+
+  // Use proxyToGAS which correctly follows GAS redirects
+  proxyToGAS('GET', '/tg-messages', '', (data) => {
+    if (data && data.error) {
+      console.warn('[TG] History load error from GAS:', data.error);
+      return;
+    }
+    processRows(data);
+  });
 }
 
 // ── Resolve Telegram file URL ────────────────────────────────
@@ -808,7 +809,7 @@ app.get('/api/tg/file/:fileId', requireAuth, (req, res) => {
 });
 
 // Load history on startup (with delay to let server fully start)
-setTimeout(loadTgHistoryFromGAS, 3000);
+setTimeout(loadTgHistoryFromGAS, 5000); // wait for server to fully init
 
 // ── Telegram API helper ────────────────────────────────────────
 function tgCall(method, params, cb) {
