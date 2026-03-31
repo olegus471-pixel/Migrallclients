@@ -220,9 +220,10 @@ button:active{transform:scale(.97)}
     <!-- Deals tab - spec-tasks assigned to this lawyer -->
     <div id="tab-deals">
       <div class="panel">
-        <div class="panel-hdr">
+        <div class="panel-hdr" style="display:flex;align-items:center;gap:8px">
           <div class="panel-title">⚖️ Дела адвоката</div>
           <div class="panel-cnt" id="cnt-deals">—</div>
+          <label style="font-size:11px;font-weight:400;color:var(--t2);display:flex;align-items:center;gap:5px;cursor:pointer;margin-left:auto"><input type="checkbox" id="show-done-deals" onchange="renderAll()" style="cursor:pointer"> Завершённые</label>
         </div>
         <div style="overflow-x:auto">
           <table class="dt"><thead><tr>
@@ -271,9 +272,10 @@ button:active{transform:scale(.97)}
     <!-- Courts tab -->
     <div id="tab-courts" style="display:none">
       <div class="panel">
-        <div class="panel-hdr">
+        <div class="panel-hdr" style="display:flex;align-items:center;gap:8px">
           <div class="panel-title">⚖️ Судебные дела</div>
           <div class="panel-cnt" id="cnt-courts">—</div>
+          <label style="font-size:11px;font-weight:400;color:var(--t2);display:flex;align-items:center;gap:5px;cursor:pointer;margin-left:auto"><input type="checkbox" id="show-done-courts" onchange="renderAll()" style="cursor:pointer"> Завершённые</label>
         </div>
         <div style="overflow-x:auto">
           <table class="dt"><thead><tr>
@@ -288,9 +290,10 @@ button:active{transform:scale(.97)}
     <!-- Citizenship tab -->
     <div id="tab-citizenship" style="display:none">
       <div class="panel">
-        <div class="panel-hdr">
+        <div class="panel-hdr" style="display:flex;align-items:center;gap:8px">
           <div class="panel-title">🏛 Гражданство</div>
           <div class="panel-cnt" id="cnt-citizenship">—</div>
+          <label style="font-size:11px;font-weight:400;color:var(--t2);display:flex;align-items:center;gap:5px;cursor:pointer;margin-left:auto"><input type="checkbox" id="show-done-cit" onchange="renderAll()" style="cursor:pointer"> Завершённые</label>
         </div>
         <div style="overflow-x:auto">
           <table class="dt"><thead><tr>
@@ -305,9 +308,10 @@ button:active{transform:scale(.97)}
     <!-- Filings tab -->
     <div id="tab-filings" style="display:none">
       <div class="panel">
-        <div class="panel-hdr">
+        <div class="panel-hdr" style="display:flex;align-items:center;gap:8px">
           <div class="panel-title">📋 Подачи AIMA</div>
           <div class="panel-cnt" id="cnt-filings">—</div>
+          <label style="font-size:11px;font-weight:400;color:var(--t2);display:flex;align-items:center;gap:5px;cursor:pointer;margin-left:auto"><input type="checkbox" id="show-done-filings" onchange="renderAll()" style="cursor:pointer"> Завершённые</label>
         </div>
         <div style="overflow-x:auto">
           <table class="dt"><thead><tr>
@@ -332,9 +336,10 @@ button:active{transform:scale(.97)}
     <!-- Tasks tab -->
     <div id="tab-tasks" style="display:none">
       <div class="panel">
-        <div class="panel-hdr">
+        <div class="panel-hdr" style="display:flex;align-items:center;gap:8px">
           <div class="panel-title">✅ Мои задачи</div>
           <div class="panel-cnt" id="cnt-tasks">—</div>
+          <label style="font-size:11px;font-weight:400;color:var(--t2);display:flex;align-items:center;gap:5px;cursor:pointer;margin-left:auto"><input type="checkbox" id="show-done-tasks" onchange="renderAll()" style="cursor:pointer"> Завершённые</label>
         </div>
         <div id="tasks-list"></div>
       </div>
@@ -519,6 +524,11 @@ function renderAll() {
 
   const myTasks = [...myGeneralTasks, ...mySpecTasks];
 
+
+  function showDone(id) {
+    const cb = document.getElementById(id);
+    return cb ? cb.checked : false;
+  }
   // KPI
   const now = new Date(); now.setHours(0,0,0,0);
   const submits = myClients.filter(c => {
@@ -574,9 +584,10 @@ function renderAll() {
 
   // Courts table
   myCourts_cache = myCourts; // cache for modal access
-  document.getElementById('cnt-courts').textContent = myCourts.length + ' дел';
-  document.getElementById('tb-courts').innerHTML = myCourts.length
-    ? myCourts.map((c,i) => {
+  const visibleCourts = showDone('show-done-courts') ? myCourts : myCourts.filter(c => !doneStages.has(c.status) && !doneStages.has(c.stage));
+  document.getElementById('cnt-courts').textContent = myCourts.length + ' дел' + (!showDone('show-done-courts') && myCourts.filter(c => doneStages.has(c.status)||doneStages.has(c.stage)).length ? ' · ' + myCourts.filter(c => doneStages.has(c.status)||doneStages.has(c.stage)).length + ' скрыто' : '');
+  document.getElementById('tb-courts').innerHTML = visibleCourts.length
+    ? visibleCourts.map((c,i) => {
         const clientObj = allClients.find(cl => cl.num === c.num || cl.name === c.name);
         const driveLink = c.driveLink || (clientObj && clientObj.driveLink) || '';
         const driveBtn = driveLink
@@ -599,9 +610,10 @@ function renderAll() {
     ? allCitizenship.filter(c => matchesMe(c.lawyer) || myClients.some(cl => cl.num === c.num || cl.name === c.name))
     : allCitizenship;
   myCit_cache = myCitizenship; // cache for modal access
-  document.getElementById('cnt-citizenship').textContent = myCitizenship.length + ' дел';
-  document.getElementById('tb-citizenship').innerHTML = myCitizenship.length
-    ? myCitizenship.map((c,i) => {
+  const visibleCitizenship = showDone('show-done-cit') ? myCitizenship : myCitizenship.filter(c => !doneStages.has(c.status) && !doneStages.has(c.stage));
+  document.getElementById('cnt-citizenship').textContent = myCitizenship.length + ' дел' + (!showDone('show-done-cit') && myCitizenship.filter(c => doneStages.has(c.status)||doneStages.has(c.stage)).length ? ' · ' + myCitizenship.filter(c => doneStages.has(c.status)||doneStages.has(c.stage)).length + ' скрыто' : '');
+  document.getElementById('tb-citizenship').innerHTML = visibleCitizenship.length
+    ? visibleCitizenship.map((c,i) => {
         const clientObj = allClients.find(cl => cl.num === c.num || cl.name === c.name);
         const driveLink = c.driveLink || (clientObj && clientObj.driveLink) || '';
         const driveBtn = driveLink
@@ -623,14 +635,15 @@ function renderAll() {
   const myFilings = isLawyer
     ? allFilings.filter(f => matchesMe(f.lawyer) || myClients.some(cl => cl.name === f.client || cl.name === f.name))
     : allFilings;
-  document.getElementById('cnt-filings').textContent = myFilings.length + ' подач';
   const sortedFilings = [...myFilings].sort((a,b) => {
     const da = parseDate(a.date), db = parseDate(b.date);
     if (!da && !db) return 0; if (!da) return 1; if (!db) return -1;
     return da - db;
   });
-  document.getElementById('tb-filings').innerHTML = sortedFilings.length
-    ? sortedFilings.map(f => `<tr>
+  const visibleFilings = showDone('show-done-filings') ? sortedFilings : sortedFilings.filter(f => !['Одобрено','Отказ','Завершено'].includes(f.status));
+  document.getElementById('cnt-filings').textContent = myFilings.length + ' подач' + (!showDone('show-done-filings') && sortedFilings.filter(f=>['Одобрено','Отказ','Завершено'].includes(f.status)).length ? ' · ' + sortedFilings.filter(f=>['Одобрено','Отказ','Завершено'].includes(f.status)).length + ' скрыто' : '');
+  document.getElementById('tb-filings').innerHTML = visibleFilings.length
+    ? visibleFilings.map(f => `<tr>
         <td style="font-weight:600">${esc(f.client||f.name||'—')}</td>
         <td class="mono" style="color:var(--acc);font-weight:700">${f.date||'—'}</td>
         <td class="mono" style="color:var(--t2)">${f.time||'—'}</td>
@@ -673,8 +686,13 @@ function renderAll() {
   // Merge all: spec-tasks first, then courts, then citizenship
   const myDeals = [...mySpecDeals, ...courtDeals, ...citDeals];
 
-  document.getElementById('cnt-deals').textContent = myDeals.length + ' дел';
-  document.getElementById('tb-deals').innerHTML = myDeals.length
+  const doneStages = new Set(['Завершено', 'done', 'Выдано', 'Выдано клиенту', 'closed']);
+  const visibleDeals = showDone('show-done-deals')
+    ? myDeals
+    : myDeals.filter(d => !doneStages.has(d.stage));
+  document.getElementById('cnt-deals').textContent =
+    myDeals.length + ' дел' + (showDone('show-done-deals') ? '' : ' · ' + myDeals.filter(d => doneStages.has(d.stage)).length + ' скрыто');
+  document.getElementById('tb-deals').innerHTML = visibleDeals.length
     ? myDeals.map(d => {
         const stageColorMap = {
           'Новое': 'var(--t3)', 'В работе': 'var(--acc)', 'Ожидает документов': 'var(--yel)',
@@ -712,24 +730,44 @@ function renderAll() {
 
   // Render stats
   renderStats(myClients, myCourts, myCitizenship, myFilings, myTasks);
-  document.getElementById('tasks-list').innerHTML = myTasks.length
-    ? myTasks.map(t => {
+  const visibleTasks = showDone('show-done-tasks') ? myTasks : myTasks.filter(t => t.stage !== 'done' && t.stage !== 'Завершено');
+  document.getElementById('cnt-tasks').textContent = myTasks.length + ' задач' + (!showDone('show-done-tasks') && myTasks.filter(t=>t.stage==='done'||t.stage==='Завершено').length ? ' · ' + myTasks.filter(t=>t.stage==='done'||t.stage==='Завершено').length + ' скрыто' : '');
+  document.getElementById('tasks-list').innerHTML = visibleTasks.length
+    ? visibleTasks.map(t => {
         const client = allClients.find(c => c.id === t.client);
         const prioColor = t.prio==='high' ? 'var(--red)' : t.prio==='mid' ? 'var(--yel)' : 'var(--t4)';
         const taskTitle = t.text || t.title || t.description || t.type || 'Задача';
         const taskClient = client ? client.name : (t.client || '—');
         const taskType = t.type ? `<span style="font-size:11px;color:var(--pur);font-weight:600;margin-left:6px">${esc(t.type)}</span>` : '';
         const driveLink = t.driveUrl ? `<a href="${esc(t.driveUrl)}" target="_blank" style="font-size:11px;color:var(--acc);margin-left:8px">📁 Drive</a>` : '';
+        const taskStages = ['todo','active','done'];
+        const stageLabels = {'todo':'Новое','active':'В работе','done':'Завершено'};
         return `<div class="task-item">
           <div class="task-prio" style="background:${prioColor}"></div>
           <div class="task-body">
             <div class="task-title">${esc(taskTitle)}${taskType}</div>
             <div class="task-meta">${esc(taskClient)}${t.due?' · 📅 '+t.due:''}${driveLink}</div>
           </div>
-          ${statusBdg(t.stage)}
+          <div style="display:flex;align-items:center;gap:6px">
+            <select onchange="changeTaskStage('${t.id}',this.value)" onclick="event.stopPropagation()"
+              style="font-size:11px;border:1px solid var(--border);border-radius:6px;padding:3px 6px;background:var(--surface);color:var(--t1);cursor:pointer">
+              ${taskStages.map(s=>`<option value="${s}"${t.stage===s?' selected':''}>${stageLabels[s]||s}</option>`).join('')}
+            </select>
+          </div>
         </div>`;
       }).join('')
     : '<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Нет открытых задач 🎉</div>';
+}
+
+async function changeTaskStage(taskId, newStage) {
+  const t = allTasks.find(x => x.id === taskId);
+  if (!t) return;
+  t.stage = newStage;
+  renderAll();
+  toast(newStage === 'done' ? '✅ Задача завершена' : '✓ Статус обновлён');
+  try {
+    await api('/tasks/' + encodeURIComponent(taskId), { method:'PUT', body: JSON.stringify({ stage: newStage }) });
+  } catch(e) { console.warn('changeTaskStage:', e); }
 }
 
 // ── STATS ───────────────────────────────────────────────────
@@ -1093,11 +1131,15 @@ function openDealEdit(id) {
       <label class="lw-label">Описание / Комментарий</label>
       <textarea class="lw-textarea" id="lw-deal-desc">${esc(d.description||d.comment||'')}</textarea>
     </div>
+    <div class="lw-field" style="margin-bottom:12px">
+      <label class="lw-label">Статус</label>
+      <select class="lw-select" id="lw-deal-status">${selOpts(['Новое','В работе','Ожидает документов','На проверке','Завершено'], d.stage)}</select>
+    </div>
     ${driveLink ? `<div style="margin-bottom:12px"><a href="${esc(driveLink)}" target="_blank" class="drive-btn" style="display:inline-flex">📁 Открыть папку клиента на Drive</a></div>` : ''}
   `;
 
   openLwModal('⚖️ Дело — ' + (d.client||''), body, async () => {
-    d.stage       = document.getElementById('lw-deal-stage').value;
+    d.stage       = document.getElementById('lw-deal-status').value;
     d.due         = document.getElementById('lw-deal-due').value;
     d.description = document.getElementById('lw-deal-desc').value;
     closeLwModal();
