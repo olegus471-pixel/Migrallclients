@@ -465,6 +465,8 @@ function renderAll() {
   function matchesMe(val) {
     if (!val) return false;
     const v = String(val).trim().toLowerCase();
+    // Skip encrypted values that weren't decrypted
+    if (v.startsWith('enc:')) return false;
     const n = myName.toLowerCase();
     const e = myEmail.toLowerCase();
     // Exact match
@@ -481,14 +483,27 @@ function renderAll() {
     return false;
   }
 
+  // Log first 3 unique lawyer values to help debug matching
+  if (!matchesMe._logged) {
+    matchesMe._logged = true;
+    const lawyerVals = [...new Set([
+      ...allCourts.map(c=>c.lawyer),
+      ...allCitizenship.map(c=>c.lawyer),
+      ...allSpecTasks.map(t=>t.assignee),
+    ])].filter(Boolean).slice(0, 8);
+    console.log('[lawyer] matchesMe check | myName:', myName, '| myEmail:', myEmail);
+    console.log('[lawyer] lawyer field values in data:', lawyerVals);
+    console.log('[lawyer] matchesMe results:', lawyerVals.map(v => v + ' → ' + matchesMe(v)));
+  }
+
   const myClients = isLawyer
-    ? allClients.filter(c => matchesMe(c.lawyer) || !c.lawyer)
+    ? allClients.filter(c => matchesMe(c.lawyer))
     : allClients;
 
   const myClientIds = new Set(myClients.map(c => c.id));
 
   const myCourts = isLawyer
-    ? allCourts.filter(c => matchesMe(c.lawyer) || !c.lawyer || myClientIds.has(c.num) || myClientIds.has(c.clientId))
+    ? allCourts.filter(c => matchesMe(c.lawyer) || myClientIds.has(c.num) || myClientIds.has(c.clientId))
     : allCourts;
 
   // General tasks assigned to this lawyer
@@ -499,7 +514,7 @@ function renderAll() {
 
   // Spec-tasks (role=lawyer) assigned to this lawyer
   const mySpecTasks = isLawyer
-    ? allSpecTasks.filter(t => t.role === 'lawyer' && (matchesMe(t.assignee) || !t.assignee || t.assignee === '' || t.assignee === '—'))
+    ? allSpecTasks.filter(t => t.role === 'lawyer' && matchesMe(t.assignee))
     : allSpecTasks.filter(t => t.role === 'lawyer');
 
   const myTasks = [...myGeneralTasks, ...mySpecTasks];
@@ -581,7 +596,7 @@ function renderAll() {
 
   // Citizenship
   const myCitizenship = isLawyer
-    ? allCitizenship.filter(c => matchesMe(c.lawyer) || !c.lawyer || myClients.some(cl => cl.num === c.num || cl.name === c.name))
+    ? allCitizenship.filter(c => matchesMe(c.lawyer) || myClients.some(cl => cl.num === c.num || cl.name === c.name))
     : allCitizenship;
   myCit_cache = myCitizenship; // cache for modal access
   document.getElementById('cnt-citizenship').textContent = myCitizenship.length + ' дел';
@@ -606,7 +621,7 @@ function renderAll() {
 
   // Filings
   const myFilings = isLawyer
-    ? allFilings.filter(f => matchesMe(f.lawyer) || !f.lawyer || myClients.some(cl => cl.name === f.client || cl.name === f.name))
+    ? allFilings.filter(f => matchesMe(f.lawyer) || myClients.some(cl => cl.name === f.client || cl.name === f.name))
     : allFilings;
   document.getElementById('cnt-filings').textContent = myFilings.length + ' подач';
   const sortedFilings = [...myFilings].sort((a,b) => {
