@@ -330,6 +330,7 @@ const ENC_PATH_MAP = {
   '/filings':    'filings',
   '/checklists': 'checklists',
   '/schedule':   'schedule',
+  '/tg-messages':'tgmessages',
 };
 
 function getEncFields(apiPath) {
@@ -706,7 +707,7 @@ function loadTgHistoryFromGAS() {
         fromName:   r.fromName   || '',
         fromId:     r.fromId     || '',
         isOutgoing: r.isOutgoing === 'TRUE' || r.isOutgoing === true,
-        isRead:     r.isRead     === 'TRUE' || r.isRead     === true,
+        isRead:     true, // history always read; new messages marked unread by webhook
         mediaType:  r.mediaType  || null,
         fileId:     r.fileId     || null,
         fileName:   r.fileName   || null,
@@ -716,7 +717,7 @@ function loadTgHistoryFromGAS() {
       };
       tgChats[chatId].messages.push(msg);
       if (msg.ts > tgChats[chatId].lastTs) tgChats[chatId].lastTs = msg.ts;
-      if (!msg.isOutgoing && msg.isRead === false) tgChats[chatId].unread++;
+      // unread not counted for history — only for new webhook messages
       loaded++;
     });
     // Sort messages by ts in each chat
@@ -985,7 +986,12 @@ app.get('/api/tg/chats', requireAuth, (req, res) => {
       type:     c.type,
       unread:   c.unread,
       lastTs:   c.lastTs,
-      lastMsg:  c.messages.length ? c.messages[c.messages.length - 1].text.slice(0, 80) : '',
+      lastMsg:       c.messages.length ? (() => {
+        const t = c.messages[c.messages.length - 1].text || '';
+        const dec = (ENCRYPT_KEY && t.startsWith('enc:')) ? decryptField(t) : t;
+        return dec.slice(0, 80);
+      })() : '',
+      lastIsOutgoing: c.messages.length ? !!c.messages[c.messages.length - 1].isOutgoing : false,
     }));
   res.json({ ok: true, chats: list, total: list.length });
 });
@@ -997,7 +1003,15 @@ app.get('/api/tg/messages/:chatId', requireAuth, (req, res) => {
   if (!chat) return res.json({ ok: true, messages: [], chat: null });
   // Mark as read in memory
   chat.unread = 0;
-  chat.messages.forEach(m => { m.isRead = true; });
+  chat.messages.forEach(m => {
+    m.isRead = true;
+    // Decrypt any fields that are still encrypted (e.g. loaded before ENC_PATH_MAP fix)
+    if (ENCRYPT_KEY) {
+      if (m.text     && String(m.text).startsWith('enc:'))     m.text     = decryptField(m.text);
+      if (m.fromName && String(m.fromName).startsWith('enc:')) m.fromName = decryptField(m.fromName);
+      if (m.fileName && String(m.fileName).startsWith('enc:')) m.fileName = decryptField(m.fileName);
+    }
+  });
 
   // Mark as read in GAS (async, non-blocking)
   if (GAS_URL) {
