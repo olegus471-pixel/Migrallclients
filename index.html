@@ -569,6 +569,26 @@ button:active{transform:scale(.97)}
 .cl-cmt-author{font-weight:700;color:var(--acc);flex-shrink:0}
 .cl-cmt-date{color:var(--t4);flex-shrink:0}
 .cl-cmt-text{flex:1;word-break:break-word}
+
+  .tg-ftab {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border-radius: 16px;
+    border: 1.5px solid var(--border);
+    background: var(--s2);
+    color: var(--t2);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .tg-ftab:hover { background: var(--s3); color: var(--t1); }
+  .tg-ftab-active {
+    background: var(--acc) !important;
+    color: #fff !important;
+    border-color: var(--acc) !important;
+  }
 </style>
 </head>
 <body>
@@ -1611,7 +1631,16 @@ CRM ↔ Backend (Render) ↔ Google Sheets
             <button class="btn btn-sm" style="font-size:11px;padding:4px 8px;background:var(--acc-d);color:var(--acc)" onclick="openTgSettings()">⚙️</button>
           </div>
         </div>
-        <input id="tg-search" placeholder="🔍 Поиск чатов..." style="margin:10px 12px;padding:8px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;outline:none;background:var(--s2);color:var(--t1)" oninput="tgFilterChats(this.value)">
+        <input id="tg-search" placeholder="🔍 Поиск чатов..." style="margin:10px 12px 6px;padding:8px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;outline:none;background:var(--s2);color:var(--t1)" oninput="tgFilterChats(this.value)">
+        <!-- Filter tabs -->
+        <div id="tg-filter-tabs" style="display:flex;gap:4px;padding:0 12px 8px;overflow-x:auto;scrollbar-width:none">
+          <button class="tg-ftab tg-ftab-active" onclick="tgSetFilter('all',this)">Все</button>
+          <button class="tg-ftab" onclick="tgSetFilter('unread',this)">🔵 Непрочитанные</button>
+          <button class="tg-ftab" onclick="tgSetFilter('incoming',this)">📥 Входящие</button>
+          <button class="tg-ftab" onclick="tgSetFilter('outgoing',this)">📤 Исходящие</button>
+          <button class="tg-ftab" onclick="tgSetFilter('crm',this)">✅ CRM</button>
+          <button class="tg-ftab" onclick="tgSetFilter('grouped',this)">👥 По клиентам</button>
+        </div>
         <div id="tg-chat-list" style="overflow-y:auto;flex:1">
           <div style="padding:40px 16px;text-align:center;color:var(--t3);font-size:13px">
             Настройте Telegram-бота для получения сообщений.<br>
@@ -6370,8 +6399,21 @@ async function tgLoadChats() {
     const data = await tgFetch('/api/tg/chats');
     if (data.error) { tgSetStatus('error'); return; }
     tgSetStatus('ok');
-    _tgAllChats = data.chats || [];
+    _tgAllChats = (data.chats || []).map(function(c) {
+      // Add _lastIsOutgoing from server
+      c._lastIsOutgoing = !!c.lastIsOutgoing;
+      // Add _crmMatch: does this chat have a matching CRM client?
+      if (c.username) {
+        var un = c.username.replace('@','').toLowerCase();
+        c._crmMatch = !!(typeof clients !== 'undefined' && clients &&
+          clients.find(function(cl){ return (cl.tg||'').replace('@','').toLowerCase() === un; }));
+      } else {
+        c._crmMatch = false;
+      }
+      return c;
+    });
     tgRenderChatList(_tgAllChats);
+    tgUpdateFilterCounts();
     // Update badge
     const unread = _tgAllChats.reduce((s, c) => s + (c.unread||0), 0);
     var bdg = g('bdg-tg');
@@ -6595,14 +6637,125 @@ function tgUpdateSignaturePreview() {
 }
 
 // ── Filter chats ──────────────────────────────────────────────
-function tgFilterChats(q) {
-  if (!q) { tgRenderChatList(_tgAllChats); return; }
-  var filtered = _tgAllChats.filter(function(c) {
-    return (c.name||'').toLowerCase().includes(q.toLowerCase())
-        || (c.username||'').toLowerCase().includes(q.toLowerCase())
-        || (c.lastMsg||'').toLowerCase().includes(q.toLowerCase());
+var _tgActiveFilter = 'all';
+
+function tgSetFilter(filter, btn) {
+  _tgActiveFilter = filter;
+  document.querySelectorAll('.tg-ftab').forEach(function(b) {
+    b.classList.remove('tg-ftab-active');
   });
-  tgRenderChatList(filtered);
+  if (btn) btn.classList.add('tg-ftab-active');
+  tgFilterChats((document.getElementById('tg-search')||{}).value || '');
+}
+
+function tgRenderGroupedChats(chats, q) {
+  var el = g('tg-chat-list');
+  if (!el) return;
+
+  // Apply search if any
+  if (q) {
+    var ql = q.toLowerCase();
+    chats = chats.filter(function(c) {
+      return (c.name||'').toLowerCase().includes(ql)
+          || (c.username||'').toLowerCase().includes(ql);
+    });
+  }
+
+  if (!chats.length) {
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Нет чатов</div>';
+    return;
+  }
+
+  // Group: CRM clients first (with client name as header), then Unknown
+  var crmGroup   = [];
+  var unknownGroup = [];
+
+  chats.forEach(function(c) {
+    if (c._crmMatch) {
+      // Find CRM client name
+      var cl = null;
+      if (c.username && typeof clients !== 'undefined') {
+        var un = c.username.replace('@','').toLowerCase();
+        cl = clients.find(function(x){ return (x.tg||'').replace('@','').toLowerCase() === un; });
+      }
+      crmGroup.push({ chat: c, client: cl });
+    } else {
+      unknownGroup.push({ chat: c, client: null });
+    }
+  });
+
+  function renderChatItem(c) {
+    var unreadBdg = (c.unread||0) > 0
+      ? '<span style="background:var(--acc);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:auto">' + c.unread + '</span>'
+      : '';
+    var lastDir = c._lastIsOutgoing ? '↗ ' : '';
+    var name = c.crmName || c.name || 'Unknown';
+    return '<div class="tg-chat-item" onclick="tgOpenChat(\'' + c.id + '\')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">'
+      + '<div style="width:36px;height:36px;border-radius:50%;background:var(--acc-d);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">'
+      + (name[0]||'?').toUpperCase()
+      + '</div>'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(name) + '</div>'
+      + '<div style="font-size:11px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + lastDir + esc(c.lastMsg||'') + '</div>'
+      + '</div>'
+      + unreadBdg
+      + '</div>';
+  }
+
+  var html = '';
+
+  // CRM clients group
+  if (crmGroup.length) {
+    html += '<div style="padding:6px 14px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);background:var(--s2)">✅ Клиенты CRM · ' + crmGroup.length + '</div>';
+    html += crmGroup.map(function(item) { return renderChatItem(item.chat); }).join('');
+  }
+
+  // Unknown group
+  if (unknownGroup.length) {
+    html += '<div style="padding:6px 14px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);background:var(--s2)">❓ Не в CRM · ' + unknownGroup.length + '</div>';
+    html += unknownGroup.map(function(item) { return renderChatItem(item.chat); }).join('');
+  }
+
+  el.innerHTML = html;
+}
+
+function tgUpdateFilterCounts() {
+  if (!_tgAllChats.length) return;
+  var unreadCnt = _tgAllChats.filter(function(c){ return (c.unread||0) > 0; }).length;
+  var crmCnt    = _tgAllChats.filter(function(c){ return c._crmMatch; }).length;
+  var tabs = document.querySelectorAll('.tg-ftab');
+  if (tabs[1] && unreadCnt) tabs[1].textContent = '🔵 Непрочитанные (' + unreadCnt + ')';
+  if (tabs[4] && crmCnt)    tabs[4].textContent = '✅ CRM (' + crmCnt + ')';
+}
+
+function tgFilterChats(q) {
+  var chats = _tgAllChats;
+
+  // Apply tab filter
+  if (_tgActiveFilter === 'unread') {
+    chats = chats.filter(function(c) { return (c.unread || 0) > 0; });
+  } else if (_tgActiveFilter === 'incoming') {
+    chats = chats.filter(function(c) { return !c._lastIsOutgoing; });
+  } else if (_tgActiveFilter === 'outgoing') {
+    chats = chats.filter(function(c) { return c._lastIsOutgoing; });
+  } else if (_tgActiveFilter === 'crm') {
+    chats = chats.filter(function(c) { return c._crmMatch; });
+  } else if (_tgActiveFilter === 'grouped') {
+    tgRenderGroupedChats(chats, q);
+    return;
+  }
+
+  // Apply search query
+  if (q) {
+    var ql = q.toLowerCase();
+    chats = chats.filter(function(c) {
+      return (c.name||'').toLowerCase().includes(ql)
+          || (c.username||'').toLowerCase().includes(ql)
+          || (c.lastMsg||'').toLowerCase().includes(ql);
+    });
+  }
+
+  tgRenderChatList(chats);
 }
 
 function tgRefreshChats() { tgLoadChats(); }
