@@ -689,7 +689,11 @@ function renderAll() {
 
   const visibleDeals = showDone('show-done-deals')
     ? myDeals
-    : myDeals.filter(d => !doneStages.has(d.stage));
+    : myDeals.filter(d => {
+        const st = (d.stage || '').trim();
+        return !doneStages.has(st);
+      });
+  console.log('[lawyer] myDeals stages:', [...new Set(myDeals.map(d=>(d.stage||'').trim()))]);
   document.getElementById('cnt-deals').textContent =
     myDeals.length + ' дел' + (showDone('show-done-deals') ? '' : ' · ' + myDeals.filter(d => doneStages.has(d.stage)).length + ' скрыто');
   document.getElementById('tb-deals').innerHTML = visibleDeals.length
