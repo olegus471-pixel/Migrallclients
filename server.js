@@ -287,7 +287,7 @@ function decryptFields(obj, fields) {
 // Field lists per data type — ALL sensitive fields across ALL sheets
 const ENC_FIELDS = {
   // Telegram messages
-  tgmessages:  ['text', 'fromName', 'chatName', 'fileName'],
+  tgmessages:  ['text', 'fromName', 'chatName', 'fileName', 'fileUrl', 'chatUsername'],
 
   // Clients
   clients:     ['name', 'tg', 'phone', 'email', 'comment', 'address',
