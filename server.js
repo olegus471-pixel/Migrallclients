@@ -1325,22 +1325,77 @@ app.post('/api/admin/encrypt-migrate', express.json(), requireAuth, (req, res) =
     });
   });
 
-  // Migrate TG messages via GAS tg-messages path
-  proxyToGAS('GET', '/tg-messages', '', (msgs) => {
-    if (!Array.isArray(msgs)) { results.tgmessages = 'skipped'; checkDone(); return; }
-    const toMigrate = msgs.filter(m =>
-      ENC_FIELDS.tgmessages.some(f => m[f] && !String(m[f]).startsWith('enc:'))
+  // Migrate TG messages — fetch RAW (unfiltered by ENC_PATH_MAP) then batch encrypt
+  // We call GAS directly (without the decrypt proxy) to get actual stored values
+  (function migrateTgMessages() {
+    if (!GAS_URL) { results.tgmessages = 'no GAS_URL'; checkDone(); return; }
+    const gasUrl = GAS_URL + '?path=tg-messages';
+    const parsedUrl = url.parse(gasUrl);
+    let rawData = '';
+    const req = https.request(
+      { hostname: parsedUrl.hostname, path: parsedUrl.path, method: 'GET', headers: {} },
+      (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          // Follow redirect
+          const redir = url.parse(res.headers.location);
+          let rdata = '';
+          https.get({ hostname: redir.hostname, path: redir.path, headers: {} }, (r2) => {
+            r2.on('data', c => rdata += c);
+            r2.on('end', () => {
+              try { processTgRaw(JSON.parse(rdata)); }
+              catch(e) { results.tgmessages = 'parse error: ' + e.message; checkDone(); }
+            });
+          }).on('error', e => { results.tgmessages = 'redirect error: ' + e.message; checkDone(); });
+          return;
+        }
+        res.on('data', c => rawData += c);
+        res.on('end', () => {
+          try { processTgRaw(JSON.parse(rawData)); }
+          catch(e) { results.tgmessages = 'parse error: ' + e.message; checkDone(); }
+        });
+      }
     );
-    if (!toMigrate.length) { results.tgmessages = 'already encrypted or empty'; checkDone(); return; }
-    let done = 0;
-    toMigrate.forEach(msg => {
-      const encrypted = encryptFields(msg, ENC_FIELDS.tgmessages);
-      proxyToGAS('PUT', '/tg-messages/' + msg.id, JSON.stringify(encrypted), () => {
-        done++;
-        if (done === toMigrate.length) { results.tgmessages = 'migrated ' + done; checkDone(); }
-      });
-    });
-  });
+    req.on('error', e => { results.tgmessages = 'error: ' + e.message; checkDone(); });
+    req.end();
+
+    function processTgRaw(msgs) {
+      if (!Array.isArray(msgs)) { results.tgmessages = 'not array: ' + JSON.stringify(msgs).slice(0,100); checkDone(); return; }
+      // Only migrate records where at least one enc field is NOT yet encrypted
+      const toMigrate = msgs.filter(m =>
+        ENC_FIELDS.tgmessages.some(f => m[f] && !String(m[f]).startsWith('enc:'))
+      );
+      console.log('[remigrate] tg-messages total:', msgs.length, 'to encrypt:', toMigrate.length);
+      if (!toMigrate.length) { results.tgmessages = 'already encrypted (' + msgs.length + ' total)'; checkDone(); return; }
+      
+      // Process in small batches to avoid GAS quota
+      let done = 0;
+      let errors = 0;
+      const batchSize = 10;
+      let batchIdx = 0;
+
+      function processBatch() {
+        const batch = toMigrate.slice(batchIdx, batchIdx + batchSize);
+        if (!batch.length) {
+          results.tgmessages = 'migrated ' + done + (errors ? ' (' + errors + ' errors)' : '');
+          checkDone();
+          return;
+        }
+        batchIdx += batchSize;
+        let batchDone = 0;
+        batch.forEach(msg => {
+          const encrypted = encryptFields(msg, ENC_FIELDS.tgmessages);
+          proxyToGAS('PUT', '/tg-messages/' + msg.id, JSON.stringify(encrypted), () => {
+            done++;
+            batchDone++;
+            if (batchDone === batch.length) {
+              setTimeout(processBatch, 500); // 500ms between batches
+            }
+          });
+        });
+      }
+      processBatch();
+    }
+  })();
 });
 
 // ── GET /api/tg/unread — total unread count ───────────────────
