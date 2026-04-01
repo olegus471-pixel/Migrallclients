@@ -649,6 +649,7 @@ function persistTgMessage(chatInfo, msg) {
     mimeType:     msg.mimeType   || '',
     fileSize:     msg.fileSize   || '',
     fileUrl:      msg.fileUrl    || '',
+    businessConnectionId: chatInfo.businessConnectionId || '',
   };
   // Encrypt sensitive fields before storing in Sheets
   const payload = encryptFields(rawPayload, ENC_FIELDS.tgmessages);
@@ -698,7 +699,12 @@ function loadTgHistoryFromGAS() {
           messages: [],
           unread:   0,
           lastTs:   0,
+          businessConnectionId: r.businessConnectionId || null,
         };
+      }
+      // Update businessConnectionId if we have it and chat doesn't
+      if (r.businessConnectionId && !tgChats[chatId].businessConnectionId) {
+        tgChats[chatId].businessConnectionId = r.businessConnectionId;
       }
       // proxyToGAS already decrypts fields — use directly
       const msg = {
@@ -1000,7 +1006,8 @@ app.get('/api/tg/chats', requireAuth, (req, res) => {
         const dec = (ENCRYPT_KEY && t.startsWith('enc:')) ? decryptField(t) : t;
         return dec.slice(0, 80);
       })() : '',
-      lastIsOutgoing: c.messages.length ? !!c.messages[c.messages.length - 1].isOutgoing : false,
+      lastIsOutgoing:       c.messages.length ? !!c.messages[c.messages.length - 1].isOutgoing : false,
+      businessConnectionId: c.businessConnectionId || null,
     }));
   res.json({ ok: true, chats: list, total: list.length });
 });
