@@ -549,6 +549,130 @@ app.post('/api/auth/login', express.json(), (req, res, next) => {
   });
 });
 
+// ── Notifications: intercept PUT courts/citizenship/filings ─────
+// After saving to GAS, send TG notifications to admins and optionally client
+app.put('/api/courts/:id', express.json(), requireAuth, (req, res, next) => {
+  // Notify on status, date, or comment change
+  if (req.body && (req.body.status || req.body.date || req.body.comment)) {
+    req._notifyAfter = {
+      type: 'court',
+      id: req.params.id,
+      body: req.body,
+    };
+  }
+  next();
+});
+
+app.put('/api/citizenship/:id', express.json(), requireAuth, (req, res, next) => {
+  // Notify on status, date, or comment change
+  if (req.body && (req.body.status || req.body.date || req.body.comment)) {
+    req._notifyAfter = {
+      type: 'citizenship',
+      id: req.params.id,
+      body: req.body,
+    };
+  }
+  next();
+});
+
+app.put('/api/filings/:id', express.json(), requireAuth, (req, res, next) => {
+  req._notifyAfter = {
+    type: 'filing',
+    id: req.params.id,
+    body: req.body,
+  };
+  next();
+});
+
+// After-save notification middleware (runs after proxy sends response)
+function sendUpdateNotification(type, id, body, session) {
+  // Send on: citizenship status/date/comment change, court status/date/comment change
+  if (!['citizenship','court'].includes(type)) return;
+  if (!body.status && !body.date && !body.comment) return;
+
+  const who = (session && session.name) ? session.name : 'Менеджер';
+  const clientName = body.name || id;
+  const isAima = type === 'citizenship';
+
+  // Format date nicely
+  const dateStr = body.date || body.updated || '';
+
+  // Build message text per spec
+  const clientText = `Уважаемый клиент,\n\n`
+    + (isAima ? `📋 Статус вашего дела обновлён\n\n` : `⚖️ Статус вашего судебного дела обновлён\n\n`)
+    + (dateStr   ? `📅 Дата: ${dateStr}\n` : '')
+    + (body.status ? `📌 Статус: <b>${body.status}</b>\n` : '')
+    + (body.stage  ? `🔹 Этап: ${body.stage}\n` : '')
+    + (isAima && body.track ? `🔢 Трек-номер: ${body.track}\n` : '')
+    + (body.comment ? `\n💬 ${body.comment}\n` : '')
+    + `\n<i>Это автоматическое уведомление от MigrAll</i>`;
+
+  // Message for manager (includes who updated)
+  const managerText = clientText + `\n\n✏️ Обновил: ${who}`;
+
+  // 1. Notify manager via personal TG IDs (from env var NOTIFY_TG_IDS)
+  notifyAdmins(managerText);
+
+  // 2. Notify client via their TG chat (look up by username in tgChats)
+  // First find client's TG username from body or look up via name match
+  const clientUsername = body.tg || body.username || body.clientTg || '';
+  const clientNameLower = (clientName || '').toLowerCase();
+  let clientChatId = null;
+
+  // Try by TG username first
+  if (clientUsername) {
+    const un = clientUsername.replace('@','').toLowerCase();
+    const match = Object.values(tgChats).find(c =>
+      (c.username||'').replace('@','').toLowerCase() === un
+    );
+    if (match) clientChatId = match.id;
+  }
+
+  // Fallback: match by name in tgChats (chat.name = TG display name ≈ client full name)
+  if (!clientChatId && clientNameLower) {
+    const match = Object.values(tgChats).find(c => {
+      const chatName = (c.name||'').toLowerCase();
+      // Check if names overlap (at least first word matches)
+      const firstWord = clientNameLower.split(' ')[0];
+      return firstWord.length > 2 && chatName.includes(firstWord);
+    });
+    if (match) {
+      clientChatId = match.id;
+      console.log('[TG notify] matched client by name:', clientName, '→ chat:', match.name);
+    }
+  }
+
+  if (clientChatId) {
+    // Send via business connection if available
+    const bizConnId = global._tgDefaultBizConnId;
+    const params = {
+      chat_id: clientChatId,
+      text: clientText,
+      parse_mode: 'HTML',
+    };
+    if (bizConnId) params.business_connection_id = bizConnId;
+    tgCall('sendMessage', params, (err) => {
+      if (err) console.warn('[TG notify] client send failed:', err);
+      else console.log('[TG notify] client notified:', clientChatId);
+    });
+  }
+
+  // 3. Add notification to manager's CRM messenger (as a system message in tgChats)
+  // Find the relevant chat for this client and add a system note
+  if (clientChatId && tgChats[clientChatId]) {
+    const sysMsg = {
+      id: 'sys_' + Date.now(),
+      ts: Date.now(),
+      text: `[Система] Статус обновлён → ${body.status}` + (body.stage ? `, этап: ${body.stage}` : ''),
+      fromName: 'CRM',
+      isOutgoing: true,
+      isRead: true,
+      _isSystem: true,
+    };
+    tgChats[clientChatId].messages.push(sysMsg);
+  }
+}
+
 // ── API прокси: /api/* → GAS (excluding /api/tg/*) ───────────
 app.all('/api/*', (req, res, next) => {
   // TG and admin routes are handled by dedicated endpoints
@@ -594,6 +718,16 @@ app.all('/api/*', (req, res, next) => {
       } else if (data.id || data.num) {
         data = decryptFields(data, _encFields);
       }
+    }
+
+    // Send TG notification after successful save
+    if (req._notifyAfter && data && !data.error) {
+      sendUpdateNotification(
+        req._notifyAfter.type,
+        req._notifyAfter.id,
+        req._notifyAfter.body || {},
+        req.session || {}
+      );
     }
 
     res.json(data);
@@ -824,6 +958,26 @@ app.get('/api/tg/file/:fileId', requireAuth, (req, res) => {
 setTimeout(loadTgHistoryFromGAS, 5000); // wait for server to fully init
 
 // ── Telegram API helper ────────────────────────────────────────
+// ── TG Notification helper ───────────────────────────────────
+// Send notification to a specific Telegram user_id
+function sendTgNotification(chatId, text) {
+  if (!TG_TOKEN || !chatId) return;
+  tgCall('sendMessage', {
+    chat_id: chatId,
+    text: text,
+    parse_mode: 'HTML',
+  }, (err) => {
+    if (err) console.warn('[TG notify] failed to send to', chatId, ':', err);
+    else console.log('[TG notify] sent to', chatId);
+  });
+}
+
+// Send notification to all configured admin/manager chat IDs
+function notifyAdmins(text) {
+  const ids = (process.env.NOTIFY_TG_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
+  ids.forEach(id => sendTgNotification(id, text));
+}
+
 function tgCall(method, params, cb) {
   if (!TG_TOKEN) return cb && cb({ error: 'TG_BOT_TOKEN not set' });
   const body = JSON.stringify(params);
