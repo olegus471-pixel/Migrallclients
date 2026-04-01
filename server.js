@@ -765,16 +765,12 @@ function resolveFileUrl(fileId, msgObj, chatId) {
     const fileUrl  = `https://api.telegram.org/file/bot${TG_TOKEN}/${filePath}`;
     msgObj.fileUrl = fileUrl;
 
-    // Also update persisted record in GAS
+    // Also update persisted record in GAS — use proxyToGAS to ensure encryption
     if (GAS_URL && msgObj.id) {
-      const body = JSON.stringify({ ...msgObj, chatId, isUpdate: true });
-      const pu   = url.parse(GAS_URL + '?path=tg-messages');
-      const req  = https.request({
-        hostname: pu.hostname, path: pu.path, method: 'POST',
-        headers: { 'Content-Type': 'text/plain', 'Content-Length': Buffer.byteLength(body) }
-      }, r => r.resume());
-      req.on('error', () => {});
-      req.write(body); req.end();
+      // Encrypt sensitive fields before saving (fileUrl is now in ENC_FIELDS)
+      const updatePayload = encryptFields({ ...msgObj, chatId }, ENC_FIELDS.tgmessages);
+      // Use PUT with message id to update existing record
+      proxyToGAS('PUT', '/tg-messages/' + msgObj.id, JSON.stringify(updatePayload), () => {});
     }
   });
 }
