@@ -6464,6 +6464,16 @@ async function tgOpenChat(chatId, silent) {
     _tgCurrentBizConnId = (chat && chat.businessConnectionId)
       || (_chatInList && _chatInList.businessConnectionId)
       || null;
+    // If still no bizConnId, try to fetch from server
+    if (!_tgCurrentBizConnId) {
+      try {
+        var bizData = await tgFetch('/api/tg/biz-conn');
+        if (bizData && bizData.defaultBizConnId) {
+          _tgCurrentBizConnId = bizData.defaultBizConnId;
+          console.log('[TG] Using global businessConnectionId:', _tgCurrentBizConnId.slice(0,20)+'...');
+        }
+      } catch(e) {}
+    }
     if (_tgCurrentBizConnId) {
       console.log('[TG] businessConnectionId:', _tgCurrentBizConnId.slice(0,20) + '...');
     } else {
