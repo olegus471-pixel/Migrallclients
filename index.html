@@ -589,10 +589,9 @@ button:active{transform:scale(.97)}
     color: #fff !important;
     border-color: var(--acc) !important;
   }
-  /* Show context menu button on hover */
-  #tg-chat-list div:hover .tg-chat-menu-btn {
-    opacity: 1 !important;
-  }
+  /* Show context menu button always (subtle) and full on hover */
+  .tg-chat-menu-btn { opacity: 0.3 !important; }
+  #tg-chat-list div:hover .tg-chat-menu-btn { opacity: 1 !important; }
 </style>
 </head>
 <body>
@@ -6417,6 +6416,8 @@ async function tgLoadChats() {
       } else {
         c._crmMatch = false;
       }
+      // Apply manual unread overrides from _tgMeta
+      if (_tgMeta.unread[c.id]) c.unread = Math.max(c.unread || 0, 1);
       return c;
     });
     tgRenderChatList(_tgAllChats);
@@ -6438,95 +6439,6 @@ function tgSetStatus(s) {
   if (!dot) return;
   dot.style.background = s === 'ok' ? 'var(--gre)' : s === 'error' ? 'var(--red)' : 'var(--t4)';
   dot.title = s === 'ok' ? 'Подключено' : s === 'error' ? 'Ошибка подключения' : 'Нет данных';
-}
-
-function tgRenderChatList(chats) {
-  var el = g('tg-chat-list');
-  if (!el) return;
-  if (!chats.length) {
-    el.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--t3);font-size:13px">Сообщений нет.<br>Подключите Telegram Business.<br><button class=\'btn btn-p\' style=\'margin-top:10px;font-size:12px\' onclick=\'openTgSettings()\'>⚙️ Настройка</button></div>';
-    return;
-  }
-  el.innerHTML = chats.map(function(c) {
-    // Match with CRM client by TG username
-    var _crmCl = null;
-    if (c.username) {
-      var _un = c.username.replace('@','').toLowerCase();
-      _crmCl = (typeof clients !== 'undefined' && clients)
-        ? clients.find(function(cl){ return (cl.tg||'').replace('@','').toLowerCase() === _un; })
-        : null;
-    }
-    var displayName = c.crmName || (_crmCl ? _crmCl.name : null) || c.name || 'Unknown';
-    var initials = displayName.split(' ').map(function(w){ return w[0]||''; }).join('').slice(0,2).toUpperCase();
-    var ts = c.lastTs ? new Date(c.lastTs).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}) : '';
-    var active = c.id === _tgCurrentChatId ? 'background:var(--acc-d);' : '';
-    return '<div onclick="tgOpenChat(\''+c.id+'\')" style="padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--s3);display:flex;gap:10px;align-items:center;transition:background .1s;'+active+'" onmouseenter="this.style.background=\'var(--s2)\'" onmouseleave="this.style.background=\''+active+'\'">'
-      + '<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--pur));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">'+initials+'</div>'
-      + '<div style="flex:1;min-width:0">'
-        + '<div style="display:flex;justify-content:space-between;align-items:center">'
-          + '<div style="font-size:13px;font-weight:'+(c.unread?'700':'600')+';color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px">'+(c.name||'Unknown')+'</div>'
-          + '<div style="font-size:10px;color:var(--t3);flex-shrink:0">'+ts+'</div>'
-        + '</div>'
-        + '<div style="font-size:12px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">'+(c.lastMsg||'')+'</div>'
-      + '</div>'
-      + (c.unread ? '<div style="width:18px;height:18px;border-radius:50%;background:#229ed9;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+c.unread+'</div>' : '')
-      + '</div>';
-  }).join('');
-}
-
-// ── Open chat ─────────────────────────────────────────────────
-async function tgOpenChat(chatId, silent) {
-  _tgCurrentChatId = chatId;
-  // Mark active in list
-  document.querySelectorAll('#tg-chat-list > div').forEach(function(el) {
-    el.style.background = '';
-  });
-  try {
-    const data = await tgFetch('/api/tg/messages/' + chatId);
-    if (!data.ok) return;
-    const chat = data.chat;
-    // Show chat view
-    g('tg-empty').style.display = 'none';
-    var cv = g('tg-chat-view');
-    cv.style.display = 'flex';
-    cv.style.flexDirection = 'column';
-    cv.style.height = '100%';
-    cv.style.overflow = 'hidden';
-    cv.style.minHeight = '0';
-    // Header
-    var name = chat.name||'Unknown';
-    g('tg-chat-name').textContent = name;
-    var username = chat.username ? '@' + chat.username : '';
-    g('tg-chat-username').textContent = username;
-    var avatarEl = g('tg-chat-avatar');
-    avatarEl.textContent = name.split(' ').map(function(w){ return w[0]||''; }).join('').slice(0,2).toUpperCase();
-    var link = g('tg-chat-link');
-    if (chat.username) {
-      link.href = 'https://t.me/' + chat.username;
-      link.style.display = '';
-    } else {
-      link.style.display = 'none';
-    }
-    // Messages
-    tgRenderMessages(data.messages || []);
-    // Signature preview
-    tgUpdateSignaturePreview();
-    // Update local unread count immediately (don't wait for poll)
-    var localChat = _tgAllChats.find(function(c){ return c.id === chatId; });
-    if (localChat) {
-      localChat.unread = 0;
-      // Update badge immediately
-      var totalUnread = _tgAllChats.reduce(function(s,c){ return s + (c.unread||0); }, 0);
-      var bdg = g('bdg-tg');
-      if (bdg) { bdg.textContent = totalUnread; bdg.style.display = totalUnread > 0 ? '' : 'none'; }
-      // Re-render chat list to remove unread badge
-      tgRenderChatList(_tgAllChats);
-    }
-    // Reload chat list unread counts
-    if (!silent) tgLoadChats();
-  } catch(e) {
-    console.warn('[TG] openChat error:', e);
-  }
 }
 
 function tgFormatFileSize(bytes) {
@@ -13143,4 +13055,51 @@ CRM ↔ Backend (Render) ↔ Google Sheets
 
 
 </body>
-</html>
+</htmlfunction tgRenderChatList(chats) {
+  var el = g('tg-chat-list');
+  if (!el) return;
+  if (!chats.length) {
+    el.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--t3);font-size:13px">Сообщений нет.<br>Подключите Telegram Business.<br><button class=\'btn btn-p\' style=\'margin-top:10px;font-size:12px\' onclick=\'openTgSettings()\'>⚙️ Настройка</button></div>';
+    return;
+  }
+
+  var html = chats.map(function(c) {
+    var _crmCl = null;
+    if (c.username) {
+      var _un = c.username.replace('@','').toLowerCase();
+      _crmCl = (typeof clients !== 'undefined' && clients)
+        ? clients.find(function(cl){ return (cl.tg||'').replace('@','').toLowerCase() === _un; })
+        : null;
+    }
+    var displayName = c.crmName || (_crmCl ? _crmCl.name : null) || c.name || 'Unknown';
+    var initials = displayName.split(' ').map(function(w){ return w[0]||''; }).join('').slice(0,2).toUpperCase() || '?';
+    var ts = c.lastTs ? new Date(c.lastTs).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}) : '';
+    var isActive = c.id === _tgCurrentChatId;
+    var lastMsgText = (c.lastMsg || '').startsWith('enc:') ? '🔒' : esc(c.lastMsg || '');
+    var isPinned = !!_tgMeta.pinned[c.id];
+    var label    = _tgMeta.labels[c.id] || '';
+
+    return '<div onclick="tgOpenChat(\''+c.id+'\')" style="padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--s3);display:flex;gap:10px;align-items:center;background:'+(isActive?'var(--acc-d)':'')+';" onmouseenter="if(!'+isActive+')this.style.background=\'var(--s2)\'" onmouseleave="if(!'+isActive+')this.style.background=\'\'">'
+      + '<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--pur));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">'+initials+'</div>'
+      + '<div style="flex:1;min-width:0;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center">'
+          + '<div style="font-size:13px;font-weight:'+(c.unread?'700':'600')+';color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px">'+displayName+'</div>'
+          + '<div style="font-size:10px;color:var(--t3);flex-shrink:0">'+ts+'</div>'
+        + '</div>'
+        + '<div style="font-size:12px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">'+(c._lastIsOutgoing?'↗ ':'')+lastMsgText+'</div>'
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;min-height:40px;gap:2px;flex-shrink:0">'
+        + (c.unread ? '<div style="min-width:18px;height:18px;border-radius:9px;background:#229ed9;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px">'+c.unread+'</div>' : '<div></div>')
+        + '<div style="display:flex;align-items:center;gap:1px">'
+          + (isPinned ? '<span style="font-size:10px" title="Закреплён">📌</span>' : '')
+          + (label ? '<span style="font-size:11px">'+label+'</span>' : '')
+          + '<button class="tg-chat-menu-btn" onclick="event.stopPropagation();tgShowChatMenu(\''+c.id+'\',event)" title="Меню" style="background:none;border:none;color:var(--t2);cursor:pointer;font-size:18px;line-height:1;padding:0 2px;font-weight:900;opacity:0.3;transition:opacity .15s">⋮</button>'
+        + '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+
+  el.innerHTML = html;
+}
+
+>
