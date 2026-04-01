@@ -863,6 +863,10 @@ app.post('/tg/webhook', express.json(), (req, res) => {
     const isBot    = from.is_bot;
     const isBusinessConn = !!update.business_message || !!update.edited_business_message;
 
+    const _bizConnId = (update.business_message && update.business_message.business_connection_id)
+      || (update.edited_business_message && update.edited_business_message.business_connection_id)
+      || null;
+
     if (!tgChats[chatId]) {
       tgChats[chatId] = {
         id:       chatId,
@@ -874,10 +878,14 @@ app.post('/tg/webhook', express.json(), (req, res) => {
         messages: [],
         unread:   0,
         lastTs:   0,
+        businessConnectionId: _bizConnId,
       };
     }
 
     const chat = tgChats[chatId];
+    if (_bizConnId && !chat.businessConnectionId) {
+      chat.businessConnectionId = _bizConnId;
+    }
     // ── Extract media info ───────────────────────────────────────
     let mediaType = null;
     let fileId    = null;
@@ -1031,7 +1039,7 @@ app.get('/api/tg/messages/:chatId', requireAuth, (req, res) => {
     req.write(body); req.end();
   }
 
-  res.json({ ok: true, chat: { id: chat.id, name: chat.name, username: chat.username }, messages: chat.messages });
+  res.json({ ok: true, chat: { id: chat.id, name: chat.name, username: chat.username, businessConnectionId: chat.businessConnectionId || null }, messages: chat.messages });
 });
 
 // ── POST /api/tg/send — send message with signature ──────────
