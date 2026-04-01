@@ -6417,6 +6417,8 @@ async function tgLoadChats() {
       } else {
         c._crmMatch = false;
       }
+      // Store businessConnectionId from server response
+      c.businessConnectionId = c.businessConnectionId || null;
       // Apply manual unread overrides from _tgMeta
       if (_tgMeta.unread[c.id]) c.unread = Math.max(c.unread || 0, 1);
       return c;
@@ -6457,7 +6459,16 @@ async function tgOpenChat(chatId, silent) {
     const chat = data.chat;
 
     // Store businessConnectionId for sending replies
-    _tgCurrentBizConnId = (chat && chat.businessConnectionId) || null;
+    // Prefer from direct API response, fallback to cached chat list
+    var _chatInList = _tgAllChats.find(function(c){ return c.id === chatId; });
+    _tgCurrentBizConnId = (chat && chat.businessConnectionId)
+      || (_chatInList && _chatInList.businessConnectionId)
+      || null;
+    if (_tgCurrentBizConnId) {
+      console.log('[TG] businessConnectionId:', _tgCurrentBizConnId.slice(0,20) + '...');
+    } else {
+      console.warn('[TG] No businessConnectionId for chat', chatId, '— replies may fail');
+    }
 
     // Show chat view
     g('tg-empty').style.display = 'none';
