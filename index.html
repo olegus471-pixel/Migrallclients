@@ -6394,9 +6394,10 @@ function tgFetch(url, opts) {
   });
 }
 // ═══════════════════════════════════════════════════════════════
-var _tgCurrentChatId = null;
-var _tgAllChats      = [];
-var _tgPollTimer     = null;
+var _tgCurrentChatId    = null;
+var _tgCurrentBizConnId = null;  // business_connection_id for current chat
+var _tgAllChats         = [];
+var _tgPollTimer        = null;
 
 // ── Load chats ────────────────────────────────────────────────
 async function tgLoadChats() {
@@ -6439,6 +6440,72 @@ function tgSetStatus(s) {
   if (!dot) return;
   dot.style.background = s === 'ok' ? 'var(--gre)' : s === 'error' ? 'var(--red)' : 'var(--t4)';
   dot.title = s === 'ok' ? 'Подключено' : s === 'error' ? 'Ошибка подключения' : 'Нет данных';
+}
+
+// ── Open chat ──────────────────────────────────────────────────
+async function tgOpenChat(chatId, silent) {
+  _tgCurrentChatId = chatId;
+
+  // Highlight active chat in list
+  document.querySelectorAll('#tg-chat-list > div').forEach(function(el) {
+    el.style.background = '';
+  });
+
+  try {
+    const data = await tgFetch('/api/tg/messages/' + chatId);
+    if (!data || !data.ok) return;
+    const chat = data.chat;
+
+    // Store businessConnectionId for sending replies
+    _tgCurrentBizConnId = (chat && chat.businessConnectionId) || null;
+
+    // Show chat view
+    g('tg-empty').style.display = 'none';
+    var cv = g('tg-chat-view');
+    cv.style.display = 'flex';
+    cv.style.flexDirection = 'column';
+    cv.style.height = '100%';
+    cv.style.overflow = 'hidden';
+    cv.style.minHeight = '0';
+
+    // Header
+    var name = (chat && chat.name) || 'Unknown';
+    g('tg-chat-name').textContent = name;
+    var username = (chat && chat.username) ? '@' + chat.username.replace('@','') : '';
+    g('tg-chat-username').textContent = username;
+
+    // Avatar initials
+    var initials = name.split(' ').map(function(w){ return w[0]||''; }).join('').slice(0,2).toUpperCase() || '?';
+    var av = g('tg-chat-avatar');
+    if (av) av.textContent = initials;
+
+    // TG link
+    var lnk = g('tg-chat-link');
+    if (lnk) {
+      if (username) {
+        lnk.href = 'https://t.me/' + username.replace('@','');
+        lnk.style.display = '';
+      } else {
+        lnk.style.display = 'none';
+      }
+    }
+
+    // Show businessConnectionId indicator if present
+    var bizBadge = g('tg-biz-badge');
+    if (bizBadge) {
+      bizBadge.style.display = _tgCurrentBizConnId ? '' : 'none';
+    }
+
+    // Render messages
+    tgRenderMessages(data.messages || []);
+
+    // Update signature preview
+    tgUpdateSignaturePreview();
+
+    if (!silent) tgLoadChats();
+  } catch(e) {
+    console.warn('[TG] openChat error:', e.message);
+  }
 }
 
 function tgFormatFileSize(bytes) {
@@ -6568,7 +6635,7 @@ async function tgSendMessage() {
     var user = currentUser || {};
     const data = await tgFetch('/api/tg/send', {
       method: 'POST',
-      body: JSON.stringify({ chatId: _tgCurrentChatId, text: text })
+      body: JSON.stringify({ chatId: _tgCurrentChatId, text: text, businessConnectionId: _tgCurrentBizConnId || undefined })
     });
     if (data.ok) {
       tgOpenChat(_tgCurrentChatId, true);
