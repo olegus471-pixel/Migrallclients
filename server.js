@@ -732,6 +732,14 @@ function loadTgHistoryFromGAS() {
       c.messages.sort((a, b) => a.ts - b.ts);
     });
     console.log('[TG] Loaded', loaded, 'messages from GAS for', Object.keys(tgChats).length, 'chats');
+        // Try to restore global bizConnId from any chat that has it
+        if (!global._tgDefaultBizConnId) {
+          const _chatWithBiz = Object.values(tgChats).find(c => c.businessConnectionId);
+          if (_chatWithBiz) {
+            global._tgDefaultBizConnId = _chatWithBiz.businessConnectionId;
+            console.log('[TG] Restored default businessConnectionId:', global._tgDefaultBizConnId);
+          }
+        }
   }
 
   // Use proxyToGAS which correctly follows GAS redirects
@@ -872,6 +880,11 @@ app.post('/tg/webhook', express.json(), (req, res) => {
     const _bizConnId = (update.business_message && update.business_message.business_connection_id)
       || (update.edited_business_message && update.edited_business_message.business_connection_id)
       || null;
+    // Store globally as fallback for all chats
+    if (_bizConnId && !global._tgDefaultBizConnId) {
+      global._tgDefaultBizConnId = _bizConnId;
+      console.log('[TG] Stored default businessConnectionId:', _bizConnId);
+    }
 
     if (!tgChats[chatId]) {
       tgChats[chatId] = {
@@ -1046,7 +1059,7 @@ app.get('/api/tg/messages/:chatId', requireAuth, (req, res) => {
     req.write(body); req.end();
   }
 
-  res.json({ ok: true, chat: { id: chat.id, name: chat.name, username: chat.username, businessConnectionId: chat.businessConnectionId || null }, messages: chat.messages });
+  res.json({ ok: true, chat: { id: chat.id, name: chat.name, username: chat.username, businessConnectionId: chat.businessConnectionId || global._tgDefaultBizConnId || null }, messages: chat.messages });
 });
 
 // ── POST /api/tg/send — send message with signature ──────────
@@ -1104,6 +1117,17 @@ app.post('/api/tg/send', express.json(), requireAuth, tgSendLimiter, (req, res) 
     res.json({ ok: true, messageId: result.result.message_id });
   });
   }, typingDelay); // end setTimeout
+});
+
+// ── GET /api/tg/biz-conn — get business connection info ──────
+app.get('/api/tg/biz-conn', requireAuth, (req, res) => {
+  res.json({
+    defaultBizConnId: global._tgDefaultBizConnId || null,
+    chatsWithBizConn: Object.values(tgChats)
+      .filter(c => c.businessConnectionId)
+      .map(c => ({ id: c.id, name: c.name, bizConnId: c.businessConnectionId }))
+      .slice(0, 5),
+  });
 });
 
 // ── POST /api/tg/setup-webhook — register webhook ────────────
