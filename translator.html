@@ -490,14 +490,27 @@ async function markReady(taskId) {
     isOrder = !!t;
   }
   if(!t) return;
-  if(isOrder) t.status = 'Готово'; else t.stage = 'Готово к выдаче';
+  // Use correct CRM status names
+  if(isOrder) {
+    t.status = t.svcType === 'Переводы' ? 'Перевод готов' : 'Готово к выдаче';
+  } else {
+    t.stage = 'Готово к выдаче';
+  }
   renderAll();
   toast('📤 Статус обновлён: Готово к выдаче');
   try {
     if(isOrder) {
-      await api('/orders/' + taskId, { method:'PUT', body: JSON.stringify({status: 'Готово'}) });
+      const newStatus = t.svcType === 'Переводы' ? 'Перевод готов' : 'Готово к выдаче';
+      await api('/orders/' + taskId, { method:'PUT', body: JSON.stringify({status: newStatus}) });
     } else {
       await api('/spec-tasks/' + taskId, { method:'PUT', body: JSON.stringify({stage: 'Готово к выдаче'}) });
+      // Also update related order if exists
+      const relOrder = allOrders.find(o => o.clientId === t.clientId && !['Выдано клиенту','Перевод готов'].includes(o.status));
+      if(relOrder) {
+        const newSt = relOrder.svcType === 'Переводы' ? 'Перевод готов' : 'Готово к выдаче';
+        relOrder.status = newSt;
+        await api('/orders/' + relOrder.id, { method:'PUT', body: JSON.stringify({status: newSt}) }).catch(()=>{});
+      }
     }
   } catch(e) { console.warn(e); }
 }
