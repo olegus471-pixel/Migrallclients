@@ -851,7 +851,7 @@ button:active{transform:scale(.97)}
       <div class="dt-wrap"><table class="dt">
         <thead><tr>
           <th style="width:36px;text-align:center;color:var(--t3)">#</th>
-          <th>Telegram</th><th>Клиент</th><th>Переводчик</th><th>Статус</th>
+          <th>№ заказа</th><th>Telegram</th><th>Клиент</th><th>Переводчик</th><th>Статус</th>
           <th>Создан</th><th>Обновлён</th><th>Папка</th><th>Комментарий</th><th></th>
         </tr></thead>
         <tbody id="trans-tbody"></tbody>
@@ -879,7 +879,7 @@ button:active{transform:scale(.97)}
       <div class="dt-wrap"><table class="dt">
         <thead><tr>
           <th style="width:36px;text-align:center;color:var(--t3)">#</th>
-          <th>Telegram</th><th>Клиент</th><th>Переводчик</th><th>Статус</th>
+          <th>№ заказа</th><th>Telegram</th><th>Клиент</th><th>Переводчик</th><th>Статус</th>
           <th>Создан</th><th>Обновлён</th><th>Папка</th><th>Комментарий</th><th></th>
         </tr></thead>
         <tbody id="nocrims-tbody"></tbody>
@@ -3067,22 +3067,15 @@ async function doSync(silent=false){
   if(results[5] && Array.isArray(results[5])) rights=results[5].filter(r=>r.deleted!=='1');
   if(results[6] && Array.isArray(results[6])) orders=results[6].filter(o=>o.deleted!=='1');
   if(results[7] && Array.isArray(results[7])){
-    // Мёрдж: для каждой задачи сравниваем локальную и серверную версии
-    // Если локальная была изменена позже (есть _localUpdated) — берём её
+    // Сервер — источник правды. Локальные задачи используются только пока не дошёл sync.
     var serverTasks = results[7].filter(function(t){ return t.stage !== 'deleted' && t.deleted !== '1'; });
-    var localMap = {};
-    tasks.forEach(function(t){ localMap[t.id] = t; });
-    var merged = serverTasks.map(function(srv){
-      var loc = localMap[srv.id];
-      // Если локальная версия помечена как "грязная" (изменена после последнего sync) — берём её
-      if(loc && loc._dirty) return loc;
-      return srv;
-    });
-    // Добавить задачи которые есть только локально (ещё не дошли до сервера)
+    // Если сервер вернул данные (даже пустой массив) — доверяем серверу полностью.
+    // _dirty задачи (изменены локально, ещё не сохранены на сервер) — оставляем
     var serverIds = new Set(serverTasks.map(function(t){ return t.id; }));
-    tasks.filter(function(t){ return !serverIds.has(t.id) && t.stage !== 'deleted' && t.deleted !== '1'; })
-         .forEach(function(t){ merged.push(t); });
-    tasks = merged;
+    var dirtyLocalOnly = tasks.filter(function(t){
+      return t._dirty && !serverIds.has(t.id) && t.stage !== 'deleted' && t.deleted !== '1';
+    });
+    tasks = serverTasks.concat(dirtyLocalOnly);
     persistTasks(); renderTasks();
   }
   if(results[8]) {
@@ -3421,6 +3414,8 @@ function renderClients(data){
 
 async function deleteClient(cid, e) {
   if (e) e.stopPropagation();
+  var _u = currentUser || {};
+  if (_u.role !== 'admin') { toast('⛔ Удаление клиентов доступно только администратору'); return; }
   const c = clients.find(x => x.id === cid);
   if (!c) return;
   openModal(
@@ -3520,7 +3515,7 @@ function openClientModal(cid){
     <!-- Service tabs -->
     <div class="svc-tabs">
       <div class="svc-tab active" onclick="switchClientTab(this,'ct-main')">Main</div>
-      <div class="svc-tab" onclick="switchClientTab(this,'ct-orders')">Services <span class="ni-bdg" id="ct-orders-cnt" style="background:var(--acc);color:#fff;margin-left:2px">${orders.filter(o=>o.clientId===cid).length||''}</span></div>
+      <div class="svc-tab" onclick="switchClientTab(this,'ct-orders')">📦 Услуги <span class="ni-bdg" id="ct-orders-cnt" style="background:var(--acc);color:#fff;margin-left:2px">${orders.filter(o=>o.clientId===cid).length||''}</span></div>
       <div class="svc-tab" onclick="switchClientTab(this,'ct-tasks')">Tasks (${ctasks.length})</div>
     </div>
 
@@ -3592,12 +3587,32 @@ function openClientModal(cid){
         <div style="font-size:11px;color:var(--t3);margin-bottom:8px">Место и дата планируемой подачи документов</div>
         <div class="mrow" style="margin-bottom:8px">
           <div class="mf"><label class="mfl">Место подачи</label>
-            <input class="mi" id="cm-submit-place" value="${c.submitPlace||''}" placeholder="Консульство / SEF / AIMA"></div>
+            <select class="ms" id="cm-submit-place" autocomplete="off">
+              <option value="">— Выберите место —</option>
+              <option ${c.submitPlace==='AIMA'?'selected':''}>AIMA</option>
+              <option ${c.submitPlace==='Консульство'?'selected':''}>Консульство</option>
+              <option ${c.submitPlace==='SEF'?'selected':''}>SEF</option>
+              <option ${c.submitPlace==='IRN'?'selected':''}>IRN</option>
+            </select></div>
           <div class="mf"><label class="mfl">Дата подачи</label>
-            <input class="mi mi-date" id="cm-submit-date" value="${c.submitDate||''}" placeholder="ДД.ММ.ГГГГ"></div>
+            <input class="mi mi-date" id="cm-submit-date" autocomplete="off" value="${c.submitDate||''}" placeholder="ДД.ММ.ГГГГ"></div>
         </div>
         <button type="button" class="btn btn-p btn-sm" onclick="saveSubmitInfo('${cid}')">💾 Сохранить</button>
         ${c.submitPlace||c.submitDate?`<div style="margin-top:8px;font-size:11px;background:var(--gre-d);color:#065f46;border-radius:6px;padding:6px 10px">📍 ${c.submitPlace||'—'} · 📅 ${c.submitDate||'—'}</div>`:''}
+        ${(function(){
+          var cFilings=(window.filings||[]).filter(function(f){return f.id==='FIL-'+cid||f.clientId===cid||(f.client===c.name&&f.num===c.num&&c.name);});
+          if(!cFilings.length)return '';
+          return '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">'
+            +'<div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Записи о подаче</div>'
+            +cFilings.map(function(f){
+              return '<div style="font-size:11px;padding:4px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+                +'<span>📅 <b>'+esc(f.date||'—')+'</b></span>'
+                +'<span style="color:var(--t2)">📍 '+esc(f.place||'—')+'</span>'
+                +(f.status?'<span class="badge" style="font-size:9px;padding:1px 5px;border-radius:4px;background:var(--acc-d);color:var(--acc)">'+esc(f.status)+'</span>':'')
+                +(f.comment?'<span style="color:var(--t3)">'+esc(f.comment)+'</span>':'')
+              +'</div>';
+            }).join('')+'</div>';
+        })()}
       </div>
     </div>
   </div><!-- /ct-main -->
@@ -5086,7 +5101,14 @@ function editCourt(idx,e){
       </div>
       <div class="mf">
         <label class="mfl">Статус <span style="color:var(--gre);font-size:8px">← дата обновится</span></label>
-        <input class="mi" id="ct-status" value="${c.status}" placeholder="В процессе, Ожидание решения...">
+        <select class="ms" id="ct-status">
+          <option value="">— Выберите —</option>
+          <option ${c.status==='В процессе'?'selected':''}>В процессе</option>
+          <option ${c.status==='Ожидание решения'?'selected':''}>Ожидание решения</option>
+          <option ${c.status==='Апелляция'?'selected':''}>Апелляция</option>
+          <option ${c.status==='Решение вынесено'?'selected':''}>Решение вынесено</option>
+          <option ${c.status==='Дело закрыто'?'selected':''}>Дело закрыто</option>
+        </select>
       </div>
     </div>
     <div class="msec"><label class="mfl">Комментарий</label><textarea class="mta" id="ct-comment">${c.comment}</textarea></div>
@@ -5148,7 +5170,8 @@ async function saveCourt(idx){
     status:   (g('ct-status')||{}).value||'',
     updated:  nowDMY(),
     comment:  (g('ct-comment')||{}).value||'',
-    driveLink: _ctDrive ? _ctDrive.value : undefined
+    driveLink: _ctDrive ? _ctDrive.value : undefined,
+    tg: (function(){ var c = clients.find(function(x){ return x.name===name || (_ctPicker && x.id===_ctPicker.value); }); return c ? (c.tg||'') : ''; })(),
   };
   if(idx<0) courts.push(obj); else courts[idx]=obj;
   _isSaving = false;
@@ -5177,7 +5200,7 @@ function renderTranslations(filter){
     const cNum   = client ? (client.num||'—') : '—';
     const cTg    = client ? (client.tg||'') : '';
     const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
-    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+cNum+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td>'+bdg(o.status)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
+    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+cNum+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--t3)">'+esc(o.id||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td>'+bdg(o.status)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
   }).join('');
 }
 
@@ -5407,6 +5430,8 @@ async function saveCitizenship(idx){
     || (()=>{ var c=clients.find(function(x){return x.id===(_ciPicker&&_ciPicker.value);}); return c?c.name:''; })()
     || '';
   if(!name.trim()){ toast('Укажите ФИО клиента'); _isSaving=false; return; }
+  // Find client's TG username for notifications
+  var _ciClient = clients.find(function(c){ return c.name === name || (g('ci-client-val') && c.id === g('ci-client-val').value); });
   const obj = {
     num:     (g('ci-num')   ||{}).value||'',
     name:    name,
@@ -5418,7 +5443,8 @@ async function saveCitizenship(idx){
     status:  (g('ci-status')||{}).value||'',
     updated: nowDMY(),
     comment: (g('ci-comment')||{}).value||'',
-    driveLink: (g('ci-drive')||{}).value||undefined
+    driveLink: (g('ci-drive')||{}).value||undefined,
+    tg:      _ciClient ? (_ciClient.tg||'') : '',  // for TG notifications
   };
   if(idx<0) citizenship.push(obj); else citizenship[idx]=obj;
   _isSaving = false;
@@ -5537,7 +5563,14 @@ function editCourt(idx,e){
       </div>
       <div class="mf">
         <label class="mfl">Статус <span style="color:var(--gre);font-size:8px">← дата обновится</span></label>
-        <input class="mi" id="ct-status" value="${c.status}" placeholder="В процессе, Ожидание решения...">
+        <select class="ms" id="ct-status">
+          <option value="">— Выберите —</option>
+          <option ${c.status==='В процессе'?'selected':''}>В процессе</option>
+          <option ${c.status==='Ожидание решения'?'selected':''}>Ожидание решения</option>
+          <option ${c.status==='Апелляция'?'selected':''}>Апелляция</option>
+          <option ${c.status==='Решение вынесено'?'selected':''}>Решение вынесено</option>
+          <option ${c.status==='Дело закрыто'?'selected':''}>Дело закрыто</option>
+        </select>
       </div>
     </div>
     <div class="msec"><label class="mfl">Комментарий</label><textarea class="mta" id="ct-comment">${c.comment}</textarea></div>
@@ -5892,6 +5925,7 @@ async function saveRights(idx){
 // ============================================================
 let taskClientFilter='';
 let _dragId=null;
+let _dragMoved=false; // track if drag actually moved
 
 function filterTasksByClient(v){taskClientFilter=v;renderTasks();}
 
@@ -5937,7 +5971,8 @@ function renderTCard(t){
   </div>`;
 }
 
-function tDragStart(e,id){_dragId=id;setTimeout(()=>{const el=g('tc-'+id);if(el)el.classList.add('dragging');},0);}
+function tDragStart(e,id){_dragId=id;_dragMoved=true;setTimeout(()=>{const el=g('tc-'+id);if(el)el.classList.add('dragging');},0);}
+function tCardClick(id){if(_dragMoved){_dragMoved=false;return;}openTaskModal(id);}
 function tDragOver(e,col){e.preventDefault();e.currentTarget.classList.add('drop-active');}
 function tDragLeave(e){e.currentTarget.classList.remove('drop-active');}
 async function tDrop(e,col){
@@ -5973,7 +6008,7 @@ function openTaskModal(id){
   openModal(`
     <div class="mhdr">
       <div>
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)">Задача${t.client?' · клиент '+t.client:''}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)">${(()=>{ const _tc=t.clientId?clients.find(c=>c.id===t.clientId):(t.client?clients.find(c=>c.num===t.client||c.id===t.client):null); return _tc?'Задача · '+_tc.name:(t.client?'Задача · кл.'+t.client:'Задача'); })()}</div>
         <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-top:3px">${t.text}</div>
       </div>
       <button class="mcls" onclick="closeModal()">✕</button>
@@ -6102,7 +6137,7 @@ function loadPersistedTasks(){
 // ============================================================
 // SCHEDULE
 // ============================================================
-let schedY=2026,schedM=1,schedSel=null;
+let schedY=new Date().getFullYear(),schedM=new Date().getMonth(),schedSel=null;
 function schedMon(d){schedM+=d;if(schedM>11){schedM=0;schedY++;}if(schedM<0){schedM=11;schedY--;}renderSchedMini();}
 function renderSchedMini(){
   g('sched-m-title').textContent=`${MONTHS[schedM]} ${schedY}`;
@@ -6234,7 +6269,7 @@ async function bookSlot(){
 // ============================================================
 // CALENDAR
 // ============================================================
-let calY=2026,calM=1,calSel=null;
+let calY=new Date().getFullYear(),calM=new Date().getMonth(),calSel=null;
 function calMon(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}renderCal();}
 function renderCal(){
   g('cal-month').textContent = MONTHS[calM] + ' ' + calY;
@@ -9072,7 +9107,9 @@ async function saveSpecTask() {
   // Защита от двойного сабмита
   var btn = document.querySelector('#modal-spec-task .btn-p');
   if (btn && btn.disabled) return;
-  if (btn) { btn.disabled = true; btn.textContent = 'Сохранение...'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Сохранение...';
+    setTimeout(function(){ if(btn){ btn.disabled=false; btn.textContent='Создать'; } }, 5000);
+  }
   // Читать из searchable picker
   var stCpVal = document.getElementById('st-cp-val');
   if(stCpVal && stCpVal.value) {
