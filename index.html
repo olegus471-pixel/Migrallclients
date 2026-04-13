@@ -850,7 +850,7 @@ button:active{transform:scale(.97)}
     <div class="panel">
       <div class="dt-wrap"><table class="dt">
         <thead><tr>
-          <th style="width:36px;text-align:center;color:var(--t3)">#</th>
+          <th style="width:40px;text-align:center;color:var(--t3)">№ кл.</th>
           <th>№ заказа</th><th>Telegram</th><th>Клиент</th><th>Переводчик</th><th>Статус</th>
           <th>Создан</th><th>Обновлён</th><th>Папка</th><th>Комментарий</th><th></th>
         </tr></thead>
@@ -878,7 +878,7 @@ button:active{transform:scale(.97)}
     <div class="panel">
       <div class="dt-wrap"><table class="dt">
         <thead><tr>
-          <th style="width:36px;text-align:center;color:var(--t3)">#</th>
+          <th style="width:40px;text-align:center;color:var(--t3)">№ кл.</th>
           <th>№ заказа</th><th>Telegram</th><th>Клиент</th><th>Переводчик</th><th>Статус</th>
           <th>Создан</th><th>Обновлён</th><th>Папка</th><th>Комментарий</th><th></th>
         </tr></thead>
@@ -1779,7 +1779,20 @@ CRM ↔ Backend (Render) ↔ Google Sheets
 <script>
 'use strict';
 // VERSION: 2026-03-24-v3 (proxy mode + encryption)
-var _isSaving = false; // Global save-in-progress flag (prevents double submit)
+var _isSaving = false;
+var _savingOps = new Set(); // track in-flight operations
+
+function _btnGuard(key, btn) {
+  // Returns true if already saving (block), false if OK to proceed
+  if (_savingOps.has(key)) return true;
+  _savingOps.add(key);
+  if (btn) { btn.disabled = true; btn._origText = btn.textContent; btn.textContent = '⏳ Сохранение...'; }
+  return false;
+}
+function _btnRelease(key, btn) {
+  _savingOps.delete(key);
+  if (btn) { btn.disabled = false; btn.textContent = btn._origText || 'Сохранить'; }
+} // Global save-in-progress flag (prevents double submit)
 console.log('[CRM] Version: 2026-03-24-v3 | API mode:', window.location.protocol === 'file:' ? 'DIRECT' : 'PROXY');
 // ============================================================
 // API LAYER — calls go to /api/* on Render
@@ -3516,7 +3529,7 @@ function openClientModal(cid){
     <div class="svc-tabs">
       <div class="svc-tab active" onclick="switchClientTab(this,'ct-main')">Main</div>
       <div class="svc-tab" onclick="switchClientTab(this,'ct-orders')">📦 Услуги <span class="ni-bdg" id="ct-orders-cnt" style="background:var(--acc);color:#fff;margin-left:2px">${orders.filter(o=>o.clientId===cid).length||''}</span></div>
-      <div class="svc-tab" onclick="switchClientTab(this,'ct-tasks')">Tasks (${ctasks.length})</div>
+      <div class="svc-tab" onclick="switchClientTab(this,'ct-tasks')">📋 Задачи (${ctasks.length})</div>
     </div>
 
     <!-- MAIN tab -->
@@ -3798,6 +3811,9 @@ function ncSvcChange(svc){
   sel.innerHTML = stages.length ? stages.map(s=>'<option value="'+s+'">'+s+'</option>').join('') : '<option value="">— нет этапов —</option>';
 }
 async function createClient(){
+  var _gBtn = document.querySelector('[onclick*="createClient"]');
+  if (_btnGuard('createClient', _gBtn)) return;
+  // guard active
   const name = (g('nc-name')?g('nc-name').value:'').trim();
   if(!name){ toast('Введите имя клиента'); return; }
   const svc      = g('nc-svc')      ? g('nc-svc').value      : '';
@@ -4063,6 +4079,8 @@ async function createDriveFolderForClient(cid) {
 }
 
 async function saveClientEdit(cid) {
+  var _gBtn = document.querySelector('[onclick*="saveClientEdit"]');
+  if (_btnGuard('saveClientEdit', _gBtn)) return;
   const c = clients.find(x => x.id === cid);
   if(!c) return;
   const name = (document.getElementById('ec-name').value||'').trim();
@@ -4637,6 +4655,7 @@ function handleDelBtn(btn, e){
     if(r.bottom>window.innerHeight-8) pop.style.top=(rect.top-r.height-4)+'px';
     if(r.right>window.innerWidth-8)   pop.style.left=(window.innerWidth-r.width-8)+'px';
   });
+  _btnRelease('saveClientEdit', _gBtn);
 }
 
 async function _execDelete(mod, idx){
@@ -4899,6 +4918,9 @@ function editAIMA(idx,e){
     </div>`,'narrow');
 }
 async function saveAIMA(idx){
+  var _gBtn = document.querySelector('[onclick*="saveAIMA"]');
+  if (_btnGuard('saveAIMA', _gBtn)) return;
+  // guard active
   const newStatus=g('ea-status').value;
   const newDate=g('ea-date').value||nowDMY();
   statuses[idx].status=newStatus;
@@ -4971,9 +4993,13 @@ function editVisaD(idx,e){
       <button class="btn btn-g" onclick="closeModal()">Отмена</button>
       <button class="btn btn-p" onclick="saveVisaD(${idx})">${idx<0?'Добавить':'Сохранить'}</button>
     </div>`);
+  _btnRelease('saveAIMA', _gBtn);
 }
 function toggleVdCustom(v){g('vd-custom').style.display=v==='__custom__'?'block':'none';}
 async function saveVisaD(idx){
+  var _gBtn = document.querySelector('[onclick*="saveVisaD"]');
+  if (_btnGuard('saveVisaD', _gBtn)) return;
+  // guard active
   let st=g('vd-status').value;
   if(st==='__custom__')st=g('vd-custom-val').value||'—';
   const obj={num:g('vd-num').value,name:g('vd-name').value,type:g('vd-type').value,dob:g('vd-dob').value,pass:g('vd-pass').value,status:st,date:g('vd-date').value,updated:nowDMY(),city:g('vd-city').value,comment:g('vd-comment').value};
@@ -5119,6 +5145,7 @@ function editCourt(idx,e){
     </div>`);
   // Async-заполнение адвоката если usersData ещё не загружен
   fillLawyerSelect('ct-lawyer', c.lawyer||'');
+  _btnRelease('saveVisaD', _gBtn);
 }
 
 // ── Создать папку услуги на Google Drive клиента ─────────────
@@ -5913,6 +5940,9 @@ function editRights(idx,e){
     </div>`,'narrow');
 }
 async function saveRights(idx){
+  var _gBtn = document.querySelector('[onclick*="saveRights"]');
+  if (_btnGuard('saveRights', _gBtn)) return;
+  // guard active
   const obj={num:g('ri-num').value,name:g('ri-name').value,country:g('ri-country').value,date:g('ri-date').value,stage:g('ri-stage').value,status:g('ri-status').value,updated:nowDMY(),comment:g('ri-comment').value};
   if(idx<0)rights.push(obj);else rights[idx]=obj;
   closeModal();renderRights();renderDash();toast(idx<0?'Добавлено ✓':'Права обновлены ✓');
@@ -5969,6 +5999,7 @@ function renderTCard(t){
       ${t.stage==='done'?`<button class="btn btn-xs" style="background:var(--s2);color:var(--t3);font-size:9px" onclick="archiveTask('${t.id}',event)" title="Убрать из списка (останется в таблице)">✕ Убрать</button>`:''}
     </div>
   </div>`;
+  _btnRelease('saveRights', _gBtn);
 }
 
 function tDragStart(e,id){_dragId=id;_dragMoved=true;setTimeout(()=>{const el=g('tc-'+id);if(el)el.classList.add('dragging');},0);}
@@ -6005,14 +6036,33 @@ document.addEventListener('dragend',()=>{document.querySelectorAll('.tcard').for
 
 function openTaskModal(id){
   const t=tasks.find(x=>x.id===id);if(!t)return;
+  const _tc = t.clientId ? clients.find(c=>c.id===t.clientId)
+    : (t.client ? clients.find(c=>c.num===t.client||c.name===t.client||c.id===t.client) : null);
+  const _clientBlock = _tc ? `
+    <div style="background:var(--s2);border-radius:8px;padding:10px 14px;margin-bottom:4px;cursor:pointer"
+         onclick="closeModal();setTimeout(()=>openClientModal('${_tc.id}'),100)">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:4px">Клиент</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--pur));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">${(_tc.name||'?')[0].toUpperCase()}</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--t1)">${_tc.name||'—'}</div>
+          <div style="font-size:11px;color:var(--t3)">
+            ${_tc.num?'№'+_tc.num+' · ':''}${_tc.tg||''}${_tc.phone?' · '+_tc.phone:''}
+          </div>
+          ${_tc.stage?`<div style="margin-top:3px">${bdg(_tc.stage)}</div>`:''}
+        </div>
+        <div style="margin-left:auto;font-size:10px;color:var(--acc)">↗ Открыть карточку</div>
+      </div>
+    </div>` : '';
   openModal(`
     <div class="mhdr">
       <div>
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)">${(()=>{ const _tc=t.clientId?clients.find(c=>c.id===t.clientId):(t.client?clients.find(c=>c.num===t.client||c.id===t.client):null); return _tc?'Задача · '+_tc.name:(t.client?'Задача · кл.'+t.client:'Задача'); })()}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)">Задача</div>
         <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-top:3px">${t.text}</div>
       </div>
       <button class="mcls" onclick="closeModal()">✕</button>
     </div>
+    ${_clientBlock}
     <div class="mrow">
       <div class="mf"><label class="mfl">Этап</label>
         <select class="ms" id="tm-stage"><option value="todo" ${t.stage==='todo'?'selected':''}>К выполнению</option><option value="inprogress" ${t.stage==='inprogress'?'selected':''}>В процессе</option><option value="done" ${t.stage==='done'?'selected':''}>Выполнено</option></select>
@@ -6026,7 +6076,9 @@ function openTaskModal(id){
         <select class="ms" id="tm-assignee">${TEAM.map(a=>`<option ${t.assignee===a?'selected':''}>${a}</option>`).join('')}</select>
       </div>
       <div class="mf"><label class="mfl">Срок</label><input class="mi" type="date" id="tm-due" value="${t.due}"></div>
-      <div class="mf"><label class="mfl">Клиент №</label><input class="mi" id="tm-client" value="${t.client}"></div>
+      <div class="mf"><label class="mfl">Клиент (имя или №)</label>
+        <input class="mi" id="tm-client" value="${_tc?_tc.name:(t.client||'')}" autocomplete="off">
+      </div>
     </div>
     <hr class="mdiv">
     <div class="msec">
@@ -6100,6 +6152,8 @@ function openAddTaskModal(defaultStage='todo',defaultClient=''){
     </div>`,'narrow');
 }
 async function createTask(){
+  var _gBtn = document.querySelector('[onclick*="createTask"]');
+  if (_btnGuard('createTask', _gBtn)) return;
   const txt=(g('nt-text').value||'').trim();if(!txt)return;
   const newTask={id:uid(),text:txt,title:txt,client:(g('nt-client-val')||g('nt-client')||{}).value||'',assignee:g('nt-assignee').value,prio:g('nt-prio').value,stage:g('nt-stage').value,due:g('nt-due').value,created:today(),cmts:[]};
   tasks.unshift(newTask);
@@ -6110,6 +6164,7 @@ async function createTask(){
     if(res && res.ok) toast('Задача сохранена в таблице ✓');
     else if(API_ONLINE) toast('⚠ Задача создана локально, не удалось сохранить на сервере');
   }
+  _btnRelease('createTask', _gBtn);
 }
 
 async function archiveTask(id, e){
@@ -9277,6 +9332,8 @@ function openEditUserModal(uid) {
 }
 
 async function saveNewUser() {
+  var _gBtn = document.querySelector('[onclick*="saveNewUser"]');
+  if (_btnGuard('saveNewUser', _gBtn)) return;
   var name     = (document.getElementById('umod-name').value||'').trim();
   var email    = (document.getElementById('umod-email').value||'').trim();
   var role     = document.getElementById('umod-role').value;
@@ -9311,6 +9368,7 @@ async function saveNewUser() {
     errEl.textContent = result && result.error || 'Ошибка сервера — проверьте API';
     errEl.style.display = 'block';
   }
+  _btnRelease('saveNewUser', _gBtn);
 }
 
 async function toggleUserStatus(uid, currentStatus) {
@@ -9868,6 +9926,8 @@ async function saveClientPass(cid){
   }
 }
 async function saveSubmitInfo(cid){
+  var _gBtn = document.querySelector('[onclick*="saveSubmitInfo"]');
+  if (_btnGuard('saveSubmitInfo', _gBtn)) return;
   const c = clients.find(x=>x.id===cid);
   if(!c) return;
   const place = (document.getElementById('cm-submit-place')||{}).value||'';
@@ -9940,6 +10000,7 @@ function esc(s){
 function getClientPageBase(){
   // Если client.html лежит рядом с index.html
   return location.origin + location.pathname.replace('index.html','').replace(/\/$/,'') + '/client.html';
+  _btnRelease('saveSubmitInfo', _gBtn);
 }
 
 async function genClientToken(cid){
@@ -10889,6 +10950,8 @@ function closeREModal() {
 }
 
 async function saveREDeal() {
+  var _gBtn = document.querySelector('[onclick*="saveREDeal"]');
+  if (_btnGuard('saveREDeal', _gBtn)) return;
   const id = g('re-mid').value;
   const client = g('re-mclient').value.trim();
   if(!client) { toast('⚠️ Укажите клиента'); return; }
@@ -11062,6 +11125,7 @@ function openStaffPassModal(uid) {
       + '<button class="btn btn-p" onclick="saveStaffPass(\'' + esc(uid) + '\')">💾 Сохранить пароль</button>'
     + '</div>'
   );
+  _btnRelease('saveREDeal', _gBtn);
 }
 
 async function saveStaffPass(uid) {
