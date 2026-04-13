@@ -513,8 +513,7 @@ function renderAll() {
 
   // General tasks assigned to this lawyer
   const myGeneralTasks = isLawyer
-    ? allTasks.filter(t => (matchesMe(t.assignee) || myClientIds.has(t.client) || 
-        allClients.find(c => c.id === t.client && matchesMe(c.lawyer))) && t.stage !== 'done')
+    ? allTasks.filter(t => matchesMe(t.assignee) && t.stage !== 'done')
     : allTasks.filter(t => t.stage !== 'done');
 
   // Spec-tasks (role=lawyer) assigned to this lawyer
