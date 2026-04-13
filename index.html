@@ -181,6 +181,7 @@ button:active{transform:scale(.97)}
 .sec-a{margin-left:auto;display:flex;gap:6px;align-items:center}
 
 /* ── BADGES ── */
+.inline-status{cursor:pointer;position:relative}.inline-status:hover::after{content:'✎ изменить';position:absolute;top:-22px;left:0;background:#333;color:#fff;font-size:9px;padding:2px 6px;border-radius:4px;white-space:nowrap;pointer-events:none}
 .bdg{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.01em}
 .bdg.gre{background:var(--gre-d);color:var(--gre)}
 .bdg.blu{background:var(--acc-d);color:var(--acc)}
@@ -278,6 +279,11 @@ button:active{transform:scale(.97)}
 .tcol-t{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-family:'Plus Jakarta Sans',sans-serif}
 .tcol-cnt{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3);background:var(--surface);border:1px solid var(--border);padding:1px 7px;border-radius:10px}
 .tlist{flex:1;overflow-y:auto;padding:8px 6px;display:flex;flex-direction:column;gap:6px;min-height:60px}
+.svc-tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:0}
+.svc-tab{padding:6px 14px;font-size:12px;font-weight:600;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;border-radius:6px 6px 0 0;white-space:nowrap}
+.svc-tab:hover{color:var(--t1);background:var(--s2)}
+.svc-tab.active{color:var(--acc);border-bottom-color:var(--acc);background:var(--acc-d)}
+.svc-pane{display:none}.svc-pane.active{display:block}
 .tcard{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 13px;cursor:grab;transition:all .2s cubic-bezier(.4,0,.2,1);user-select:none;border-left:3px solid transparent;box-shadow:var(--sh)}
 .tcard:hover{border-color:var(--border2);box-shadow:var(--sh2);transform:translateY(-2px)}
 .tcard.dragging{opacity:.35;cursor:grabbing}
@@ -870,6 +876,7 @@ button:active{transform:scale(.97)}
     </div>
     <div class="chips" id="nocrims-filter-chips">
       <div class="chip active" onclick="filterNocrims('all',this)">Все</div>
+      <div class="chip" onclick="filterNocrims('Принято в работу',this)">Принято</div>
       <div class="chip" onclick="filterNocrims('Документы собраны',this)">Документы</div>
       <div class="chip" onclick="filterNocrims('Передано переводчикам',this)">Передано</div>
       <div class="chip" onclick="filterNocrims('Справка готова',this)">Готова</div>
@@ -1476,6 +1483,7 @@ CRM ↔ Backend (Render) ↔ Google Sheets
             <th>Тип дела</th>
             <th>Адвокат</th>
             <th>Срок</th>
+            <th>Этап</th>
             <th>Статус</th>
             <th>Документы</th>
             <th style="width:70px"></th>
@@ -3845,6 +3853,27 @@ async function createClient(){
       const ci = clients.findIndex(c=>c.id===id);
       if(ci>=0){ clients[ci].driveLink = driveRes.folderUrl; renderClients(); }
       toast('📁 Папка на Drive создана ✓');
+    }
+    // Auto-create service orders for relevant service types
+    if(SVC_NEEDS_TRANSLATOR.includes(svc) || svc === 'Права') {
+      const autoOrder = {
+        id:         'ORD-' + id + '-' + Date.now(),
+        clientId:   id,
+        clientNum:  newClient.num || '',
+        svcType:    svc,
+        status:     (ORD_STATUSES[svc]||[])[0] || 'Принято в работу',
+        created:    nowDMYtime(),
+        updated:    nowDMYtime(),
+        comment:    '',
+        translator: '',
+        driveLink:  '',
+      };
+      orders.push(autoOrder);
+      const ordRes = await apiPost('/orders', autoOrder).catch(()=>null);
+      if(ordRes && ordRes.ok) {
+        renderTranslations(); renderNocrims(); renderRights();
+        toast('📋 Заказ «' + svc + '» создан автоматически ✓');
+      }
     }
   }
 }
@@ -8986,9 +9015,10 @@ function renderLawyerTasks() {
       + '<td style="font-size:12px">' + (t.type||'—') + '</td>'
       + '<td style="font-size:12px;color:var(--acc)">' + (t.assignee ? '⚖ ' + t.assignee : '<span style="color:var(--t3)">—</span>') + '</td>'
       + '<td style="font-size:12px' + (overdue ? ';color:#dc2626;font-weight:600' : '') + '">📅 ' + (t.due||'—') + '</td>'
+      + '<td style="font-size:11px;color:var(--t2)">' + (t.stage||'—') + '</td>'
+            + '<td style="font-size:11px;color:var(--t2)">' + (t.stage||'—') + '</td>'
       + '<td>' + badge + '</td>'
-      + '<td>' + drive + '</td>'
-      + '<td onclick="event.stopPropagation()">' + _editBtn + '</td>'
+      + '<td>' + drive + '</td>' + '<td onclick="event.stopPropagation()">' + _editBtn + '</td>'
       + '</tr>';
   }).join('');
 }
