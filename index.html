@@ -5248,24 +5248,6 @@ async function saveCourt(idx){
 // ============================================================
 
 // ─── ПЕРЕВОДЫ ────────────────────────────────────────────────
-function renderTranslations(filter){
-  var _u = _myUser();
-  var arr = orders.filter(function(o){ return o.svcType === 'Переводы'; });
-  if(_u.role === 'translator') arr = arr.filter(function(o){ return (o.translator||'') === _u.name; });
-  const filtered = filter && filter !== 'all' ? arr.filter(o=>o.status===filter) : arr;
-  const tbody = g('trans-tbody');
-  if(!tbody) return;
-  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:24px">Нет переводов</td></tr>'; return; }
-  tbody.innerHTML = filtered.map(o => {
-    const client = clients.find(c=>c.id===o.clientId);
-    const cName  = client ? client.name : (o.clientId||'—');
-    const cNum   = client ? (client.num||'—') : '—';
-    const cTg    = client ? (client.tg||'') : '';
-    const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
-    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:44px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+(cNum||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)">'+esc(o.id||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td>'+bdg(o.status)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
-  }).join('');
-}
-
 function filterTranslations(val, el){
   document.querySelectorAll('#trans-filter-chips .chip').forEach(c=>c.classList.remove('active'));
   if(el) el.classList.add('active');
@@ -5273,24 +5255,6 @@ function filterTranslations(val, el){
 }
 
 // ─── СПРАВКИ О НЕСУДИМОСТИ ───────────────────────────────────
-function renderNocrims(filter){
-  var _u = _myUser();
-  var arr = orders.filter(function(o){ return o.svcType === 'Справка о несудимости'; });
-  if(_u.role === 'translator') arr = arr.filter(function(o){ return (o.translator||'') === _u.name; });
-  const filtered = filter && filter !== 'all' ? arr.filter(o=>o.status===filter) : arr;
-  const tbody = g('nocrims-tbody');
-  if(!tbody) return;
-  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--t3);padding:24px">Нет справок</td></tr>'; return; }
-  tbody.innerHTML = filtered.map(o => {
-    const client = clients.find(c=>c.id===o.clientId);
-    const cName  = client ? client.name : (o.clientId||'—');
-    const cNum   = client ? (client.num||'—') : '—';
-    const cTg    = client ? (client.tg||'') : '';
-    const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
-    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:44px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+(cNum||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)">'+esc(o.id||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td>'+bdg(o.status)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
-  }).join('');
-}
-
 function filterNocrims(val, el){
   document.querySelectorAll('#nocrims-filter-chips .chip').forEach(c=>c.classList.remove('active'));
   if(el) el.classList.add('active');
@@ -5690,19 +5654,11 @@ function renderTranslations(filter){
   tbody.innerHTML = filtered.map(o => {
     const client = clients.find(c=>c.id===o.clientId);
     const cName  = client ? client.name : (o.clientId||'—');
-    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'
-      +'<td style="font-weight:600">'+cName+'</td>'
-      +'<td>'+(o.translator||'—')+'</td>'
-      +'<td>'+bdg(o.status)+'</td>'
-      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'
-      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'
-      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'
-      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'
-      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'
-        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)" title="Редактировать">✏</button>'
-        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)" title="Удалить">🗑</button>'
-      +'</td>'
-      +'</tr>';
+    const cNum   = client ? (client.num||'—') : '—';
+    const cTg    = client ? (client.tg||'') : '';
+    const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
+    const ordStatus = (o.status||'').replace(/'/g, "\'");
+    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:44px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+(cNum||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)">'+esc(o.id||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-status" onclick="openStatusDropdown(event,\'orders\',o.id,ordStatus,ORD_STATUSES[\'Переводы\'],\'/orders\',\'id\')" title="Нажмите чтобы изменить">'+bdg(o.status)+'</span></td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'        +(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')      +'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
   }).join('');
 }
 
@@ -5724,19 +5680,11 @@ function renderNocrims(filter){
   tbody.innerHTML = filtered.map(o => {
     const client = clients.find(c=>c.id===o.clientId);
     const cName  = client ? client.name : (o.clientId||'—');
-    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'
-      +'<td style="font-weight:600">'+cName+'</td>'
-      +'<td>'+(o.translator||'—')+'</td>'
-      +'<td>'+bdg(o.status)+'</td>'
-      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'
-      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'
-      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'
-      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'
-      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'
-        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)" title="Редактировать">✏</button>'
-        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)" title="Удалить">🗑</button>'
-      +'</td>'
-      +'</tr>';
+    const cNum   = client ? (client.num||'—') : '—';
+    const cTg    = client ? (client.tg||'') : '';
+    const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
+    const ordStatus = (o.status||'').replace(/'/g, "\'");
+    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:44px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+(cNum||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)">'+esc(o.id||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td class="inline-edit-cell" onclick="event.stopPropagation()"><span class="inline-status" onclick="openStatusDropdown(event,\'orders\',o.id,ordStatus,ORD_STATUSES[\'Справка о несудимости\'],\'/orders\',\'id\')" title="Нажмите чтобы изменить">'+bdg(o.status)+'</span></td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'        +(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')      +'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
   }).join('');
 }
 
