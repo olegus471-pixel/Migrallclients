@@ -9280,11 +9280,9 @@ function openAddSpecTaskModal(role) {
 
 async function saveSpecTask() {
   // Защита от двойного сабмита
-  var btn = document.querySelector('#modal-spec-task .btn-p');
+  var btn = document.getElementById('modal-spec-save');
   if (btn && btn.disabled) return;
-  if (btn) { btn.disabled = true; btn.textContent = 'Сохранение...';
-    setTimeout(function(){ if(btn){ btn.disabled=false; btn.textContent='Создать'; } }, 5000);
-  }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Сохранение...'; }
   // Читать из searchable picker
   var stCpVal = document.getElementById('st-cp-val');
   if(stCpVal && stCpVal.value) {
@@ -9297,7 +9295,11 @@ async function saveSpecTask() {
     }
   }
   var client = (document.getElementById('st-client').value||'').trim();
-  if (!client) { toast('Выберите клиента из списка или введите ФИО'); return; }
+  if (!client) {
+    toast('Выберите клиента из списка или введите ФИО');
+    if (btn) { btn.disabled = false; btn.textContent = 'Создать'; }
+    return;
+  }
   var role = specTaskRole;
   var clientId = (document.getElementById('st-client-id') ? document.getElementById('st-client-id').value : '') || '';
   var task = {
@@ -9518,8 +9520,8 @@ async function resetUserPass(email) {
     var stClose = document.getElementById('modal-spec-close');
     var stCancel = document.getElementById('modal-spec-cancel');
     var stSave = document.getElementById('modal-spec-save');
-    if(stClose) stClose.onclick = function(){ stModal.style.display='none'; };
-    if(stCancel) stCancel.onclick = function(){ stModal.style.display='none'; };
+    if(stClose)  stClose.onclick  = function(){ stModal.style.display='none'; var sb=document.getElementById('modal-spec-save'); if(sb){sb.disabled=false;sb.textContent='Создать';} };
+    if(stCancel) stCancel.onclick = function(){ stModal.style.display='none'; var sb=document.getElementById('modal-spec-save'); if(sb){sb.disabled=false;sb.textContent='Создать';} };
     if(stSave) stSave.onclick = function(){ saveSpecTask(); };
     if(stModal) stModal.addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
     // Spec detail modal close
