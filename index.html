@@ -857,9 +857,9 @@ button:active{transform:scale(.97)}
     <div class="panel">
       <div class="dt-wrap"><table class="dt">
         <thead><tr>
-          <th style="width:44px;text-align:center;color:var(--t3)">№ кл.</th>
-          <th>Клиент</th><th>Telegram</th><th>Переводчик</th><th>Статус</th>
-          <th>Создан</th><th>Обновлён</th><th>Папка</th><th>Комментарий</th><th></th>
+          <th style="width:44px;text-align:center;color:var(--t3)">#</th>
+          <th>№ заказа</th><th>Telegram</th><th>Клиент</th><th>Переводчик</th>
+          <th>Создан</th><th>Статус</th><th>Обновлён</th><th>Папка</th><th>Комментарий</th><th></th>
         </tr></thead>
         <tbody id="trans-tbody"></tbody>
       </table></div>
@@ -886,9 +886,9 @@ button:active{transform:scale(.97)}
     <div class="panel">
       <div class="dt-wrap"><table class="dt">
         <thead><tr>
-          <th style="width:40px;text-align:center;color:var(--t3)">№ кл.</th>
-          <th>№ заказа</th><th>Telegram</th><th>Клиент</th><th>Переводчик</th><th>Статус</th>
-          <th>Создан</th><th>Обновлён</th><th>Папка</th><th>Комментарий</th><th></th>
+          <th style="width:44px;text-align:center;color:var(--t3)">#</th>
+          <th>№ заказа</th><th>Telegram</th><th>Клиент</th><th>Переводчик</th>
+          <th>Создан</th><th>Статус</th><th>Обновлён</th><th>Папка</th><th>Комментарий</th><th></th>
         </tr></thead>
         <tbody id="nocrims-tbody"></tbody>
       </table></div>
@@ -5262,7 +5262,7 @@ function renderTranslations(filter){
     const cNum   = client ? (client.num||'—') : '—';
     const cTg    = client ? (client.tg||'') : '';
     const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
-    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:44px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+cNum+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td>'+bdg(o.status)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
+    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:44px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+(cNum||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)">'+esc(o.id||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td>'+bdg(o.status)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
   }).join('');
 }
 
@@ -5287,7 +5287,7 @@ function renderNocrims(filter){
     const cNum   = client ? (client.num||'—') : '—';
     const cTg    = client ? (client.tg||'') : '';
     const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
-    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:44px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+cNum+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td>'+bdg(o.status)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
+    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:44px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+(cNum||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)">'+esc(o.id||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td>'+bdg(o.status)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
   }).join('');
 }
 
