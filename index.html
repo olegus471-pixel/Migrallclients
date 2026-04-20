@@ -857,8 +857,8 @@ button:active{transform:scale(.97)}
     <div class="panel">
       <div class="dt-wrap"><table class="dt">
         <thead><tr>
-          <th style="width:40px;text-align:center;color:var(--t3)">№ кл.</th>
-          <th>№ заказа</th><th>Telegram</th><th>Клиент</th><th>Переводчик</th><th>Статус</th>
+          <th style="width:44px;text-align:center;color:var(--t3)">№ кл.</th>
+          <th>Клиент</th><th>Telegram</th><th>Переводчик</th><th>Статус</th>
           <th>Создан</th><th>Обновлён</th><th>Папка</th><th>Комментарий</th><th></th>
         </tr></thead>
         <tbody id="trans-tbody"></tbody>
@@ -5257,7 +5257,7 @@ function renderTranslations(filter){
     const cNum   = client ? (client.num||'—') : '—';
     const cTg    = client ? (client.tg||'') : '';
     const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
-    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+cNum+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--t3)">'+esc(o.id||'—')+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td>'+bdg(o.status)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
+    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:44px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+cNum+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td>'+bdg(o.status)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
   }).join('');
 }
 
@@ -5282,7 +5282,7 @@ function renderNocrims(filter){
     const cNum   = client ? (client.num||'—') : '—';
     const cTg    = client ? (client.tg||'') : '';
     const tgLink = cTg ? '<a href="tg://resolve?domain='+cTg.replace('@','')+'" onclick="event.stopPropagation()">'+cTg+'</a>' : '—';
-    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:36px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+cNum+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td>'+bdg(o.status)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
+    return '<tr style="cursor:pointer" onclick="openOrderDetailModal(\''+o.id+'\')">'      +'<td style="width:44px;text-align:center;font-size:11px;font-weight:700;color:var(--t3);background:var(--bg2)">'+cNum+'</td>'      +'<td style="font-weight:600">'+esc(cName)+'</td>'      +'<td class="mono" style="font-size:11px;color:var(--acc)" onclick="event.stopPropagation()">'+tgLink+'</td>'      +'<td>'+(o.translator||'—')+'</td>'      +'<td>'+bdg(o.status)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.created)+'</td>'      +'<td class="mono" style="color:var(--t3)">'+fmtDate(o.updated)+'</td>'      +'<td onclick="event.stopPropagation()">'+(o.driveLink?'<a href="'+o.driveLink+'" target="_blank" class="btn btn-sm" style="font-size:10px">📁 Папка</a>':'—')+'</td>'      +'<td style="color:var(--t3);font-size:11px">'+(o.comment||'—')+'</td>'      +'<td style="white-space:nowrap" onclick="event.stopPropagation()">'        +'<button class="edit-btn" onclick="editOrder(\''+o.id+'\',event)">✏</button>'        +'<button class="del-btn" onclick="deleteOrder(\''+o.id+'\',event)">🗑</button>'      +'</td>'      +'</tr>';
   }).join('');
 }
 
@@ -6013,7 +6013,7 @@ function renderTCard(t){
   const now=new Date();const ov=t.stage!=='done'&&t.due&&new Date(t.due)<now;
   const _tc = t.clientId ? clients.find(c=>c.id===t.clientId) : (t.client ? clients.find(c=>c.num===t.client||c.name===t.client||c.id===t.client) : null);
   const _tcLabel = _tc ? ((_tc.num?'№'+_tc.num+' ':'') + _tc.name) : (t.client ? 'кл.'+t.client : '');
-  return`<div class="tcard pb-${t.prio}" id="tc-${t.id}" draggable="true" ondragstart="tDragStart(event,'${t.id}')" onclick="openTaskModal('${t.id}')">
+  return`<div class="tcard pb-${t.prio}" id="tc-${t.id}" draggable="true" ondragstart="tDragStart(event,'${t.id}')" onmousedown="_dragMoved=false" onclick="tCardClick('${t.id}')">
     <div class="tcard-txt">${t.text}</div>
     <div class="tcard-meta">
       ${_tcLabel?`<span class="cn" title="${_tc?_tc.name:t.client}">${_tcLabel}</span>`:''}
@@ -6064,67 +6064,103 @@ async function moveTask(id,stage,e){
 document.addEventListener('dragend',()=>{document.querySelectorAll('.tcard').forEach(c=>c.classList.remove('dragging'));document.querySelectorAll('.tcol').forEach(c=>c.classList.remove('drop-active'));});
 
 function openTaskModal(id){
-  const t=tasks.find(x=>x.id===id);if(!t)return;
+  const t=tasks.find(x=>x.id===id); if(!t)return;
   const _tc = t.clientId ? clients.find(c=>c.id===t.clientId)
     : (t.client ? clients.find(c=>c.num===t.client||c.name===t.client||c.id===t.client) : null);
+
+  // Client block (clickable to open client card)
   const _clientBlock = _tc ? `
-    <div style="background:var(--s2);border-radius:8px;padding:10px 14px;margin-bottom:4px;cursor:pointer"
-         onclick="closeModal();setTimeout(()=>openClientModal('${_tc.id}'),100)">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:4px">Клиент</div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--pur));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">${(_tc.name||'?')[0].toUpperCase()}</div>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:var(--t1)">${_tc.name||'—'}</div>
-          <div style="font-size:11px;color:var(--t3)">
-            ${_tc.num?'№'+_tc.num+' · ':''}${_tc.tg||''}${_tc.phone?' · '+_tc.phone:''}
-          </div>
-          ${_tc.stage?`<div style="margin-top:3px">${bdg(_tc.stage)}</div>`:''}
-        </div>
-        <div style="margin-left:auto;font-size:10px;color:var(--acc)">↗ Открыть карточку</div>
+    <div style="background:var(--s2);border-radius:8px;padding:9px 13px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:10px"
+         onclick="closeModal();setTimeout(()=>openClientModal('${_tc.id}'),120)">
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--pur));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">${(_tc.name||'?')[0].toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--t1)">${_tc.name||'—'}</div>
+        <div style="font-size:10px;color:var(--t3)">${_tc.num?'№'+_tc.num+' · ':''}${_tc.tg||''}${_tc.stage?' · '+_tc.stage:''}</div>
       </div>
+      <div style="font-size:10px;color:var(--acc);white-space:nowrap">↗ Карточка</div>
     </div>` : '';
+
   openModal(`
     <div class="mhdr">
       <div>
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3)">Задача</div>
-        <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-top:3px">${t.text}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--t3);margin-bottom:3px">✏ Редактирование задачи</div>
       </div>
       <button class="mcls" onclick="closeModal()">✕</button>
     </div>
-    ${_clientBlock}
-    <div class="mrow">
-      <div class="mf"><label class="mfl">Этап</label>
-        <select class="ms" id="tm-stage"><option value="todo" ${t.stage==='todo'?'selected':''}>К выполнению</option><option value="inprogress" ${t.stage==='inprogress'?'selected':''}>В процессе</option><option value="done" ${t.stage==='done'?'selected':''}>Выполнено</option></select>
+
+    <div class="msec" style="margin-bottom:0">
+      <label class="mfl">Описание задачи *</label>
+      <textarea class="mta" id="tm-text" style="min-height:64px;font-size:14px;font-weight:600">${esc(t.text||'')}</textarea>
+    </div>
+
+    <div class="mrow" style="margin-top:10px">
+      <div class="mf">
+        <label class="mfl">Этап</label>
+        <select class="ms" id="tm-stage">
+          <option value="todo" ${t.stage==='todo'?'selected':''}>📋 К выполнению</option>
+          <option value="inprogress" ${t.stage==='inprogress'?'selected':''}>⚡ В процессе</option>
+          <option value="done" ${t.stage==='done'?'selected':''}>✅ Выполнено</option>
+        </select>
       </div>
-      <div class="mf"><label class="mfl">Приоритет</label>
-        <select class="ms" id="tm-prio"><option value="high" ${t.prio==='high'?'selected':''}>🔴 Высокий</option><option value="mid" ${t.prio==='mid'?'selected':''}>🟡 Средний</option><option value="low" ${t.prio==='low'?'selected':''}>⚪ Низкий</option></select>
+      <div class="mf">
+        <label class="mfl">Приоритет</label>
+        <select class="ms" id="tm-prio">
+          <option value="high" ${t.prio==='high'?'selected':''}>🔴 Высокий</option>
+          <option value="mid" ${t.prio==='mid'?'selected':''}>🟡 Средний</option>
+          <option value="low" ${t.prio==='low'?'selected':''}>⚪ Низкий</option>
+        </select>
       </div>
     </div>
+
     <div class="mrow">
-      <div class="mf"><label class="mfl">Ответственный</label>
+      <div class="mf">
+        <label class="mfl">Ответственный</label>
         <select class="ms" id="tm-assignee">${TEAM.map(a=>`<option ${t.assignee===a?'selected':''}>${a}</option>`).join('')}</select>
       </div>
-      <div class="mf"><label class="mfl">Срок</label><input class="mi" type="date" id="tm-due" value="${t.due}"></div>
-      <div class="mf"><label class="mfl">Клиент (имя или №)</label>
-        <input class="mi" id="tm-client" value="${_tc?_tc.name:(t.client||'')}" autocomplete="off">
+      <div class="mf">
+        <label class="mfl">Срок</label>
+        <input class="mi" type="date" id="tm-due" value="${t.due||''}">
       </div>
     </div>
+
+    <div class="mf" style="margin-bottom:10px">
+      <label class="mfl">Клиент</label>
+      ${clientPickerSearchHTML('tm-client-picker', _tc?_tc.id:(t.clientId||''), _tc?_tc.name:(t.client||''), '_tmFillClient')}
+    </div>
+
+    ${_clientBlock}
+
     <hr class="mdiv">
+
     <div class="msec">
       <div class="msl">Комментарии (${(t.cmts||[]).length})</div>
-      <div class="cmt-list" id="tm-cmtlist">
-        ${(t.cmts||[]).map(c=>`<div class="cmt"><div class="cmt-m"><span>${c.a}</span> · ${c.d}</div><div class="cmt-t">${c.t}</div></div>`).join('')}
+      <div class="cmt-list" id="tm-cmtlist" style="max-height:160px;overflow-y:auto">
+        ${(t.cmts||[]).map(c=>`<div class="cmt"><div class="cmt-m"><span>${esc(c.a||'')}</span> · ${c.d||''}</div><div class="cmt-t">${esc(c.t||'')}</div></div>`).join('')}
         ${!(t.cmts||[]).length?'<div style="font-size:10px;color:var(--t3);padding:4px">Нет комментариев</div>':''}
       </div>
-      <textarea class="mta" id="tm-new-cmt" placeholder="Добавить комментарий..." style="min-height:52px;margin-bottom:5px"></textarea>
-      <button class="btn btn-g btn-sm" onclick="addComment('${t.id}')">+ Добавить комментарий</button>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <textarea class="mta" id="tm-new-cmt" placeholder="Добавить комментарий..." style="min-height:42px;flex:1"></textarea>
+        <button class="btn btn-g btn-sm" style="align-self:flex-end;white-space:nowrap" onclick="addComment('${t.id}')">+ Добавить</button>
+      </div>
     </div>
+
     <div class="mft">
       <button class="btn btn-red btn-sm" style="margin-right:auto" onclick="deleteTask('${t.id}')">🗑 Удалить</button>
       <button class="btn btn-g" onclick="closeModal()">Отмена</button>
-      <button class="btn btn-p" onclick="saveTask('${t.id}')">Сохранить</button>
-    </div>`,'wide');
+      <button class="btn btn-p" onclick="saveTask('${t.id}')">💾 Сохранить</button>
+    </div>
+  `,'wide');
 }
+
+// Client picker callback for task modal
+function _tmFillClient(cid) {
+  const c = clients.find(x=>x.id===cid);
+  if(c) {
+    const inp = document.getElementById('tm-client-picker-val');
+    if(inp) inp.value = cid;
+  }
+}
+
 
 async function addComment(tid){
   const t=tasks.find(x=>x.id===tid);const txt=(g('tm-new-cmt').value||'').trim();
@@ -6138,10 +6174,28 @@ async function addComment(tid){
   if(API_BASE) await apiPut('/tasks/'+tid,{cmts:JSON.stringify(t.cmts)}).catch(()=>{});
 }
 async function saveTask(tid){
-  const t=tasks.find(x=>x.id===tid);if(!t)return;
-  t.stage=g('tm-stage').value;t.prio=g('tm-prio').value;t.assignee=g('tm-assignee').value;t.due=g('tm-due').value;t.client=g('tm-client').value;
-  t._dirty=true;
+  const t=tasks.find(x=>x.id===tid); if(!t)return;
+  // Save all editable fields
+  const newText = (g('tm-text')||{}).value;
+  if(newText && newText.trim()) t.text = newText.trim();
+  t.stage    = g('tm-stage').value;
+  t.prio     = g('tm-prio').value;
+  t.assignee = g('tm-assignee').value;
+  t.due      = g('tm-due').value;
+  // Client from picker
+  const pickerVal = document.getElementById('tm-client-picker-val');
+  if(pickerVal && pickerVal.value) {
+    const c = clients.find(x=>x.id===pickerVal.value);
+    if(c){ t.clientId=c.id; t.client=c.num||c.name||c.id; }
+  } else {
+    // Fallback: text input
+    const clientTxt = (g('tm-client')||{}).value||'';
+    if(clientTxt) t.client = clientTxt;
+  }
+  t.updated  = nowDMY();
+  t._dirty   = true;
   persistTasks(); closeModal(); renderTasks(); renderTaskStats();
+  toast('Задача сохранена ✓');
   if(API_BASE){
     const r=await apiPut('/tasks/'+tid, t).catch(()=>null);
     if(r&&r.ok) t._dirty=false;
@@ -6441,6 +6495,21 @@ function openModal(html,size=''){
   box.className='modal'+(size?' '+size:'');
   g('modal-in').innerHTML=html;
   g('modal-ov').classList.add('open');
+  // Auto-guard all primary buttons against double-click
+  setTimeout(function(){
+    (g('modal-in')||document).querySelectorAll('.btn-p').forEach(function(btn){
+      if(btn._guardAdded) return;
+      btn._guardAdded = true;
+      btn.addEventListener('click', function(){
+        if(btn._clicking) return false;
+        btn._clicking = true;
+        btn._origTxt = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⏳...';
+        setTimeout(function(){ btn._clicking=false; btn.disabled=false; btn.textContent=btn._origTxt||'Сохранить'; }, 4000);
+      }, true); // capture phase — fires before onclick
+    });
+  }, 50);
 }
 function closeModal(id){
   if(id) {
@@ -6448,6 +6517,11 @@ function closeModal(id){
     if(el) { el.style.display='none'; return; }
   }
   g('modal-ov').classList.remove('open');
+  // Reset all button states
+  if(g('modal-in')) g('modal-in').querySelectorAll('.btn-p').forEach(function(btn){
+    btn._clicking=false; btn.disabled=false; if(btn._origTxt) btn.textContent=btn._origTxt;
+  });
+  _savingOps.clear();
 }
 function toast(msg, type) {
   var wrap = document.getElementById('toast-wrap');
