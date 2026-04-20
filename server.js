@@ -734,6 +734,83 @@ app.all('/api/*', (req, res, next) => {
   });
 });
 
+// ── POST /api/admin/dedup-spectasks — remove duplicate spec-tasks ──
+app.post('/api/admin/dedup-spectasks', express.json(), (req, res) => {
+  if (!req.body || req.body.secret !== process.env.ADMIN_SECRET) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  if (!GAS_URL) return res.json({ error: 'no GAS_URL' });
+
+  // Fetch all spec-tasks from GAS
+  const gasUrl = GAS_URL + '?path=spec-tasks';
+  const pu = url.parse(gasUrl);
+  let raw = '';
+  const req2 = https.request({ hostname: pu.hostname, path: pu.path, method: 'GET' }, (r) => {
+    if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
+      const redir = url.parse(r.headers.location);
+      https.get({ hostname: redir.hostname, path: redir.path }, (r2) => {
+        let d = '';
+        r2.on('data', c => d += c);
+        r2.on('end', () => processTasks(d));
+      });
+      return;
+    }
+    r.on('data', c => raw += c);
+    r.on('end', () => processTasks(raw));
+  });
+  req2.on('error', e => res.json({ error: e.message }));
+  req2.end();
+
+  function processTasks(data) {
+    try {
+      const tasks = JSON.parse(data);
+      if (!Array.isArray(tasks)) return res.json({ error: 'not array' });
+
+      // Find duplicates: same client+type+role within 60 seconds of each other
+      // Keep first occurrence, collect ids of duplicates to delete
+      const seen = {};
+      const toDelete = [];
+      // Sort by createdAt ascending so we keep the earliest
+      const sorted = [...tasks].sort((a, b) => {
+        const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return ta - tb;
+      });
+
+      sorted.forEach(t => {
+        const key = `${t.client||''}|${t.type||''}|${t.role||''}`;
+        const tTime = t.createdAt ? new Date(t.createdAt).getTime() : 0;
+        if (seen[key] !== undefined) {
+          const prevTime = seen[key].time;
+          if (tTime > 0 && prevTime > 0 && Math.abs(tTime - prevTime) < 60000) {
+            toDelete.push(t.id); // duplicate within 60s
+          } else {
+            seen[key] = { time: tTime }; // new distinct record
+          }
+        } else {
+          seen[key] = { time: tTime };
+        }
+      });
+
+      console.log('[dedup] found', toDelete.length, 'duplicates to delete');
+      if (!toDelete.length) return res.json({ ok: true, deleted: 0, msg: 'No duplicates found' });
+
+      // Delete duplicates by updating their stage to 'deleted'
+      let done = 0;
+      toDelete.forEach(id => {
+        proxyToGAS('PUT', '/spec-tasks/' + id, JSON.stringify({ id, stage: 'deleted', deleted: '1' }), () => {
+          done++;
+          if (done === toDelete.length) {
+            res.json({ ok: true, deleted: done, ids: toDelete });
+          }
+        });
+      });
+    } catch(e) {
+      res.json({ error: e.message });
+    }
+  }
+});
+
 // ── HTML с инжекцией __ENV ────────────────────────────────────
 const envScript = `<script>\nwindow.__ENV = ${JSON.stringify(ENV)};\n</script>`;
 
