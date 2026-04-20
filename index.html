@@ -3089,6 +3089,11 @@ async function doSync(silent=false){
   if(results[5] && Array.isArray(results[5])) rights=results[5].filter(r=>r.deleted!=='1');
   if(results[6] && Array.isArray(results[6])) orders=results[6].filter(o=>o.deleted!=='1');
   if(results[7] && Array.isArray(results[7])){
+    // Parse cmts field (stored as JSON string in GAS) for each task
+    results[7].forEach(function(t){
+      if(typeof t.cmts==='string'){try{t.cmts=JSON.parse(t.cmts);}catch(e){t.cmts=[];}}
+      if(!Array.isArray(t.cmts))t.cmts=[];
+    });
     // Сервер — источник правды. Локальные задачи используются только пока не дошёл sync.
     var serverTasks = results[7].filter(function(t){ return t.stage !== 'deleted' && t.deleted !== '1'; });
     // Если сервер вернул данные (даже пустой массив) — доверяем серверу полностью.
@@ -6165,6 +6170,8 @@ function _tmFillClient(cid) {
 async function addComment(tid){
   const t=tasks.find(x=>x.id===tid);const txt=(g('tm-new-cmt').value||'').trim();
   if(!t||!txt)return;
+  if(typeof t.cmts==='string'){try{t.cmts=JSON.parse(t.cmts);}catch(e){t.cmts=[];}}
+  if(!Array.isArray(t.cmts))t.cmts=[];
   if(!t.cmts)t.cmts=[];
   t.cmts.push({a:(currentUser&&currentUser.name)||'Менеджер',d:nowDMY(),t:txt});
   const el=g('tm-cmtlist');
@@ -6268,7 +6275,16 @@ function persistTasks(){
 function loadPersistedTasks(){
   try{
     const raw = localStorage.getItem('crm_tasks');
-    if(raw){ const parsed=JSON.parse(raw); if(Array.isArray(parsed)) tasks=parsed; }
+    if(raw){
+      const parsed=JSON.parse(raw);
+      if(Array.isArray(parsed)){
+        parsed.forEach(function(t){
+          if(typeof t.cmts==='string'){try{t.cmts=JSON.parse(t.cmts);}catch(e){t.cmts=[];}}
+          if(!Array.isArray(t.cmts))t.cmts=[];
+        });
+        tasks=parsed;
+      }
+    }
   }catch(e){}
 }
 
