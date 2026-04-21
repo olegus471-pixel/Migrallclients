@@ -9974,8 +9974,8 @@ async function saveClientPass(cid){
   toast('💾 Сохраняю пароль...');
   try {
     // Use dedicated setpass endpoint - finds client by tg regardless of id
-    const tgKey = c.tg || c.id || cid;
-    const res = await apiPost('/clients', {action: 'setpass', tg: tgKey, clientPass: pass, id: cid});
+    // Use c.id (not c.tg) as lookup key — tg may be encrypted in transit
+    const res = await apiPost('/clients', {action: 'setpass', tg: c.tg||'', id: c.id||cid, clientPass: pass});
     if(res && res.ok) {
       c.clientPass = pass;
       c.hasPassword = true;
