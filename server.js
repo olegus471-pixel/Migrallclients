@@ -690,7 +690,14 @@ app.all('/api/*', (req, res, next) => {
   if (req.method !== 'GET' && body && typeof body === 'string' && _encFields.length) {
     try {
       const parsed = JSON.parse(body);
-      body = JSON.stringify(encryptFields(parsed, _encFields));
+      // For setpass action: DO NOT encrypt lookup fields (tg, id) — GAS needs raw values
+      // and DO NOT encrypt clientPass — GAS will hash it itself
+      if (parsed.action === 'setpass') {
+        const filtered = _encFields.filter(f => f !== 'tg' && f !== 'id' && f !== 'clientPass');
+        body = JSON.stringify(encryptFields(parsed, filtered));
+      } else {
+        body = JSON.stringify(encryptFields(parsed, _encFields));
+      }
     } catch(e) {}
   }
 
