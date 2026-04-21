@@ -10008,10 +10008,12 @@ async function saveSubmitInfo(cid){
   const date  = (document.getElementById('cm-submit-date')||{}).value||'';
   c.submitPlace = place.trim();
   c.submitDate  = date.trim();
+  // Close and re-open immediately with updated data (no waiting for server)
   closeModal();
   toast('📅 Подача сохранена ✓');
-  // Сохранить в таблице клиентов
-  await apiPut('/clients/'+cid, {submitPlace: c.submitPlace, submitDate: c.submitDate}).catch(()=>{});
+  setTimeout(function(){ openClientModal(cid); }, 100);
+  // Save to GAS in background
+  apiPut('/clients/'+cid, {submitPlace: c.submitPlace, submitDate: c.submitDate}).catch(()=>{});
   // Добавить/обновить запись в таблице Подачи (filings)
   if(c.submitDate) {
     const filing = {
