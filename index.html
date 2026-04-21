@@ -3080,6 +3080,8 @@ async function doSync(silent=false){
     clients.forEach(function(c){
       var prev = prevClients.find(function(p){ return p.id === c.id; });
       if(prev && prev.num && !c.num) c.num = prev.num; // держим локальный num до следующего sync
+      // Set hasPassword flag if GAS returned hashed password
+      if(c.clientPass && c.clientPass.trim()) c.hasPassword = true;
     });
   }
   if(results[1] && Array.isArray(results[1])) statuses=results[1].filter(s=>s.deleted!=='1');
@@ -9976,6 +9978,7 @@ async function saveClientPass(cid){
     const res = await apiPost('/clients', {action: 'setpass', tg: tgKey, clientPass: pass, id: cid});
     if(res && res.ok) {
       c.clientPass = pass;
+      c.hasPassword = true;
       renderClientPortal();
       toast('🔑 Пароль клиента установлен ✓');
     } else {
@@ -9983,6 +9986,7 @@ async function saveClientPass(cid){
       const res2 = await apiPut('/clients/'+(c.tg||cid), {clientPass: pass, tg: c.tg||'', id: c.id||cid});
       if(res2 && res2.ok) {
         c.clientPass = pass;
+        c.hasPassword = true;
         renderClientPortal();
         toast('🔑 Пароль клиента установлен ✓');
       } else {
@@ -10053,7 +10057,12 @@ async function saveSubmitInfo(cid){
 function copySimpleClientLink(cid){
   const c = clients.find(x=>x.id===cid);
   if(!c) return;
-  if(!c.clientPass && !c.hasPassword){ toast('⚠ Сначала задайте пароль клиенту'); return; }
+  // Check password set: from local cache, server flag, or the hint element
+  const _hint = document.getElementById('cp-pass-hint-' + cid);
+  const _hintGreen = _hint && _hint.textContent.includes('🟢');
+  if(!c.clientPass && !c.hasPassword && !_hintGreen){ 
+    toast('⚠ Сначала задайте пароль клиенту'); return; 
+  }
   const link = getClientPageBase();
   const info = link + '\n\nЛогин: ' + (c.tg||c.id) + '\nПароль: ' + c.clientPass;
   navigator.clipboard.writeText(link).then(()=>{
