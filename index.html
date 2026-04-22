@@ -2168,13 +2168,13 @@ function _fillFromClientSearch_fm(cid) {
       document.getElementById('fm-time').value = existingFiling.time;
     document.getElementById('fm-editing-id').value = existingFiling.id;
     var saveBtn = document.getElementById('modal-filing-save');
-    if (saveBtn) saveBtn.textContent = 'Обновить подачу';
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Обновить подачу'; }
     document.getElementById('modal-filing-title').textContent = 'Редактировать подачу';
   } else {
     warnEl.style.display = 'none';
     document.getElementById('fm-editing-id').value = '';
     var saveBtn = document.getElementById('modal-filing-save');
-    if (saveBtn) saveBtn.textContent = 'Создать подачу';
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Создать подачу'; }
     document.getElementById('modal-filing-title').textContent = 'Новая подача';
   }
 }
@@ -8817,10 +8817,21 @@ function fillLawyerSelect(selId, currentVal) {
     var close = document.getElementById('modal-filing-close');
     var cancel = document.getElementById('modal-filing-cancel');
     var save = document.getElementById('modal-filing-save');
-    if (close) close.onclick = function(){ m.style.display='none'; };
-    if (cancel) cancel.onclick = function(){ m.style.display='none'; };
+    function _closeFilingModal() {
+      m.style.display = 'none';
+      // Reset state for next open
+      if (save) { save.disabled = false; save.textContent = 'Создать подачу'; }
+      var eid = document.getElementById('fm-editing-id');
+      if (eid) eid.value = '';
+      var title = document.getElementById('modal-filing-title');
+      if (title) title.textContent = 'Новая подача';
+      var warn = document.getElementById('fm-dup-warn');
+      if (warn) warn.style.display = 'none';
+    }
+    if (close) close.onclick = _closeFilingModal;
+    if (cancel) cancel.onclick = _closeFilingModal;
     if (save) save.onclick = saveFiling;
-    m.addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
+    m.addEventListener('click', function(e){ if(e.target===this) _closeFilingModal(); });
   });
 })();
 
@@ -8872,7 +8883,10 @@ async function saveFiling() {
     : await apiPost('/filings', filing).catch(function(){ return null; });
 
   if (result && result.ok) {
+    // Re-enable button before closing
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Создать подачу'; }
     document.getElementById('modal-filing').style.display = 'none';
+    document.getElementById('fm-editing-id').value = '';
     loadFilings();
     toast(editingId ? 'Подача обновлена ✓' : 'Подача создана ✓');
 
