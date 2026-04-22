@@ -3925,9 +3925,10 @@ async function createClient(){
         driveLink:  '',
       };
       orders.push(autoOrder);
+      renderRights(); renderDash(); // show immediately (optimistic)
       const ordRes = await apiPost('/orders', autoOrder).catch(()=>null);
       if(ordRes && ordRes.ok) {
-        renderTranslations(); renderNocrims(); renderRights();
+        renderTranslations(); renderNocrims(); renderRights(); renderDash();
         toast('📋 Заказ «' + svc + '» создан автоматически ✓');
       }
     }
