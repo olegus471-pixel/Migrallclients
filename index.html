@@ -2134,6 +2134,49 @@ function _fillFromClientSearch_fm(cid) {
   if(!c) return;
   var cl = document.getElementById('fm-client'); if(cl) cl.value = c.name;
   var ci = document.getElementById('fm-client-id'); if(ci) ci.value = c.id;
+
+  // Проверяем: есть ли уже подача у этого клиента?
+  var existingFiling = Array.isArray(filingsData) && filingsData.find(function(f){
+    return f.clientId === cid || (f.client === c.name && !f.clientId);
+  });
+  var warnEl = document.getElementById('fm-dup-warn');
+  if (!warnEl) {
+    warnEl = document.createElement('div');
+    warnEl.id = 'fm-dup-warn';
+    warnEl.style.cssText = 'margin-top:8px;padding:8px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;font-size:12px;color:#92400e;display:none';
+    var cmtBlock = document.getElementById('fm-comment');
+    if (cmtBlock && cmtBlock.parentNode) cmtBlock.parentNode.parentNode.insertBefore(warnEl, cmtBlock.parentNode);
+    else document.querySelector('#modal-filing .mft') && document.querySelector('#modal-filing .mft').before(warnEl);
+  }
+  if (existingFiling) {
+    warnEl.style.display = 'block';
+    warnEl.innerHTML = '⚠️ У клиента уже есть подача: <b>' + (existingFiling.date||'—') + '</b>'
+      + (existingFiling.place ? ', 📍 ' + existingFiling.place : '')
+      + '<br><span style="color:#78350f">При сохранении существующая запись будет обновлена</span>';
+    // Pre-fill existing data so user sees what they are editing
+    if (!document.getElementById('fm-date').value && existingFiling.date)
+      document.getElementById('fm-date').value = existingFiling.date;
+    if (!document.getElementById('fm-place').value && existingFiling.place)
+      document.getElementById('fm-place').value = existingFiling.place;
+    if (!document.getElementById('fm-lawyer').value && existingFiling.lawyer)
+      document.getElementById('fm-lawyer').value = existingFiling.lawyer;
+    if (existingFiling.status)
+      document.getElementById('fm-status').value = existingFiling.status;
+    if (existingFiling.comment)
+      document.getElementById('fm-comment').value = existingFiling.comment;
+    if (existingFiling.time && document.getElementById('fm-time'))
+      document.getElementById('fm-time').value = existingFiling.time;
+    document.getElementById('fm-editing-id').value = existingFiling.id;
+    var saveBtn = document.getElementById('modal-filing-save');
+    if (saveBtn) saveBtn.textContent = 'Обновить подачу';
+    document.getElementById('modal-filing-title').textContent = 'Редактировать подачу';
+  } else {
+    warnEl.style.display = 'none';
+    document.getElementById('fm-editing-id').value = '';
+    var saveBtn = document.getElementById('modal-filing-save');
+    if (saveBtn) saveBtn.textContent = 'Создать подачу';
+    document.getElementById('modal-filing-title').textContent = 'Новая подача';
+  }
 }
 function _fillFromClientSearch_ri(cid) {
   var c = clients.find(function(x){ return x.id === cid; });
@@ -8728,6 +8771,9 @@ function openAddFilingModal() {
   document.getElementById('fm-date').value = '';
   document.getElementById('fm-time').value = '';
   document.getElementById('fm-place').value = '';
+  // Сброс предупреждения о дублях
+  var warnEl = document.getElementById('fm-dup-warn');
+  if (warnEl) warnEl.style.display = 'none';
   document.getElementById('fm-status').value = 'Планируется';
   document.getElementById('fm-comment').value = '';
   document.getElementById('fm-editing-id').value = '';
@@ -8789,9 +8835,28 @@ async function saveFiling() {
     return;
   }
   var editingId = document.getElementById('fm-editing-id').value;
+  var clientId  = (document.getElementById('fm-client-id') ? document.getElementById('fm-client-id').value.trim() : '');
+
+  // ─── ЗАЩИТА ОТ ДУБЛЕЙ ─────────────────────────────────────────────────────
+  // Если создаём новую подачу (не редактируем) и у клиента уже есть запись —
+  // переключаемся на UPDATE вместо CREATE
+  if (!editingId && clientId && Array.isArray(filingsData)) {
+    var existing = filingsData.find(function(f) {
+      return (f.clientId === clientId) ||
+             (f.client === client && !f.clientId);
+    });
+    if (existing) {
+      // Переключаем на редактирование существующей
+      editingId = existing.id;
+      document.getElementById('fm-editing-id').value = editingId;
+      if (saveBtn) saveBtn.textContent = 'Обновление...';
+    }
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   var filing = {
     id: editingId || ('fil_' + Date.now()),
-    clientId: (document.getElementById('fm-client-id') ? document.getElementById('fm-client-id').value.trim() : ''),
+    clientId: clientId,
     client: client,
     date: document.getElementById('fm-date').value,
     time: document.getElementById('fm-time').value,
@@ -8801,34 +8866,40 @@ async function saveFiling() {
     comment: document.getElementById('fm-comment').value,
   };
   if (!editingId) filing.createdBy = (currentUser&&(currentUser.name||currentUser.email||currentUser.login)) || '';
+
   var result = editingId
     ? await apiPut('/filings', filing).catch(function(){ return null; })
     : await apiPost('/filings', filing).catch(function(){ return null; });
+
   if (result && result.ok) {
     document.getElementById('modal-filing').style.display = 'none';
     loadFilings();
-    toast(editingId ? 'Подача обновлена' : 'Подача создана ✓');
-    // Sync submitDate back to client object so list updates immediately
-    if (filing.date) {
-      var _cli = filing.clientId
-        ? clients.find(function(c){ return c.id === filing.clientId; })
-        : clients.find(function(c){ return c.name === filing.client || c.num === filing.client; });
-      if (_cli) {
-        _cli.submitDate  = filing.date;
-        _cli.submitPlace = filing.place || _cli.submitPlace || '';
-        applyClientsFilter();
-        renderDash();
-        // Also persist to clients table
-        apiPut('/clients/' + filing.clientId, {
+    toast(editingId ? 'Подача обновлена ✓' : 'Подача создана ✓');
+
+    // ─── СИНХРОНИЗАЦИЯ С ТАБЛИЦЕЙ КЛИЕНТОВ ───────────────────────────────
+    var _cli = clientId
+      ? clients.find(function(c){ return c.id === clientId; })
+      : clients.find(function(c){ return c.name === client; });
+    if (_cli) {
+      _cli.submitDate  = filing.date  || _cli.submitDate  || '';
+      _cli.submitPlace = filing.place || _cli.submitPlace || '';
+      applyClientsFilter();   // перерисовать список клиентов
+      renderDash();           // перерисовать дашборд
+      // Сохранить в таблицу клиентов
+      var _cliId = _cli.id || clientId;
+      if (_cliId) {
+        apiPut('/clients/' + _cliId, {
           submitDate:  _cli.submitDate,
           submitPlace: _cli.submitPlace
         }).catch(function(){});
       }
     }
-    // Создать папку 'Подача' на Drive при создании
-    if(!editingId && filing.clientId) {
-      var _fc = clients.find(function(c){ return c.id === filing.clientId; });
-      if(_fc) _createServiceDriveFolder(_fc.num||_fc.id, 'Подача');
+    // ─────────────────────────────────────────────────────────────────────
+
+    // Создать папку 'Подача' на Drive только при первичном создании
+    if (!document.getElementById('fm-editing-id').value && clientId) {
+      var _fc = clients.find(function(c){ return c.id === clientId; });
+      if (_fc) _createServiceDriveFolder(_fc.num||_fc.id, 'Подача');
     }
   } else {
     toast('Ошибка: ' + (result && result.error || 'нет ответа'));
