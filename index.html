@@ -3470,7 +3470,7 @@ function renderClients(data){
     return '<tr onclick="openClientModal(\''+c.id+'\')">'
       +'<td style="width:40px;text-align:center;font-size:12px;font-weight:800;color:'+(c.num?'var(--acc)':'var(--t4)')+';background:var(--bg2);cursor:pointer" title="Нажмите чтобы изменить номер клиента" onclick="openClientNumModal(\''+c.id+'\',event)">'+seqNum+'</td>'
       +'<td class="mono" style="color:var(--acc)">'+c.id+'</td>'
-      +'<td style="font-weight:600">'+c.name+lwBdg+submitBdg+'</td>'
+      +'<td style="font-weight:600">'+c.name+'</td>'
       +'<td class="mono" style="color:var(--acc)">'+c.tg+'</td>'
       +'<td>'+svcBdg(c.serviceType)+'</td>'
       +'<td>'+bdg(c.stage)+'</td>'
