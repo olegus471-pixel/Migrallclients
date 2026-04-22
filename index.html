@@ -3383,8 +3383,14 @@ function renderDash(){
   // Citizenship
   g('dash-cit').innerHTML=citizenship.length?citizenship.slice(0,4).map(c=>`<div class="stat-row"><div class="stat-num" style="color:var(--ora)">${c.num}</div><div class="stat-name">${c.name}</div>${bdg(c.status)}</div>`).join(''):'<div class="cal-empty">Нет данных</div>';
   
-  // Rights  
-  g('dash-rights').innerHTML=rights.length?rights.slice(0,4).map(r=>`<div class="stat-row"><div class="stat-num" style="color:var(--gre)">${r.num}</div><div class="stat-name">${r.name}</div>${bdg(r.status)}</div>`).join(''):'<div class="cal-empty">Нет данных</div>';
+  // Rights — берём из orders (svcType='Права'), как в разделе /rights
+  var _dashRights = orders.filter(function(o){ return o.svcType === 'Права' && o.status !== 'Выдано клиенту'; }).slice(0,4);
+  g('dash-rights').innerHTML = _dashRights.length ? _dashRights.map(function(o){
+    var _rc = clients.find(function(c){ return c.id === o.clientId; });
+    var _rn = _rc ? _rc.name : (o.clientId || '—');
+    var _rid = _rc ? (_rc.num || _rc.id) : (o.id || '—');
+    return '<div class="stat-row"><div class="stat-num" style="color:var(--gre)">'+_rid+'</div><div class="stat-name">'+_rn+'</div>'+bdg(o.status)+'</div>';
+  }).join('') : '<div class="cal-empty">Нет данных</div>';
   
   renderTaskStats();
 }
