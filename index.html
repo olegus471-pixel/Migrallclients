@@ -4829,33 +4829,34 @@ async function applyInlineStatus(module, idx, newStatus, apiPath, keyField, el){
   
   // Обновить данные в памяти и перерисовать
   let obj, key;
+  var _i = parseInt(idx); // for array-indexed modules
   if(module==='aima'){
-    statuses[idx].status = newStatus;
-    statuses[idx].date = today;
-    key = statuses[idx][keyField];
+    statuses[_i].status = newStatus;
+    statuses[_i].date = today;
+    key = statuses[_i][keyField];
     renderAIMA(); renderDash();
   } else if(module==='visad'){
-    visaD[idx].status = newStatus;
-    visaD[idx].updated = today;
-    key = visaD[idx][keyField];
+    visaD[_i].status = newStatus;
+    visaD[_i].updated = today;
+    key = visaD[_i][keyField];
     renderVisaD();
   } else if(module==='courts'){
-    courts[idx].status = newStatus;
-    courts[idx].updated = today;
-    key = courts[idx][keyField];
+    courts[_i].status = newStatus;
+    courts[_i].updated = today;
+    key = courts[_i][keyField];
     renderCourts(); renderDash();
   } else if(module==='citizenship'){
-    citizenship[idx].status = newStatus;
-    citizenship[idx].updated = today;
-    key = citizenship[idx][keyField];
+    citizenship[_i].status = newStatus;
+    citizenship[_i].updated = today;
+    key = citizenship[_i][keyField];
     renderCitizenship(); renderDash();
   } else if(module==='rights'){
-    rights[idx].status = newStatus;
-    rights[idx].updated = today;
-    key = rights[idx][keyField];
+    rights[_i].status = newStatus;
+    rights[_i].updated = today;
+    key = rights[_i][keyField];
     renderRights();
   } else if(module==='orders'){
-    // idx is the order ID (string), keyField='id'
+    // idx is the order ID string
     var _ord = orders.find(function(o){ return o.id === idx; });
     if(_ord) {
       _ord.status  = newStatus;
