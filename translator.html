@@ -305,12 +305,19 @@ function doLogout() {
 // ── DATA ────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const [tasksRes, ordersRes, clientsRes] = await Promise.all([
+    const results = await Promise.allSettled([
       api('/spec-tasks'), api('/orders'), api('/clients')
     ]);
+    const [tasksRes, ordersRes, clientsRes] = results.map(r => r.status === 'fulfilled' ? r.value : []);
     allTasks   = Array.isArray(tasksRes)   ? tasksRes   : [];
     allOrders  = Array.isArray(ordersRes)  ? ordersRes  : [];
     allClients = Array.isArray(clientsRes) ? clientsRes : [];
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        const names = ['spec-tasks','orders','clients'];
+        console.warn('[translator] failed to load:', names[i], r.reason?.message || r.reason);
+      }
+    });
     renderAll();
   } catch(e) {
     toast('⚠️ Ошибка загрузки данных');
