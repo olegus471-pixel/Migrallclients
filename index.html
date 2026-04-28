@@ -4486,6 +4486,8 @@ function setLang(lang, btn){
   if(btn) btn.classList.add('active');
   _applyI18n();
   renderAll(); renderCal(); renderSchedMini();
+  // Google Translate for full-page translation
+  if (typeof triggerGoogleTranslate === 'function') triggerGoogleTranslate(lang);
 }
 
 const _NI_MAP = {
