@@ -466,15 +466,24 @@ function doLogout() {
 // ── DATA ────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const [clientsRes, courtsRes, tasksRes, citizenshipRes, filingsRes, specTasksRes] = await Promise.all([
+    // Use allSettled so one slow/failed endpoint doesn't block the rest
+    const results = await Promise.allSettled([
       api('/clients'), api('/courts'), api('/tasks'), api('/citizenship'), api('/filings'), api('/spec-tasks')
     ]);
+    const [clientsRes, courtsRes, tasksRes, citizenshipRes, filingsRes, specTasksRes] = results.map(r => r.status === 'fulfilled' ? r.value : []);
     allClients     = Array.isArray(clientsRes)     ? clientsRes     : [];
     allCourts      = Array.isArray(courtsRes)      ? courtsRes      : [];
     allTasks       = Array.isArray(tasksRes)       ? tasksRes       : [];
     allSpecTasks   = Array.isArray(specTasksRes)   ? specTasksRes   : [];
     allCitizenship = Array.isArray(citizenshipRes) ? citizenshipRes : [];
     allFilings     = Array.isArray(filingsRes)     ? filingsRes     : [];
+    // Log any failures
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        const names = ['clients','courts','tasks','citizenship','filings','spec-tasks'];
+        console.warn('[lawyer] failed to load:', names[i], r.reason?.message || r.reason);
+      }
+    });
 
     // Debug: log what lawyer field values exist in each table
     const myN = (currentUser.name||'').trim();
