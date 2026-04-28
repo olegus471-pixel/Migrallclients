@@ -599,6 +599,67 @@ button:active{transform:scale(.97)}
   .tg-chat-menu-btn { opacity: 0.3 !important; }
   #tg-chat-list div:hover .tg-chat-menu-btn { opacity: 1 !important; }
 </style>
+
+
+<script>
+var _origTexts = null;
+var _SEP = String.fromCharCode(10)+'===SPLIT==='+String.fromCharCode(10);
+
+async function triggerGoogleTranslate(lang) {
+  if (lang !== 'en') {
+    if (_origTexts) {
+      _origTexts.forEach(function(item){ item.node.textContent = item.orig; });
+      _origTexts = null;
+    }
+    return;
+  }
+  var walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: function(node) {
+        var p = node.parentNode;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        var tag = (p.tagName || '').toUpperCase();
+        if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT' || tag === 'TEXTAREA' || tag === 'INPUT') return NodeFilter.FILTER_REJECT;
+        var text = node.textContent.trim();
+        if (!text || text.length < 2) return NodeFilter.FILTER_REJECT;
+        if (!/[\u0400-\u04ff]/.test(text)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    }
+  );
+  var nodes = [];
+  var n;
+  while ((n = walker.nextNode())) nodes.push(n);
+  if (!nodes.length) return;
+  _origTexts = nodes.map(function(nd){ return {node: nd, orig: nd.textContent}; });
+  var batchSize = 15;
+  for (var i = 0; i < nodes.length; i += batchSize) {
+    var batch = nodes.slice(i, i + batchSize);
+    var texts = batch.map(function(nd){ return nd.textContent; });
+    var joined = texts.join(_SEP);
+    var url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=ru&tl=en&dt=t&q=' + encodeURIComponent(joined);
+    try {
+      var res = await fetch(url);
+      var data = await res.json();
+      var full = '';
+      if (Array.isArray(data[0])) {
+        full = data[0].map(function(s){ return s[0] || ''; }).join('');
+      }
+      var parts = full.split(_SEP);
+      for (var j = 0; j < batch.length; j++) {
+        if (parts[j] && parts[j].trim()) {
+          batch[j].textContent = parts[j].trim();
+        }
+      }
+    } catch(e) {
+      console.warn('[translate] batch', i, 'failed:', e);
+    }
+  }
+}
+
+</script>
 </head>
 <body>
 <div id="loading-bar" class="loading-bar"></div>
