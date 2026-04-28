@@ -4854,6 +4854,15 @@ async function applyInlineStatus(module, idx, newStatus, apiPath, keyField, el){
     rights[idx].updated = today;
     key = rights[idx][keyField];
     renderRights();
+  } else if(module==='orders'){
+    // idx is the order ID (string), keyField='id'
+    var _ord = orders.find(function(o){ return o.id === idx; });
+    if(_ord) {
+      _ord.status  = newStatus;
+      _ord.updated = today;
+      key = _ord[keyField];
+      renderRights(); renderTranslations(); renderNocrims(); renderOrders(); renderDash();
+    }
   }
   
   toast('Статус обновлён: ' + newStatus + ' ✓');
