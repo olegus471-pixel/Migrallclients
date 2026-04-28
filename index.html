@@ -4805,7 +4805,7 @@ function openStatusDropdown(e, module, idx, currentStatus, statusArr, apiPath, k
   dd.style.left = rect.left + 'px';
   // Проверим что не вышли за правый край
   dd.innerHTML = statusArr.map(s=>`
-    <div class="status-dropdown-item ${s===currentStatus?'current':''}" onclick="applyInlineStatus('${module}',${idx},'${s.replace(/'/g,"\\'")}','${apiPath}','${keyField}',this)">
+    <div class="status-dropdown-item ${s===currentStatus?'current':''}" onclick="applyInlineStatus('${module}','${idx}','${s.replace(/'/g,"\\'")}','${apiPath}','${keyField}',this)">
       ${s===currentStatus?'✓ ':''}<span>${s}</span>
     </div>`).join('');
   document.body.appendChild(dd);
