@@ -2949,7 +2949,7 @@ function showView(id,el){
   if(id==='checklists'){ populateChecklistClientFilter(); renderChecklists(); loadChecklists().then(()=>{ populateChecklistClientFilter(); renderChecklists(); }); }
   if(id==='client-portal') { renderClientPortal(); loadChecklists().then(()=>renderClientPortal()); }
   if(id==='realestate') { loadREDeals(); }
-  if(id==='staff-portals') { renderStaffPortals(); }
+  if(id==='staff-portals') { ensureUsersLoaded().then(function(){ renderStaffPortals(); }); }
   if(id==='aima') filterAIMA(_aimaCurrentFilter||'all', document.querySelector('#aima-filter-chips .chip.active'));
   if(id==='courts') filterCourts(_courtsCurrentFilter||'all', document.querySelector('#courts-chips .chip.active'));
   if(id==='translator') { renderTranslatorCabinet(); loadSpecTasks(); }
@@ -11380,7 +11380,15 @@ function copyStaffPortalLink(url) {
 
 function openStaffPassModal(uid) {
   var u = (window.usersData||[]).find(function(x){ return (x.email||x.id) === uid; });
-  if(!u) return;
+  if(!u) {
+    // Попробуем перезагрузить список пользователей
+    ensureUsersLoaded().then(function(){
+      var u2 = (window.usersData||[]).find(function(x){ return (x.email||x.id) === uid; });
+      if(u2) openStaffPassModal(uid);
+      else toast('⚠️ Пользователь не найден: ' + uid);
+    });
+    return;
+  }
   const ri = STAFF_ROLES[u.role] || { label: u.role, icon: '👤' };
   openModal(
     '<div class="mhdr">'
