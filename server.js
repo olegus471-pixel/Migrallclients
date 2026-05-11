@@ -291,7 +291,7 @@ const ENC_FIELDS = {
 
   // Clients
   clients:     ['name', 'tg', 'phone', 'email', 'comment', 'address',
-                 'notes', 'passport', 'inn', 'snils', 'birthdate'],
+                 'notes', 'passport', 'inn', 'snils', 'birthdate', 'driveLink'],
 
   // Staff / users
   users:       ['name', 'phone'], // email excluded — used as login lookup key
