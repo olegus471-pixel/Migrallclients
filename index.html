@@ -5026,12 +5026,70 @@ function renderAIMA(data){
       +'<td class="inline-edit-cell"><span class="inline-date" onclick="openDatePopup(event,\'aima\','+ri+',\''+(s.date||'')+'\',\'/statuses\',\'num\')" title="'+_t('inline_date_tip')+'">'+fmtDate(s.date)+'</span></td>'
       +'<td><span class="bdg '+(s.sec==='МАНИФЕСТ'?'pur':'gry')+'">'+s.sec+'</span></td>'
       +'<td style="white-space:nowrap">'
+        +(getClientTg(s.num,s.name)!=='—'?'<button class="edit-btn" title="Уведомить в Telegram" onclick="sendAimaNotify('+ri+',event)" style="background:var(--acc);color:#fff;margin-right:2px">📩</button>':'')
         +'<button class="edit-btn" onclick="editAIMA('+ri+',event)">✏</button>'
         +'<button class="del-btn" data-mod="aima" data-idx="'+ri+'" data-lbl="'+encodeURIComponent(s.num+' '+s.name)+'" onclick="handleDelBtn(this,event)">🗑</button>'
       +'</td>'
       +'</tr>';
   }).join('');
 }
+
+async function sendAimaNotify(idx, e) {
+  if(e) e.stopPropagation();
+  var s = statuses[idx];
+  if(!s) return;
+  var tg = getClientTg(s.num, s.name);
+  if(!tg || tg === '—') { toast('⚠️ У клиента не указан Telegram'); return; }
+
+  // Build default message
+  var clientName = s.name || s.num;
+  var status = s.status || '—';
+  var date = s.date ? ' · ' + fmtDate(s.date) : '';
+  var defaultMsg = 'Добрый день!\n\n'
+    + 'Информируем вас об обновлении статуса вашей проверки AIMA:\n\n'
+    + '📋 Статус: *' + status + '*' + date + '\n\n';
+
+  openModal(
+    '<div class="mhdr">'      + '<div style="font-size:16px;font-weight:700">📩 Уведомление клиенту</div>'      + '<button class="mcls" onclick="closeModal()">✕</button>'    + '</div>'    + '<div class="msec">'      + '<div class="msl" style="margin-bottom:6px">Telegram: <b>' + esc(tg) + '</b> · ' + esc(clientName) + '</div>'      + '<div class="msl" style="margin-bottom:4px">Текст сообщения</div>'      + '<textarea class="mi" id="aima-notify-text" rows="8" style="resize:vertical;font-size:13px;line-height:1.5">' + esc(defaultMsg) + '</textarea>'      + '<div style="font-size:11px;color:var(--t3);margin-top:4px">Поддерживается *жирный* текст Telegram</div>'    + '</div>'    + '<div class="mfoot">'      + '<button class="btn" onclick="closeModal()">Отмена</button>'      + '<button class="btn btn-p" id="aima-notify-send-btn" onclick="_doSendAimaNotify(\'' + esc(tg) + '\')">📤 Отправить</button>'    + '</div>'
+  );
+}
+
+async function _doSendAimaNotify(tg) {
+  var text = (document.getElementById('aima-notify-text')||{}).value||'';
+  if(!text.trim()) { toast('⚠️ Пустое сообщение'); return; }
+  var btn = document.getElementById('aima-notify-send-btn');
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ Отправка...'; }
+
+  // tg может быть @username или числовой chat_id
+  var chatId = tg.startsWith('@') ? tg : tg;
+
+  try {
+    var res = await tgFetch('/api/tg/send', {
+      method: 'POST',
+      body: JSON.stringify({ chatId: chatId, text: text })
+    });
+    if(res && res.ok) {
+      closeModal();
+      toast('✅ Уведомление отправлено');
+    } else {
+      var errMsg = (res && res.error) || 'Ошибка отправки';
+      // Если @username не работает, попробовать без @
+      if(errMsg.includes('chat not found') && chatId.startsWith('@')) {
+        var res2 = await tgFetch('/api/tg/send', {
+          method: 'POST',
+          body: JSON.stringify({ chatId: chatId.slice(1), text: text })
+        });
+        if(res2 && res2.ok) { closeModal(); toast('✅ Уведомление отправлено'); return; }
+      }
+      if(btn) { btn.disabled = false; btn.textContent = '📤 Отправить'; }
+      toast('⚠️ ' + errMsg);
+    }
+  } catch(err) {
+    if(btn) { btn.disabled = false; btn.textContent = '📤 Отправить'; }
+    toast('⚠️ Ошибка сети');
+  }
+}
+
 var _aimaCurrentFilter = 'all';
 function filterAIMA(f, el) {
   if (el) { document.querySelectorAll('#aima-filter-chips .chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); }
