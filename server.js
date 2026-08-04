@@ -162,7 +162,14 @@ function proxyToGAS(method, apiPath, body, callback) {
           return;
         }
         try { cb(JSON.parse(data)); }
-        catch(e) { cb({ error: 'Invalid JSON: ' + data.slice(0, 200) }); }
+        catch(e) {
+          // GAS вернул HTML вместо JSON — скрипт упал или требует переопубликации
+          if (data.includes('<!DOCTYPE') || data.includes('<html')) {
+            cb({ error: 'GAS_HTML_ERROR', gasNeedsRedeploy: true });
+          } else {
+            cb({ error: 'Invalid JSON: ' + data.slice(0, 200) });
+          }
+        }
       });
     });
     req.on('error', e => cb({ error: e.message }));
