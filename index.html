@@ -2851,6 +2851,13 @@ const ORD_STATUSES = {
     'Перевод готов',
     'Выдано клиенту'
   ],
+  'Перевод': [
+    'Принято в работу',
+    'Передано переводчику',
+    'В работе',
+    'Перевод готов',
+    'Выдано клиенту'
+  ],
   'Справка о несудимости': [
     'Принято в работу',
     'Документы собраны',
@@ -2859,7 +2866,115 @@ const ORD_STATUSES = {
     'Апостиль',
     'Выдано клиенту'
   ],
+  'Апостиль': [
+    'Принято в работу',
+    'Документы собраны',
+    'В работе',
+    'Апостиль получен',
+    'Выдано клиенту'
+  ],
+  'Сопровождение (полный цикл)': [
+    'Договор подписан',
+    'Документы собраны',
+    'Подача в AIMA',
+    'Ожидание решения',
+    'Решение получено',
+    'Завершено'
+  ],
+  'Сопровождение (внутри страны)': [
+    'Договор подписан',
+    'Документы собраны',
+    'Подача в AIMA',
+    'Ожидание решения',
+    'Решение получено',
+    'Завершено'
+  ],
+  'Сопровождение по аренде': [
+    'В работе',
+    'Подбор вариантов',
+    'Просмотры',
+    'Договор согласован',
+    'Договор подписан',
+    'Завершено'
+  ],
+  'Сопровождение по продаже': [
+    'В работе',
+    'Оценка объекта',
+    'Размещение объявления',
+    'Показы',
+    'Сделка оформляется',
+    'Завершено'
+  ],
+  'Продление ВНЖ': [
+    'Принято в работу',
+    'Документы собраны',
+    'Запись в AIMA',
+    'Подача документов',
+    'Ожидание решения',
+    'ВНЖ получен'
+  ],
+  'Суд': [
+    'Новое дело',
+    'Документы собраны',
+    'Дело подано',
+    'Слушание',
+    'Решение суда',
+    'Завершено'
+  ],
+  'Гражданство': [
+    'Принято в работу',
+    'Документы собраны',
+    'Подача документов',
+    'Ожидание решения',
+    'Гражданство получено'
+  ],
+  'NIF': [
+    'В процессе',
+    'Оказана'
+  ],
+  'NISS': [
+    'В процессе',
+    'Оказана'
+  ],
+  'Банковский счёт': [
+    'В процессе',
+    'Счёт открыт'
+  ],
+  'Сопровождение адвоката': [
+    'В работе',
+    'В процессе',
+    'Завершено'
+  ],
+  'Документы РФ': [
+    'В процессе',
+    'Готово',
+    'Выдано клиенту'
+  ],
+  'Испания — сопровождение': [
+    'В работе',
+    'В процессе',
+    'Завершено'
+  ],
+  'Консультация': [
+    'Запланирована',
+    'Проведена'
+  ],
+  'Консультация базовая': [
+    'Запланирована',
+    'Проведена'
+  ],
+  'Консультация с бухгалтером': [
+    'Запланирована',
+    'Проведена'
+  ],
+  'Консультация по недвижимости': [
+    'Запланирована',
+    'Проведена'
+  ],
 };
+
+// Дефолтные этапы для кастомных/неизвестных услуг
+const ORD_STATUSES_DEFAULT = ['В процессе', 'Оказана'];
 
 // Шаг при котором уведомляем переводчика
 const ORD_TRANSLATOR_STEP = {
@@ -3817,7 +3932,7 @@ function openClientModal(cid){
         const total = cOrders.length + cCourts.length + cCitizen.length;
         if(!total) return '<div style="color:var(--t3);font-size:11px;padding:6px 0">Нет услуг</div>';
         var html_ = cOrders.map(o=>{
-          const steps=ORD_STATUSES[o.svcType]||['В процессе','Оказана'];
+          const steps=ORD_STATUSES[o.svcType]||ORD_STATUSES_DEFAULT;
           const isDone=o.status===steps[steps.length-1];
           const pct=steps.length>1?Math.round((steps.indexOf(o.status)/(steps.length-1))*100):100;
           return '<div data-oid="'+o.id+'" style="padding:8px 10px;background:var(--s2);border-radius:6px;margin-bottom:6px;cursor:pointer" onclick="var e=this;closeModal();setTimeout(function(){openOrderModal(e.getAttribute(\'data-oid\'))},60)">'  
@@ -3832,19 +3947,25 @@ function openClientModal(cid){
           +'</div>';
         }).join('');
         html_ += cCourts.map(function(ct){
-          return '<div style="padding:8px 10px;background:color-mix(in srgb,var(--pur) 8%,white);border-radius:6px;margin-bottom:6px;border-left:3px solid var(--pur)">'
+          return '<div style="padding:8px 10px;background:color-mix(in srgb,var(--pur) 8%,white);border-radius:6px;margin-bottom:6px;border-left:3px solid var(--pur);cursor:pointer" onclick="closeModal();showView(\'courts\',document.querySelector(\'.ni[onclick*=courts]\'))">'
             +'<div style="display:flex;justify-content:space-between;align-items:center">'
               +'<span style="font-size:12px;font-weight:600">'+svcBdg('Суд')+'</span>'
-              +'<span class="bdg" style="font-size:9px">'+esc(ct.status||'')+'</span>'
+              +'<span style="display:flex;align-items:center;gap:4px">'
+                +'<span class="bdg" style="font-size:9px">'+esc(ct.status||'')+'</span>'
+                +'<span style="font-size:9px;color:var(--pur);font-weight:600">→ Открыть</span>'
+              +'</span>'
             +'</div>'
             +(ct.article?'<div style="font-size:10px;color:var(--t3);margin-top:3px">📋 '+esc(ct.article)+'</div>':'')
           +'</div>';
         }).join('');
         html_ += cCitizen.map(function(ct){
-          return '<div style="padding:8px 10px;background:color-mix(in srgb,var(--ora) 8%,white);border-radius:6px;margin-bottom:6px;border-left:3px solid var(--ora)">'
+          return '<div style="padding:8px 10px;background:color-mix(in srgb,var(--ora) 8%,white);border-radius:6px;margin-bottom:6px;border-left:3px solid var(--ora);cursor:pointer" onclick="closeModal();showView(\'citizenship\',document.querySelector(\'.ni[onclick*=citizenship]\'))">'
             +'<div style="display:flex;justify-content:space-between;align-items:center">'
               +'<span style="font-size:12px;font-weight:600">'+svcBdg('Гражданство')+'</span>'
-              +'<span class="bdg" style="font-size:9px">'+esc(ct.status||'')+'</span>'
+              +'<span style="display:flex;align-items:center;gap:4px">'
+                +'<span class="bdg" style="font-size:9px">'+esc(ct.status||'')+'</span>'
+                +'<span style="font-size:9px;color:var(--ora);font-weight:600">→ Открыть</span>'
+              +'</span>'
             +'</div>'
           +'</div>';
         }).join('');
@@ -8032,7 +8153,7 @@ let _ordSvcFilter = 'all';
 
 function ordStatusBdg(svc, status){
   if(!status) return '';
-  const steps = ORD_STATUSES[svc]||[];
+  const steps = ORD_STATUSES[svc]||ORD_STATUSES_DEFAULT;
   const idx = steps.indexOf(status);
   const total = steps.length;
   const pct = total>1 ? Math.round((idx/(total-1))*100) : 0;
@@ -8066,7 +8187,7 @@ function renderOrders(){
   }
   tbody.innerHTML = data.length ? data.map(o=>{
     const c = clients.find(x=>x.id===o.clientId);
-    const steps = ORD_STATUSES[o.svcType]||['В процессе','Оказана'];
+    const steps = ORD_STATUSES[o.svcType]||ORD_STATUSES_DEFAULT;
     const isDone = o.status===steps[steps.length-1];
     const driveBdg = o.driveLink
       ? `<a href="${o.driveLink}" target="_blank" class="bdg blu" style="text-decoration:none;font-size:9px">📁 Open</a>`
