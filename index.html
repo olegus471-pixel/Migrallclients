@@ -3834,20 +3834,20 @@ function openClientModal(cid){
         html_ += cCourts.map(function(ct){
           return '<div style="padding:8px 10px;background:color-mix(in srgb,var(--pur) 8%,white);border-radius:6px;margin-bottom:6px;border-left:3px solid var(--pur)">'
             +'<div style="display:flex;justify-content:space-between;align-items:center">'
-              +'<span style="font-size:12px;font-weight:600">'+svcBdg(\'Суд\')+\'</span>\'
-              +'<span class="bdg" style="font-size:9px">'+esc(ct.status||\'\')+\'</span>\'
+              +'<span style="font-size:12px;font-weight:600">'+svcBdg('Суд')+'</span>'
+              +'<span class="bdg" style="font-size:9px">'+esc(ct.status||'')+'</span>'
             +'</div>'
             +(ct.article?'<div style="font-size:10px;color:var(--t3);margin-top:3px">📋 '+esc(ct.article)+'</div>':'')
           +'</div>';
-        }).join(\'\');
+        }).join('');
         html_ += cCitizen.map(function(ct){
           return '<div style="padding:8px 10px;background:color-mix(in srgb,var(--ora) 8%,white);border-radius:6px;margin-bottom:6px;border-left:3px solid var(--ora)">'
             +'<div style="display:flex;justify-content:space-between;align-items:center">'
-              +'<span style="font-size:12px;font-weight:600">'+svcBdg(\'Гражданство\')+\'</span>\'
-              +'<span class="bdg" style="font-size:9px">'+esc(ct.status||\'\')+\'</span>\'
+              +'<span style="font-size:12px;font-weight:600">'+svcBdg('Гражданство')+'</span>'
+              +'<span class="bdg" style="font-size:9px">'+esc(ct.status||'')+'</span>'
             +'</div>'
           +'</div>';
-        }).join(\'\');
+        }).join('');
         return html_;
       })()}
     </div>
