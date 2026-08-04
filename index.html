@@ -2718,10 +2718,18 @@ const SVC_TYPES = [
   'Права',
   'Переводы',
   'Справка о несудимости',
+  'Апостиль',
   'Консультация',
   'Консультация базовая',
   'Консультация с бухгалтером',
   'Консультация по недвижимости',
+  'NIF',
+  'NISS',
+  'Банковский счёт',
+  'Сопровождение адвоката',
+  'Перевод',
+  'Документы РФ',
+  'Испания — сопровождение',
   'Разовая услуга',
 ];
 // Услуги требующие переводчика + Google Drive папку
@@ -2729,12 +2737,26 @@ const SVC_NEEDS_TRANSLATOR = ['Права','Переводы','Справка о
 const SVC_COLORS = {
   'Сопровождение (полный цикл)':'var(--acc)',
   'Сопровождение (внутри страны)':'var(--tea)',
+  'Сопровождение по аренде':'#0ea5e9',
+  'Сопровождение по продаже':'#0284c7',
   'Продление ВНЖ':'var(--yel)',
   'Суд':'var(--pur)',
   'Гражданство':'var(--ora)',
   'Права':'var(--gre)',
   'Переводы':'#0f766e',
+  'Перевод':'#0f766e',
   'Справка о несудимости':'#6d28d9',
+  'Апостиль':'#7c3aed',
+  'Консультация':'#64748b',
+  'Консультация базовая':'#94a3b8',
+  'Консультация с бухгалтером':'#475569',
+  'Консультация по недвижимости':'#0891b2',
+  'NIF':'#be185d',
+  'NISS':'#9d174d',
+  'Банковский счёт':'#065f46',
+  'Сопровождение адвоката':'var(--pur)',
+  'Документы РФ':'#b45309',
+  'Испания — сопровождение':'#dc2626',
   'Разовая услуга':'var(--t3)',
 };
 const SUBSTAGES = {
@@ -3666,6 +3688,11 @@ function openClientModal(cid){
       <div class="mf"><span class="mfl">Подача конс.</span><div style="color:var(--yel);font-size:11px;font-weight:600">${c.consulate||'—'}</div></div>
       <div class="mf"><span class="mfl">Город</span><div style="font-size:11px">${c.city||'—'}</div></div>
     </div>
+    ${(c.comment||c.note)?`<div style="background:var(--s2);border-radius:8px;padding:9px 12px;margin:10px 0;border-left:3px solid var(--yel)">
+      <div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;margin-bottom:4px">💬 Комментарий</div>
+      <div style="font-size:12px;color:var(--t1);white-space:pre-wrap">${esc(c.comment||c.note)}</div>
+    </div>`:''}
+    ${(()=>{var _ae=statuses.find(function(s){return s.num===c.num||s.name===c.name;});return _ae?`<div style="background:color-mix(in srgb,var(--acc) 8%,white);border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px"><span style="font-size:14px">🔍</span><div><div style="font-size:9px;font-weight:700;color:var(--acc);text-transform:uppercase">В списке AIMA</div><div style="font-size:11px;color:var(--t2);margin-top:1px">${bdg(_ae.status)}${_ae.date?' · '+fmtDate(_ae.date):''}</div></div></div>`:'';})()}
     <hr class="mdiv">
     
     ${c.stage==='Новый клиент'?`
@@ -3785,9 +3812,12 @@ function openClientModal(cid){
       </div>
       ${(()=>{
         const cOrders=orders.filter(o=>o.clientId===cid);
-        if(!cOrders.length) return '<div style="color:var(--t3);font-size:11px;padding:6px 0">No services yet</div>';
-        return cOrders.map(o=>{
-          const steps=ORD_STATUSES[o.svcType]||[];
+        const cCourts=courts.filter(o=>o.clientId===cid||o.num===c.num);
+        const cCitizen=citizenship.filter(o=>o.clientId===cid||o.num===c.num);
+        const total = cOrders.length + cCourts.length + cCitizen.length;
+        if(!total) return '<div style="color:var(--t3);font-size:11px;padding:6px 0">Нет услуг</div>';
+        var html_ = cOrders.map(o=>{
+          const steps=ORD_STATUSES[o.svcType]||['В процессе','Оказана'];
           const isDone=o.status===steps[steps.length-1];
           const pct=steps.length>1?Math.round((steps.indexOf(o.status)/(steps.length-1))*100):100;
           return '<div data-oid="'+o.id+'" style="padding:8px 10px;background:var(--s2);border-radius:6px;margin-bottom:6px;cursor:pointer" onclick="var e=this;closeModal();setTimeout(function(){openOrderModal(e.getAttribute(\'data-oid\'))},60)">'  
@@ -3801,6 +3831,24 @@ function openClientModal(cid){
             +(o.driveLink?'<div style="margin-top:4px"><a href="'+o.driveLink+'" target="_blank" class="bdg blu" style="text-decoration:none;font-size:9px">📁 Drive</a></div>':'')
           +'</div>';
         }).join('');
+        html_ += cCourts.map(function(ct){
+          return '<div style="padding:8px 10px;background:color-mix(in srgb,var(--pur) 8%,white);border-radius:6px;margin-bottom:6px;border-left:3px solid var(--pur)">'
+            +'<div style="display:flex;justify-content:space-between;align-items:center">'
+              +'<span style="font-size:12px;font-weight:600">'+svcBdg(\'Суд\')+\'</span>\'
+              +'<span class="bdg" style="font-size:9px">'+esc(ct.status||\'\')+\'</span>\'
+            +'</div>'
+            +(ct.article?'<div style="font-size:10px;color:var(--t3);margin-top:3px">📋 '+esc(ct.article)+'</div>':'')
+          +'</div>';
+        }).join(\'\');
+        html_ += cCitizen.map(function(ct){
+          return '<div style="padding:8px 10px;background:color-mix(in srgb,var(--ora) 8%,white);border-radius:6px;margin-bottom:6px;border-left:3px solid var(--ora)">'
+            +'<div style="display:flex;justify-content:space-between;align-items:center">'
+              +'<span style="font-size:12px;font-weight:600">'+svcBdg(\'Гражданство\')+\'</span>\'
+              +'<span class="bdg" style="font-size:9px">'+esc(ct.status||\'\')+\'</span>\'
+            +'</div>'
+          +'</div>';
+        }).join(\'\');
+        return html_;
       })()}
     </div>
 
@@ -8018,7 +8066,7 @@ function renderOrders(){
   }
   tbody.innerHTML = data.length ? data.map(o=>{
     const c = clients.find(x=>x.id===o.clientId);
-    const steps = ORD_STATUSES[o.svcType]||[];
+    const steps = ORD_STATUSES[o.svcType]||['В процессе','Оказана'];
     const isDone = o.status===steps[steps.length-1];
     const driveBdg = o.driveLink
       ? `<a href="${o.driveLink}" target="_blank" class="bdg blu" style="text-decoration:none;font-size:9px">📁 Open</a>`
@@ -8080,7 +8128,7 @@ function openNewOrderModal(prefillClientId, prefillSvcType){
       <div class="mf">
         <label class="mfl">${_t('ord_svc_type')}</label>
         <select class="ms" id="nord-svc" onchange="nordSvcChange(this.value)">
-          ${SVC_NEEDS_TRANSLATOR.map(s=>`<option value="${s}"${prefillSvcType===s?' selected':''} >${s}</option>`).join('')}
+          ${SVC_TYPES.map(s=>`<option value="${s}"${prefillSvcType===s?' selected':''} >${s}</option>`).join('')}
           <option value="__custom__">${_t('ord_svc_custom')}</option>
         </select>
       </div>
@@ -8126,7 +8174,7 @@ function nordSvcChange(svc){
   if(customWrap) customWrap.style.display = svc==='__custom__' ? '' : 'none';
   if(el){
     if(svc==='__custom__'){
-      el.textContent = 'В работе';
+      el.textContent = 'В процессе';
     } else {
       const s=ORD_STATUSES[svc];
       if(s) el.textContent=s[0];
@@ -8156,7 +8204,7 @@ async function saveNewOrder(){
   const ord = {
     id: _genOrdId(),
     clientId, svcType,
-    status: ORD_STATUSES[svcType]?.[0]||'Принято',
+    status: ORD_STATUSES[svcType]?.[0]||'В процессе',
     translator: trans||'',
     driveLink: drive||'',
     comment: comment||'',
@@ -8181,7 +8229,48 @@ async function saveNewOrder(){
 
   // Права отображаются через orders (svcType='Права') — отдельная запись в rights не нужна
   if(svcType === 'Права') {
-    renderRights(); // re-render to show new order
+    renderRights();
+  }
+  // Суд — добавить запись в courts
+  if(svcType === 'Суд') {
+    var _cc = clients.find(function(x){ return x.id === clientId; });
+    if(_cc) {
+      var courtRec = {
+        id: 'crt_' + Date.now(),
+        clientId: clientId,
+        num: _cc.num||_cc.id,
+        name: _cc.name||'',
+        status: 'Новое дело',
+        article: '',
+        lawyer: _cc.lawyer||'',
+        comment: comment||'',
+        created: today,
+        deleted: ''
+      };
+      courts.push(courtRec);
+      renderCourts();
+      await apiFetch('/courts', {method:'POST', body:JSON.stringify(courtRec)}).catch(()=>{});
+    }
+  }
+  // Гражданство — добавить запись в citizenship
+  if(svcType === 'Гражданство') {
+    var _gc = clients.find(function(x){ return x.id === clientId; });
+    if(_gc) {
+      var citizenRec = {
+        id: 'ctz_' + Date.now(),
+        clientId: clientId,
+        num: _gc.num||_gc.id,
+        name: _gc.name||'',
+        status: 'Новое',
+        lawyer: _gc.lawyer||'',
+        comment: comment||'',
+        created: today,
+        deleted: ''
+      };
+      citizenship.push(citizenRec);
+      renderCitizenship();
+      await apiFetch('/citizenship', {method:'POST', body:JSON.stringify(citizenRec)}).catch(()=>{});
+    }
   }
 }
 
