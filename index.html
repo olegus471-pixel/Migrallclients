@@ -2400,7 +2400,10 @@ async function doLogin(){
       }
       // Скрыть технические ошибки сервера от пользователя
       var errMsg = data.error || 'Неверный email или пароль';
-      if(errMsg.includes('ReferenceError') || errMsg.includes('TypeError') || errMsg.includes('is not defined') || errMsg.includes('Cannot read')) {
+      if(errMsg === 'GAS_HTML_ERROR' || data.gasNeedsRedeploy) {
+        console.error('[doLogin] GAS returned HTML — needs redeploy');
+        errMsg = '⚠️ Google Apps Script требует переопубликации. Откройте скрипт → Развернуть → Новая версия → Развернуть.';
+      } else if(errMsg.includes('ReferenceError') || errMsg.includes('TypeError') || errMsg.includes('is not defined') || errMsg.includes('Cannot read')) {
         console.error('[doLogin] Server error:', errMsg);
         errMsg = 'Ошибка сервера. Обновите страницу или обратитесь к администратору.';
       }
